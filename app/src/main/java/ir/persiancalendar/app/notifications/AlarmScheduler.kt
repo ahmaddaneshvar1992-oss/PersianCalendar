@@ -220,6 +220,9 @@ class ReminderReceiver : BroadcastReceiver() {
 
 /**
  * دریافت هشدار اوقات شرعی → نمایش اعلان + پخش صدای اذان دلخواه (نسخه ۱.۲).
+ * نسخه ۱.۱۱.۷ (گزارش کاربر): پخش اذان به سرویس Foreground منتقل شد —
+ * قبلاً MediaPlayer داخل همین گیرنده بود و اندروید پردازه را می‌کشت و
+ * صدای اذان پخش نمی‌شد؛ اکنون AzanPlaybackService پخش را کامل می‌کند.
  * اگر کاربر «بدون صدا» انتخاب کرده باشد فقط اعلان نمایش داده می‌شود.
  */
 class PrayerAlarmReceiver : BroadcastReceiver() {
@@ -235,12 +238,13 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             "اوقات شرعی امروز — ${labels[index]} (با صدای اذان دلخواه شما)"
         )
 
-        // پخش صدای اذان انتخابی کاربر (تنظیمات ← اوقات شرعی ← اذان دلخواه)
+        // پخش صدای اذان انتخابی کاربر با سرویس Foreground (نسخه ۱.۱۱.۷)
+        val appContext = context.applicationContext
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val s = AppContainer.settingsRepo(context).settings.first()
-                AdhanSounds.play(context.applicationContext, s.adhanSound)
+                val s = AppContainer.settingsRepo(appContext).settings.first()
+                AzanPlaybackService.start(appContext, s.adhanSound)
             } catch (e: Exception) {
                 // پخش صدا هرگز نباید اپ را منفجر کند
             } finally {

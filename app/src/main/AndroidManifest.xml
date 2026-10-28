@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- سرویس پخش اذان در پس‌زمینه — نسخه ۱.۱۱.۷ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- اینترنت: خرید درون‌برنامه‌ای (Google Play Billing) و باز کردن لینک‌ها -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -77,6 +80,12 @@
         <receiver
             android:name=".notifications.PrayerAlarmReceiver"
             android:exported="false" />
+
+        <!-- سرویس پخش اذان — نسخه ۱.۱۱.۷: صدای اذان هنگام نوتیف حتی با بسته‌بودن برنامه -->
+        <service
+            android:name=".notifications.AzanPlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- تیک روزانه -->
         <receiver

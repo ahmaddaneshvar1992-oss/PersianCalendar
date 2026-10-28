@@ -20,9 +20,11 @@ object NotificationHelper {
     const val CHANNEL_PRAYERS = "prayers"
     const val CHANNEL_ONGOING = "ongoing_date"
     const val CHANNEL_REMINDERS = "reminders" // موتور یادآور عمومی — نسخه ۱.۱۱
+    const val CHANNEL_AZAN_PLAYBACK = "azan_playback" // سرویس پخش اذان — نسخه ۱.۱۱.۷
     const val NOTIF_ID_EVENT_BASE = 20000
     const val NOTIF_ID_PRAYER = 19999
     const val NOTIF_ID_REMINDER_BASE = 30000
+    const val NOTIF_ID_AZAN_PLAYBACK = 29999
 
     // اکشن‌های اعلان یادآور — «انجام شد» و «بعداً یادآوری کن»
     const val ACTION_REMINDER_DONE = "ir.persiancalendar.app.action.REMINDER_DONE"
@@ -71,10 +73,22 @@ object NotificationHelper {
             vibrationPattern = longArrayOf(0, 350, 250, 350)
         }
 
+        // کانال سرویس پخش اذان — نسخه ۱.۱۱.۷ (بی‌صدا و کم‌اهمیت؛ فقط نشانگر سرویس)
+        val azanPlayback = NotificationChannel(
+            CHANNEL_AZAN_PLAYBACK,
+            "پخش اذان",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "نشانگر پخش صدای اذان هنگام رسیدن وقت شرعی"
+            setSound(null, null)
+            setShowBadge(false)
+        }
+
         nm.createNotificationChannel(events)
         nm.createNotificationChannel(prayers)
         nm.createNotificationChannel(ongoing)
         nm.createNotificationChannel(reminders)
+        nm.createNotificationChannel(azanPlayback)
     }
 
     private fun openAppIntent(context: Context): PendingIntent =

@@ -59,6 +59,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -75,6 +76,7 @@ import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.data.support.AnnouncementBox
 import ir.persiancalendar.app.di.AppContainer
+import ir.persiancalendar.app.ui.components.AdImage
 import ir.persiancalendar.app.ui.account.AccountScreen
 import ir.persiancalendar.app.ui.calendar.CalendarScreen
 import ir.persiancalendar.app.ui.calendar.DayDetailScreen
@@ -102,7 +104,10 @@ private data class MenuItem(
 private val FabGreen = Color(0xFF1EA84D)
 
 /**
- * بدنه اصلی اپلیکیشن — نسخه ۱.۱۱.۶:
+ * بدنه اصلی اپلیکیشن — نسخه ۱.۱۱.۷:
+ *  - اطلاعیه‌ها عکس دارند: مدیر از پنل مدیریت عکس (گالری یا URL) ضمیمه می‌کند و
+ *    شیت اطلاعیه‌ها همان عکس را نشان می‌دهد (درخواست کاربر).
+ *  - دکمه‌های میان‌بر «قبله‌نما» و «یادآورها» کنار زنگ اطلاعیه در نوار بالا (درخواست کاربر).
  *  - پنل منوی سه‌نقطه دقیقاً کنار خود دکمه ⋮ (سمت چپ گوشی) باز می‌شود —
  *    جای‌گذاری قطعی با PopupPositionProvider اختصاصی، مستقل از جهت چیدمان (گزارش کاربر).
  *  - منوی سه‌نقطه (⋮) به سبک «پنل زیبا» باز می‌شود: کارت گوشه‌گرد با آیکن دایره‌ای،
@@ -219,6 +224,22 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                             style = MaterialTheme.typography.titleLarge
                         )
                         Spacer(Modifier.weight(1f))
+                        // ---------- میان‌برهای کنار زنگ اطلاعیه — نسخه ۱.۱۱.۷ (درخواست کاربر) ----------
+                        // قبله‌نما و یادآورها با یک لمس، کنار زنگ اطلاعیه در نوار بالا
+                        androidx.compose.material3.IconButton(onClick = { selectedTab = 2 }) {
+                            Icon(
+                                Icons.Filled.Explore,
+                                contentDescription = "قبله‌نما",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        androidx.compose.material3.IconButton(onClick = { selectedTab = 4 }) {
+                            Icon(
+                                Icons.Filled.Alarm,
+                                contentDescription = "یادآورها",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         // زنگ اطلاعیه با نقطه قرمز — خبر و تبلیغ مدیر (نسخه ۱.۶)
                         androidx.compose.material3.IconButton(onClick = {
                             annSheetVisible = true
@@ -463,6 +484,17 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                             )
                             Spacer(Modifier.height(3.dp))
                             Text(a.title, style = MaterialTheme.typography.titleMedium)
+                            // ---------- عکس اطلاعیه — نسخه ۱.۱۱.۷ (درخواست کاربر) ----------
+                            if (a.image.isNotBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                AdImage(
+                                    source = a.image,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(170.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                )
+                            }
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 a.body,

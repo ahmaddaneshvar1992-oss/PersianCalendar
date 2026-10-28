@@ -18,7 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -315,7 +317,7 @@ fun PrayerScreen(
 
         Spacer(Modifier.height(10.dp))
 
-        // ---------- اذان دلخواه (نسخه ۱.۲) ----------
+        // ---------- اذان دلخواه (نسخه ۱.۲ + پلیر آزمایشی ۱.۱۱.۷) ----------
         SectionCard {
             Column(Modifier.padding(14.dp)) {
                 Text("اذان دلخواه", style = MaterialTheme.typography.titleMedium)
@@ -326,27 +328,63 @@ fun PrayerScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
-                SimpleDropdown(
-                    modifier = Modifier.fillMaxWidth(),
-                    label = "انتخاب صدای اذان",
-                    items = ir.persiancalendar.app.notifications.AdhanSounds.LABELS,
-                    selectedIndex = ir.persiancalendar.app.notifications.AdhanSounds.KEYS
-                        .indexOf(settings.adhanSound).let { if (it < 0) 0 else it },
-                    onSelected = { idx ->
-                        val key = ir.persiancalendar.app.notifications.AdhanSounds.KEYS[idx]
-                        scope.launch { AppContainer.settingsRepo(context).setAdhanSound(key) }
-                        onSettingsChange()
+                // ---------- ردیف انتخاب + پلیر — نسخه ۱.۱۱.۷ (درخواست کاربر) ----------
+                // کنار فهرست انتخاب اذان، دکمه پخش/توقف هست تا نمونه اذان با یک لمس
+                // شنیده شود (اگر «بدون صدا» انتخاب باشد دکمه پخش کار نمی‌کند)
+                var azanPlaying by remember { mutableStateOf(false) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SimpleDropdown(
+                        modifier = Modifier.weight(1f),
+                        label = "انتخاب صدای اذان",
+                        items = ir.persiancalendar.app.notifications.AdhanSounds.LABELS,
+                        selectedIndex = ir.persiancalendar.app.notifications.AdhanSounds.KEYS
+                            .indexOf(settings.adhanSound).let { if (it < 0) 0 else it },
+                        onSelected = { idx ->
+                            // تغییر صدا → پخش قبلی متوقف می‌شود
+                            ir.persiancalendar.app.notifications.AdhanSounds.release()
+                            azanPlaying = false
+                            val key = ir.persiancalendar.app.notifications.AdhanSounds.KEYS[idx]
+                            scope.launch { AppContainer.settingsRepo(context).setAdhanSound(key) }
+                            onSettingsChange()
+                        }
+                    )
+                    IconButton(onClick = {
+                        if (azanPlaying) {
+                            ir.persiancalendar.app.notifications.AdhanSounds.release()
+                            azanPlaying = false
+                        } else {
+                            val ok = ir.persiancalendar.app.notifications.AdhanSounds.play(
+                                context, settings.adhanSound
+                            )
+                            if (ok) {
+                                azanPlaying = true
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "برای آزمایش، یکی از اذان‌ها را انتخاب کنید",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }) {
+                        Icon(
+                            if (azanPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                            contentDescription = if (azanPlaying) "توقف پخش اذان"
+                            else "پخش نمونه اذان",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
-                )
+                }
                 Spacer(Modifier.height(8.dp))
                 androidx.compose.material3.TextButton(onClick = {
-                    // پیش‌نمایش کامل: اعلان اذان + پخش صدای انتخابی (نسخه ۱.۳)
+                    // پیش‌نمایش کامل و واقعی: اعلان اذان + پخش صدا با همان
+                    // سرویس Foreground که هنگام وقت واقعی کار می‌کند (نسخه ۱.۱۱.۷)
                     ir.persiancalendar.app.notifications.NotificationHelper.notifyPrayer(
                         context,
                         "اذان (نمونه)",
                         "پیش‌نمایش اعلان اذان — هنگام وقت واقعی، اعلان دقیق با AlarmManager می‌آید"
                     )
-                    ir.persiancalendar.app.notifications.AdhanSounds.play(
+                    ir.persiancalendar.app.notifications.AzanPlaybackService.start(
                         context, settings.adhanSound
                     )
                 }) {

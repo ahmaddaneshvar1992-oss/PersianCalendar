@@ -167,12 +167,13 @@ private fun MainAdCard(ad: MainAd) {
 }
 
 /**
- * بارگذاری تصویر بنر بدون کتابخانه بیرونی — نسخه ۱.۱۱.۶
+ * بارگذاری تصویر بدون کتابخانه بیرونی — نسخه ۱.۱۱.۶
  * ورودی: مسیر فایل داخلی (تصویر گالری که مدیر انتخاب کرده) یا URL اینترنتی.
  * بارگذاری روی نخ پس‌زمینه انجام می‌شود و در صورت خطا فقط پس‌زمینه خالی می‌ماند.
+ * نسخه ۱.۱۱.۷: عمومی شد تا شیت اطلاعیه‌ها هم تصویر اطلاعیه را با همین لودر نشان دهد.
  */
 @Composable
-private fun AdImage(source: String, modifier: Modifier = Modifier) {
+fun AdImage(source: String, modifier: Modifier = Modifier) {
     val bitmap by produceState<ImageBitmap?>(initialValue = null, source) {
         value = withContext(Dispatchers.IO) {
             runCatching {

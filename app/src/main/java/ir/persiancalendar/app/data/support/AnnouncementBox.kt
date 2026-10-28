@@ -20,6 +20,7 @@ data class Announcement(
     val title: String,
     val body: String,
     val link: String = "", // لینک اختیاری — دکمه «مشاهده» می‌سازد
+    val image: String = "",// تصویر اختیاری — مسیر فایل داخلی یا URL (نسخه ۱.۱۱.۷)
     val on: Boolean = true,
     val at: Long = System.currentTimeMillis()
 ) {
@@ -59,6 +60,7 @@ object AnnouncementBox {
                     title = o.optString("title"),
                     body = o.optString("body"),
                     link = o.optString("link"),
+                    image = o.optString("image"),
                     on = o.optBoolean("on", true),
                     at = o.optLong("at", System.currentTimeMillis())
                 )
@@ -87,7 +89,8 @@ object AnnouncementBox {
         type: String,
         title: String,
         body: String,
-        link: String = ""
+        link: String = "",
+        image: String = ""
     ): Boolean {
         val ann = Announcement(
             id = System.currentTimeMillis(),
@@ -95,6 +98,7 @@ object AnnouncementBox {
             title = title.trim(),
             body = body.trim(),
             link = link.trim(),
+            image = image.trim(),
             at = System.currentTimeMillis()
         )
         val all = load(context).toMutableList()
@@ -108,8 +112,28 @@ object AnnouncementBox {
     }
 
     fun delete(context: Context, id: Long) {
+        // اگر تصویر اطلاعیه فایل داخلی باشد، همراهش پاک می‌شود (نسخه ۱.۱۱.۷)
+        load(context).firstOrNull { it.id == id }?.image?.takeIf {
+            it.isNotBlank() && !it.startsWith("http")
+        }?.let { p -> runCatching { java.io.File(p).delete() } }
         save(context, load(context).filterNot { it.id == id })
     }
+
+    /**
+     * کپی تصویر انتخاب‌شده از گالری به filesDir/announcements — خروجی: مسیر فایل
+     * ذخیره‌شده یا رشته خالی در صورت خطا (همان الگوی MainAdBox — نسخه ۱.۱۱.۷)
+     */
+    fun saveImageFromUri(context: Context, uri: android.net.Uri): String = runCatching {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: return ""
+        val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: return ""
+        bmp.recycle()
+        val dir = File(context.filesDir, "announcements").apply { mkdirs() }
+        val out = File(dir, "ann_${System.currentTimeMillis()}.jpg")
+        out.writeBytes(bytes)
+        out.absolutePath
+    }.getOrDefault("")
 
     /** اطلاعیه‌های فعال برای نمایش به کاربر */
     fun active(context: Context): List<Announcement> = load(context).filter { it.on }
@@ -129,6 +153,7 @@ object AnnouncementBox {
                     .put("title", a.title)
                     .put("body", a.body)
                     .put("link", a.link)
+                    .put("image", a.image)
                     .put("on", a.on)
                     .put("at", a.at)
             )

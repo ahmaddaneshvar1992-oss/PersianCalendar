@@ -82,6 +82,9 @@ fun AdminScreen(onBack: () -> Unit) {
     var annTitle by remember { mutableStateOf("") }
     var annBody by remember { mutableStateOf("") }
     var annLink by remember { mutableStateOf("") }
+    // تصویر اطلاعیه — گالری یا URL (نسخه ۱.۱۱.۷)
+    var annPickedImage by remember { mutableStateOf("") }
+    var annImageUrl by remember { mutableStateOf("") }
     // بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶
     var ads by remember { mutableStateOf<List<MainAd>>(emptyList()) }
     var adTitle by remember { mutableStateOf("") }
@@ -119,6 +122,25 @@ fun AdminScreen(onBack: () -> Unit) {
                     if (saved.isNotBlank()) {
                         adPickedImage = saved
                         Toast.makeText(context, "تصویر بنر انتخاب شد", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "خواندن تصویر ممکن نشد", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+    // انتخاب تصویر اطلاعیه از گالری — کپی به filesDir/announcements (نسخه ۱.۱۱.۷)
+    val annImagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                val saved = AnnouncementBox.saveImageFromUri(context, uri)
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    if (saved.isNotBlank()) {
+                        annPickedImage = saved
+                        Toast.makeText(context, "تصویر اطلاعیه انتخاب شد", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "خواندن تصویر ممکن نشد", Toast.LENGTH_SHORT).show()
                     }
@@ -480,7 +502,7 @@ fun AdminScreen(onBack: () -> Unit) {
                     Text("اطلاعیه‌ها (خبر و تبلیغ)", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "خبر یا تبلیغی که اینجا ثبت کنید، با زنگ و نقطه قرمز کنار منوی سه‌نقطه به کاربران نشان داده می‌شود. لینک اختیاری است.",
+                        "خبر یا تبلیغی که اینجا ثبت کنید، با زنگ و نقطه قرمز کنار منوی سه‌نقطه به کاربران نشان داده می‌شود. لینک و تصویر اختیاری‌اند (نسخه ۱.۱۱.۷: عکس اطلاعیه).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -501,7 +523,8 @@ fun AdminScreen(onBack: () -> Unit) {
                                             style = MaterialTheme.typography.titleSmall
                                         )
                                         Text(
-                                            if (a.on) "نمایش به کاربران" else "خاموش",
+                                            (if (a.on) "نمایش به کاربران" else "خاموش") +
+                                                    (if (a.image.isNotBlank()) " · تصویردار" else ""),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -570,6 +593,29 @@ fun AdminScreen(onBack: () -> Unit) {
                         label = { Text("لینک (اختیاری)") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(Modifier.height(6.dp))
+                    // ---------- تصویر اطلاعیه — گالری یا URL (نسخه ۱.۱۱.۷) ----------
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = { annImagePicker.launch("image/*") }) {
+                            Text("انتخاب عکس اطلاعیه از گالری")
+                        }
+                        Spacer(Modifier.padding(horizontal = 4.dp))
+                        if (annPickedImage.isNotBlank()) {
+                            Text(
+                                "عکس انتخاب شد ✓",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            TextButton(onClick = { annPickedImage = "" }) { Text("حذف") }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = annImageUrl,
+                        onValueChange = { annImageUrl = it },
+                        label = { Text("یا آدرس اینترنتی عکس (URL — اختیاری)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
@@ -587,12 +633,14 @@ fun AdminScreen(onBack: () -> Unit) {
                                     type = annType,
                                     title = annTitle,
                                     body = annBody,
-                                    link = annLink
+                                    link = annLink,
+                                    image = annPickedImage.ifBlank { annImageUrl.trim() }
                                 )
                                 val fresh = AnnouncementBox.load(context)
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                                     anns = fresh
                                     annTitle = ""; annBody = ""; annLink = ""
+                                    annPickedImage = ""; annImageUrl = ""
                                     Toast.makeText(
                                         context,
                                         "اطلاعیه ثبت شد — زنگ بالای برنامه قرمز می‌شود",

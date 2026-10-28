@@ -213,6 +213,18 @@ fun CalendarScreen(
 
         Spacer(Modifier.height(10.dp))
 
+        // ---------- مناسبت‌های روز انتخاب‌شده — نسخه ۱.۱۱.۷ (درخواست کاربر) ----------
+        // با لمس هر روز تقویم، مناسبت‌های همان روز با همان فرم «مناسبت‌های این ماه»
+        // (شماره روز + عنوان مناسبت‌ها) همین‌جا زیر تقویم دیده می‌شود.
+        SelectedDayOccasions(
+            selected = selectedJalali,
+            events = events,
+            holidayRepo = holidayRepo,
+            persianDigits = persianDigits
+        )
+
+        Spacer(Modifier.height(10.dp))
+
         // ---------- بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶ (درخواست کاربر) ----------
         // هر چند بنر که مدیر در «پنل مدیریت ← تبلیغات صفحه اصلی» ساخته باشد، همین‌جا
         // به‌ترتیب از بالا به پایین نمایش داده می‌شود؛ اگر بنری نباشد این بخش کلاً حذف است.
@@ -499,6 +511,84 @@ private fun WeekStrip(
                         dayEvents.forEach {
                             Text(
                                 text = "• ${it.title}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * مناسبت‌های روز لمس‌شده تقویم — نسخه ۱.۱۱.۷ (درخواست کاربر)
+ *
+ * کاربر می‌خواست «وقتی روی روزهای تقویم میزنم مناسبت‌های اون روز رو در فرم
+ * مناسبت‌های این ماه ببینم» — پس همین‌جا زیر تقویم، یک کارت با همان فرم
+ * (شماره روز سمت راست + عنوان مناسبت‌ها) برای روز انتخاب‌شده نشان داده می‌شود؛
+ * شامل مناسبت‌های رسمی (تعطیل با رنگ قرمز) و رویدادهای شخصی کاربر (با «•»).
+ */
+@Composable
+private fun SelectedDayOccasions(
+    selected: JalaliDate,
+    events: List<EventEntity>,
+    holidayRepo: HolidayRepository,
+    persianDigits: Boolean
+) {
+    val g = CalendarConverter.jalaliToGregorian(selected.year, selected.month, selected.day)
+    val gDate = LocalDate.of(g.year, g.month, g.day)
+    val occ = holidayRepo.occasionsFor(selected, gDate)
+    val dayEvents = events.filter { eventOccursOn(it, gDate) }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                text = "مناسبت‌های این روز — " +
+                        PersianText.weekDays.getOrElse(
+                            PersianText.weekdayIndexSat0(gDate)
+                        ) { "" } + " " +
+                        (if (persianDigits) PersianText.toPersianDigits(selected.day.toString())
+                         else selected.day.toString()) + " " +
+                        PersianText.jalaliMonths.getOrElse(selected.month - 1) { "" },
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(6.dp))
+            if (occ.isEmpty() && dayEvents.isEmpty()) {
+                Text(
+                    "مناسبتی برای این روز ثبت نشده است",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                // همان فرم «مناسبت‌های این ماه»: شماره روز + عنوان‌ها
+                Row(modifier = Modifier.padding(vertical = 3.dp)) {
+                    Text(
+                        text = if (persianDigits) PersianText.toPersianDigits(selected.day.toString())
+                        else selected.day.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.width(34.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    Column {
+                        occ.forEach { o ->
+                            Text(
+                                text = if (o.isHoliday) "${o.title} (تعطیل)" else o.title,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (o.isHoliday) holidayColor()
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        dayEvents.forEach { e ->
+                            Text(
+                                text = "• ${e.title}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.tertiary
                             )
