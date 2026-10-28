@@ -1,11 +1,6 @@
 package ir.persiancalendar.app.ui.settings
 
-import android.graphics.BitmapFactory
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,9 +9,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -35,19 +28,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import ir.persiancalendar.app.ads.AdManager
-import ir.persiancalendar.app.core.calendar.PersianText
 import ir.persiancalendar.app.data.db.UserEntity
 import ir.persiancalendar.app.data.prefs.AppSettings
-import ir.persiancalendar.app.data.prefs.BannerEntry
-import ir.persiancalendar.app.data.prefs.bannerEntries
 import ir.persiancalendar.app.data.support.Announcement
 import ir.persiancalendar.app.data.support.AnnouncementBox
 import ir.persiancalendar.app.data.support.SupportBox
@@ -56,23 +42,19 @@ import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.ui.components.SectionCard
 import ir.persiancalendar.app.ui.components.SimpleDropdown
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
- * پنل مدیریت تبلیغات — نسخه ۱.۵
+ * پنل مدیریت — نسخه ۱.۱۱.۵
  *
- * صفحه‌ای مخصوص توسعه‌دهنده (با رمز) برای کنترل زنده تبلیغات:
- *  - روشن/خاموش کردن بنر و اینترستیشال
- *  - تناوب نمایش اینترستیشال
- *  - بنرهای تصویری اختصاصی «بدون محدودیت تعداد» + لینک هر بنر — نسخه ۱.۵
+ * صفحه‌ای مخصوص توسعه‌دهنده (با رمز) برای:
+ *  - اطلاعیه‌ها: خبر و تبلیغ زنگ کنار منوی سه‌نقطه — نسخه ۱.۶
  *  - صندوق پشتیبانی: پیام‌های کاربران (تبلیغ/مشکل/پیشنهاد) — نسخه ۱.۵
- *  - جابه‌جایی بین شناسه‌های تست گوگل و شناسه‌های واقعی
  *  - مشاهده آمار و فهرست کاربران ثبت‌نام‌شده
  *  - تغییر رمز پنل — رمز می‌تواند حروف و اعداد با هم داشته باشد — نسخه ۱.۳
  *
- * تنظیمات در DataStore ذخیره می‌شود و بلافاصله روی بنر/اینترستیشال اثر می‌گذارد.
+ * نسخه ۱.۱۱.۵: تبلیغات بنری و اینترستیشال به‌طور کامل از برنامه حذف شد؛
+ * سکشن‌های AdMob و بنرهای تصویری چرخشی از این پنل برداشته شدند.
  */
 @Composable
 fun AdminScreen(onBack: () -> Unit) {
@@ -84,8 +66,6 @@ fun AdminScreen(onBack: () -> Unit) {
     var authed by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
     var newPin by remember { mutableStateOf("") }
-    var bannerIdText by remember(settings.bannerUnitId) { mutableStateOf(settings.bannerUnitId) }
-    var interIdText by remember(settings.interstitialUnitId) { mutableStateOf(settings.interstitialUnitId) }
     var users by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
     // صندوق پشتیبانی (نسخه ۱.۵)
     var supMsgs by remember { mutableStateOf<List<SupportMessage>>(emptyList()) }
@@ -105,45 +85,6 @@ fun AdminScreen(onBack: () -> Unit) {
             }
             anns = kotlinx.coroutines.withContext(Dispatchers.IO) {
                 AnnouncementBox.load(context)
-            }
-        }
-    }
-
-    // انتخاب عکس بنر از گالری/فایل‌ها — بنر جدید یا تعویض یک بنر موجود (نسخه ۱.۵)
-    // آندیس هدف: -1 = افزودن بنر جدید؛ در غیر این صورت اندیس بنر در فهرست برای تعویض
-    var uploadTarget by remember { mutableStateOf(-1) }
-    val imgPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        val target = uploadTarget
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                if (bytes == null || bytes.size > 5_000_000) {
-                    kotlinx.coroutines.withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "حجم تصویر باید کمتر از ۵ مگابایت باشد", Toast.LENGTH_SHORT).show()
-                    }
-                    return@launch
-                }
-                val f = File(context.filesDir, "admin_banner_b" + System.currentTimeMillis() + ".jpg")
-                f.writeBytes(bytes)
-                val r = AppContainer.settingsRepo(context)
-                val list = r.settingsBlocking().bannerEntries().toMutableList()
-                if (target < 0) {
-                    list.add(BannerEntry(f.absolutePath, "", true))
-                } else if (target < list.size) {
-                    val old = list[target]
-                    // فایل قبلی بنر تعویض‌شده حذف شود تا حافظه اشغال نماند
-                    runCatching { File(old.path).delete() }
-                    list[target] = BannerEntry(f.absolutePath, old.link, old.on)
-                }
-                r.setBannerListJson(entriesToJson(list))
-                kotlinx.coroutines.withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "بنر ذخیره شد ✓ — در چرخش پایین صفحه", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                kotlinx.coroutines.withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "خواندن تصویر ممکن نشد", Toast.LENGTH_SHORT).show()
-                }
             }
         }
     }
@@ -169,7 +110,7 @@ fun AdminScreen(onBack: () -> Unit) {
                     Text("ورود توسعه‌دهنده", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "این پنل برای مدیریت تبلیغات و مشاهده کاربران است. رمز پیش‌فرض ۱۲۳۴ است؛ حتماً قبل از انتشار عوضش کنید.",
+                        "این پنل برای مدیریت اطلاعیه‌ها و مشاهده کاربران است. رمز پیش‌فرض ۱۲۳۴ است؛ حتماً قبل از انتشار عوضش کنید.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -197,172 +138,16 @@ fun AdminScreen(onBack: () -> Unit) {
                 }
             }
         } else {
-            // ---------- مدیریت تبلیغات ----------
+            // ---------- نسخه ۱.۱۱.۵: تبلیغات حذف شد — کارت اطلاع‌رسانی ----------
             SectionCard {
                 Column(Modifier.padding(14.dp)) {
-                    Text("تبلیغات AdMob", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
-                    SwitchRow(
-                        title = "نمایش بنر تبلیغات",
-                        subtitle = "نوار تبلیغ در پایین صفحه‌ها",
-                        checked = settings.adsEnabled
-                    ) { v -> scope.launch { repo.setAdsEnabled(v) } }
-                    SwitchRow(
-                        title = "اینترستیشال",
-                        subtitle = "تبلیغ تمام‌صفحه هنگام باز کردن جزئیات روز",
-                        checked = settings.interstitialEnabled
-                    ) { v -> scope.launch { repo.setInterstitialEnabled(v) } }
-                    Spacer(Modifier.height(6.dp))
-                    SimpleDropdown(
-                        modifier = Modifier.fillMaxWidth(),
-                        label = "تناوب نمایش اینترستیشال",
-                        items = listOf("هر بار", "هر ۲ بار", "هر ۳ بار", "هر ۴ بار", "هر ۵ بار", "هر ۱۰ بار"),
-                        selectedIndex = intEveryToIndex(settings.interstitialEvery),
-                        onSelected = { idx ->
-                            scope.launch { repo.setInterstitialEvery(intEveryFromIndex(idx)) }
-                        }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    SwitchRow(
-                        title = "حالت آزمایشی (شناسه تست گوگل)",
-                        subtitle = "پیش از انتشار خاموش کنید تا شناسه‌های واقعی استفاده شوند",
-                        checked = settings.adTestMode
-                    ) { v -> scope.launch { repo.setAdTestMode(v) } }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = bannerIdText,
-                        onValueChange = { bannerIdText = it },
-                        singleLine = true,
-                        label = { Text("شناسه واقعی بنر (ca-app-pub-…)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = interIdText,
-                        onValueChange = { interIdText = it },
-                        singleLine = true,
-                        label = { Text("شناسه واقعی اینترستیشال (ca-app-pub-…)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                repo.setBannerUnitId(bannerIdText)
-                                repo.setInterstitialUnitId(interIdText)
-                                Toast.makeText(context, "شناسه‌ها ذخیره شد", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("ذخیره شناسه‌ها") }
-
-                    // ---------- بنرهای تصویری چرخشی — بدون محدودیت (نسخه ۱.۵) ----------
-                    Spacer(Modifier.height(14.dp))
-                    Text("بنرهای تصویری چرخشی (چندین تبلیغ — بدون محدودیت)", style = MaterialTheme.typography.titleMedium)
+                    Text("تبلیغات حذف شد", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "هر تعداد بنر بخواهید اضافه کنید؛ بنرهای «روشن» به‌صورت چرخشی (هر ۶ ثانیه) در محدوده تبلیغات پایین نمایش داده می‌شوند؛ اگر بنری نباشد فضای AdMob نشان داده می‌شود. بنرهای نسخه‌های قبلی به‌صورت خودکار به این فهرست منتقل می‌شوند.",
+                        "از نسخه ۱٫۱۱٫۵ بنر تبلیغاتی و اینترستیشال به‌طور کامل از برنامه حذف شده است؛ این پنل برای اطلاعیه‌ها، صندوق پشتیبانی، آمار و کاربران است.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    val banners = settings.bannerEntries()
-                    if (banners.isEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "هنوز بنری اضافه نشده — با دکمه «افزودن بنر جدید» اولین تبلیغ خود را بسازید",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    banners.forEachIndexed { i, b ->
-                        val imgFile = File(b.path)
-                        val exists = imgFile.exists()
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    "بنر " + PersianText.toPersianDigits((i + 1).toString()),
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                                Text(
-                                    if (b.on) "روشن — در چرخش نمایش" else "خاموش — نمایش داده نمی‌شود",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = b.on,
-                                onCheckedChange = { v ->
-                                    scope.launch {
-                                        repo.setBannerListJson(
-                                            entriesToJson(banners.mapIndexed { j, e -> if (j == i) e.copy(on = v) else e })
-                                        )
-                                    }
-                                }
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            OutlinedButton(onClick = {
-                                uploadTarget = i
-                                imgPicker.launch("image/*")
-                            }) { Text("تعویض") }
-                            Spacer(Modifier.width(6.dp))
-                            OutlinedButton(onClick = {
-                                scope.launch(Dispatchers.IO) {
-                                    runCatching { imgFile.delete() }
-                                    repo.setBannerListJson(
-                                        entriesToJson(banners.filterIndexed { j, _ -> j != i })
-                                    )
-                                }
-                                Toast.makeText(context, "بنر حذف شد", Toast.LENGTH_SHORT).show()
-                            }) { Text("حذف") }
-                        }
-                        if (exists) {
-                            val bmp = remember(b.path) {
-                                runCatching { BitmapFactory.decodeFile(imgFile.absolutePath) }.getOrNull()
-                            }
-                            if (bmp != null) {
-                                Image(
-                                    bitmap = bmp.asImageBitmap(),
-                                    contentDescription = "پیش‌نمایش بنر " + (i + 1),
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(64.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                )
-                            }
-                            Spacer(Modifier.height(6.dp))
-                        }
-                        var linkText by remember(b.link) { mutableStateOf(b.link) }
-                        OutlinedTextField(
-                            value = linkText,
-                            onValueChange = { linkText = it },
-                            singleLine = true,
-                            label = { Text("لینک بنر " + (i + 1) + " (اختیاری — با لمس باز می‌شود)") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        OutlinedButton(
-                            onClick = {
-                                scope.launch {
-                                    repo.setBannerListJson(
-                                        entriesToJson(banners.mapIndexed { j, e -> if (j == i) e.copy(link = linkText.trim()) else e })
-                                    )
-                                    Toast.makeText(context, "لینک بنر ذخیره شد", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("ذخیره لینک") }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedButton(
-                        onClick = {
-                            uploadTarget = -1
-                            imgPicker.launch("image/*")
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("+ افزودن بنر جدید") }
                 }
             }
 
@@ -374,10 +159,6 @@ fun AdminScreen(onBack: () -> Unit) {
                     Text("آمار", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "تعداد باز شدن جزئیات روز (شمارنده اینترستیشال): ${settings.interstitialCounter}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
                         "کاربران ثبت‌نام‌شده در این دستگاه: ${users.size}",
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -388,11 +169,6 @@ fun AdminScreen(onBack: () -> Unit) {
                     Text(
                         "اطلاعیه‌های فعال (زنگ): ${anns.count { it.on }} از ${anns.size}",
                         style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        "درآمد واقعی در کنسول AdMob دیده می‌شود؛ این شمارنده‌ها فقط برای تنظیم تناوب‌اند.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -680,60 +456,3 @@ fun AdminScreen(onBack: () -> Unit) {
     }
 }
 
-@Composable
-private fun SwitchRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
-}
-
-/** نگاشت تناوب ۱،۲،۳،۴،۵،۱۰ به اندیس فهرست */
-private fun intEveryToIndex(n: Int): Int = when (n) {
-    1 -> 0
-    2 -> 1
-    3 -> 2
-    4 -> 3
-    5 -> 4
-    else -> 5
-}
-
-/** فهرست بنرها → JSON برای ذخیره در DataStore (نسخه ۱.۵) */
-private fun entriesToJson(list: List<BannerEntry>): String {
-    val arr = org.json.JSONArray()
-    list.forEach { e ->
-        arr.put(
-            org.json.JSONObject()
-                .put("p", e.path)
-                .put("l", e.link)
-                .put("on", e.on)
-        )
-    }
-    return arr.toString()
-}
-
-private fun intEveryFromIndex(i: Int): Int = when (i) {
-    0 -> 1
-    1 -> 2
-    2 -> 3
-    3 -> 4
-    4 -> 5
-    else -> 10
-}

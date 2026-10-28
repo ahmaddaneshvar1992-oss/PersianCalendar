@@ -1,12 +1,7 @@
 package ir.persiancalendar.app.ui.components
 
-import android.content.Intent
-import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,113 +18,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdSize
-import com.google.android.gms.ads.AdView
-import ir.persiancalendar.app.ads.AdManager
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
 import ir.persiancalendar.app.core.prayer.City
-import ir.persiancalendar.app.data.prefs.AppSettings
-import ir.persiancalendar.app.data.prefs.bannerEntries
-import ir.persiancalendar.app.di.AppContainer
-import java.io.File
 
-/**
- * بنر تبلیغ — نسخه ۱.۵
- *
- * ترتیب نمایش:
- *  ۱) بنرهای تصویری اختصاصی پنل مدیریت — بدون محدودیت تعداد؛ بنرهای «روشن» به‌صورت
- *     چرخشی (هر ۶ ثانیه) نمایش داده می‌شوند و هر کدام لینک اختصاصی خود را دارند — بدون AdMob.
- *     (بنرهای قدیمی اسلات ۳تایی نسخه ۱.۳/۱.۴ به‌صورت خودکار مهاجرت می‌کنند.)
- *  ۲) در غیر این صورت بنر AdMob.
- *
- * هیچ‌کدام نمایش داده نمی‌شود اگر: عضویت ویژه فعال باشد یا تبلیغات از پنل خاموش شده باشد.
- */
-@Composable
-fun BannerAd(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val premium by AppContainer.accountRepo(context).isPremium
-        .collectAsState(initial = false)
-    // پیکربندی زنده پنل مدیریت — با تغییر تنظیمات، بنر بلافاصله عوض/حذف می‌شود
-    val settings by AppContainer.settingsRepo(context).settings
-        .collectAsState(initial = AppSettings())
-    if (premium || !settings.adsEnabled) return
-
-    // ---------- ۱) بنرهای تصویری اختصاصی — چرخش بدون محدودیت (نسخه ۱.۵) ----------
-    val candidates = settings.bannerEntries()
-        .filter { it.on && File(it.path).exists() }
-
-    if (candidates.isNotEmpty()) {
-        var slot by remember { mutableStateOf(0) }
-        // چرخش هر ۶ ثانیه فقط وقتی بیش از یک بنر روشن وجود داشته باشد
-        androidx.compose.runtime.LaunchedEffect(candidates.size, candidates.hashCode()) {
-            while (candidates.size > 1) {
-                kotlinx.coroutines.delay(6000)
-                slot = (slot + 1) % candidates.size
-            }
-        }
-        val current = candidates[slot % candidates.size]
-        val bmp = remember(current.path) {
-            runCatching { BitmapFactory.decodeFile(current.path) }.getOrNull()
-        }
-        if (bmp != null) {
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = "بنر تبلیغ اختصاصی",
-                contentScale = ContentScale.Crop,
-                modifier = modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .clickable {
-                        if (current.link.isNotBlank()) {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse(current.link))
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            }
-                        }
-                    }
-            )
-            return
-        }
-    }
-
-    // ---------- ۲) بنر AdMob ----------
-    AdManager.syncConfig(
-        adsEnabled = settings.adsEnabled,
-        interstitialEnabled = AdManager.interstitialEnabled,
-        testMode = AdManager.testMode,
-        bannerUnitId = AdManager.realBannerUnitId,
-        interstitialUnitId = AdManager.realInterstitialUnitId
-    )
-    AndroidView(
-        modifier = modifier.fillMaxWidth().height(60.dp),
-        factory = { ctx ->
-            AdView(ctx).apply {
-                setAdSize(AdSize.BANNER)
-                adUnitId = AdManager.activeBannerUnitId
-                loadAd(AdRequest.Builder().build())
-            }
-        }
-    )
-}
-
-/** کارت بخش با گوشه‌های گرد مطابق طراحی اپلیکیشن */
+/** کارت بخش با گوشه‌های گرد مطابق طراحی اپلیکیشن (نسخه ۱.۱۱.۵: نوار تبلیغ پایین صفحه حذف شد) */
 @Composable
 fun SectionCard(
     modifier: Modifier = Modifier,

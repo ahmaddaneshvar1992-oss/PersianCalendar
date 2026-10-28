@@ -1,8 +1,6 @@
 package ir.persiancalendar.app
 
 import android.app.Application
-import android.util.Log
-import com.google.android.gms.ads.MobileAds
 import ir.persiancalendar.app.billing.BillingManager
 import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.notifications.AlarmScheduler
@@ -15,7 +13,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * کلاس اپلیکیشن: راه‌اندازی کانال‌های اعلان، AdMob، Billing و زمان‌بندی‌های اولیه.
+ * کلاس اپلیکیشن: راه‌اندازی کانال‌های اعلان، Billing و زمان‌بندی‌های اولیه.
+ * (نسخه ۱.۱۱.۵: راه‌اندازی AdMob حذف شد — تبلیغات کامل از برنامه برداشته شدند)
  */
 class PersianCalendarApp : Application() {
 
@@ -25,14 +24,8 @@ class PersianCalendarApp : Application() {
         AppContainer.init(this)
         NotificationHelper.createChannels(this)
 
-        // راه‌اندازی AdMob در نخ پس‌زمینه (توصیه گوگل)
-        CoroutineScope(Dispatchers.IO).launch {
-            runCatching { MobileAds.initialize(this@PersianCalendarApp) }
-                .onFailure { Log.w("AdMob", "initialize failed", it) }
-        }
-
         // اتصال به فروشگاه برای خرید/بازگردانی «عضویت ویژه»
-        // (روی گوشی‌های بدون گوگل‌پلی بی‌صدا ناموفق است)
+        // (هیچ‌وقت استثنا نمی‌فرستد — روی گوشی‌های بدون گوگل‌پلی هم امن است)
         runCatching { BillingManager.start(this) }
 
         // زمان‌بندی‌های اولیه: تیک روزانه، اوقات شرعی، یادآوری رویدادها و موتور یادآور عمومی

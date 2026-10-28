@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- AdMob -->
+    <!-- اینترنت: خرید درون‌برنامه‌ای (Google Play Billing) و باز کردن لینک‌ها -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- خرید درون‌برنامه‌ای عضویت ویژه -->
@@ -94,10 +94,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- AdMob — شناسه تست گوگل. پیش از انتشار با شناسه خودتان جایگزین کنید -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+        <!-- نسخه ۱.۱۱.۵: متادیتای AdMob حذف شد (تبلیغات کامل از برنامه برداشته شدند) -->
     </application>
 
     <queries>

@@ -386,7 +386,7 @@ fun OnboardingScreen(settings: AppSettings) {
                         Text("حساب کاربری و عضویت ویژه", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "با ساخت حساب کاربری می‌توانید عضویت ویژه بگیرید؛ با عضویت ویژه تبلیغات حذف می‌شود و تنظیمات شما بین نصب‌های بعدی پشتیبانی می‌شود. ثبت‌نام کاملاً روی همین دستگاه انجام می‌شود و اجباری نیست.",
+                            "با ساخت حساب کاربری می‌توانید عضویت ویژه بگیرید و از توسعه تقویم فارسی حمایت کنید؛ وضعیت ویژه روی همین دستگاه ثبت می‌شود. ثبت‌نام کاملاً روی همین دستگاه انجام می‌شود و اجباری نیست.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

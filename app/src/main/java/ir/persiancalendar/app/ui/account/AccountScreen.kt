@@ -65,7 +65,7 @@ import java.time.ZoneId
  * صفحه حساب کاربری و عضویت ویژه:
  * - ثبت‌نام/ورود کاربر جدید (محلی، آفلاین، پسورد هش‌شده)
  * - ارتقا به عضویت ویژه: خرید درون‌برنامه‌ای (گوگل‌پلی) یا کد فعال‌سازی
- * - پس از ارتقا، همه تبلیغات به‌طور خودکار حذف می‌شوند
+ * - نسخه ۱.۱۱.۵: باز شدن صفحه روی همه گوشی‌ها بدون خروج از برنامه (هاردنینگ Billing)
  */
 @Composable
 fun AccountScreen(onBack: () -> Unit) {
@@ -87,12 +87,14 @@ fun AccountScreen(onBack: () -> Unit) {
 
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
 
-    // اتصال به فروشگاه هنگام ورود به صفحه (اگر قبلاً اتصال نشده باشد)
+    // اتصال به فروشگاه فقط در Application انجام می‌شود (نسخه ۱.۱۱.۵ — رفع خروج برنامه
+    // هنگام باز کردن صفحه حساب: هر خطای Billing نباید در نخ UI منتشر شود)
     LaunchedEffect(Unit) {
-        BillingManager.start(context)
-        BillingManager.setOnPremiumGranted {
-            Handler(Looper.getMainLooper()).post {
-                toast("عضویت ویژه شما فعال شد — تبلیغات حذف شد")
+        runCatching {
+            BillingManager.setOnPremiumGranted {
+                Handler(Looper.getMainLooper()).post {
+                    toast("عضویت ویژه شما فعال شد — سپاس از حمایت شما!")
+                }
             }
         }
     }
@@ -266,7 +268,7 @@ fun AccountScreen(onBack: () -> Unit) {
 
                     if (isPremium) {
                         Text(
-                            "تشکر از حمایت شما! تبلیغات در تمام بخش‌های برنامه حذف شده است.\nوضعیت ویژه شما روی همین دستگاه و حساب‌تان ثبت شده است.",
+                            "تشکر از حمایت شما! وضعیت ویژه شما روی همین دستگاه و حساب‌تان ثبت شده است.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
@@ -275,7 +277,7 @@ fun AccountScreen(onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            "• حذف کامل تبلیغات بنری و تمام‌صفحه\n• پشتیبانی سریع‌تر از توسعه‌دهنده\n• حمایت از توسعه تقویم فارسی",
+                            "• پشتیبانی سریع‌تر از توسعه‌دهنده\n• حمایت از توسعه تقویم فارسی\n• اولویت دریافت امکانات جدید",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

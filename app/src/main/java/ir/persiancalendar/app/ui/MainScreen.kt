@@ -1,7 +1,11 @@
 package ir.persiancalendar.app.ui
 
-import android.app.Activity
+import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,10 +14,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
@@ -25,13 +29,15 @@ import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +59,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import ir.persiancalendar.app.ads.AdManager
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.data.prefs.AppSettings
@@ -62,7 +67,6 @@ import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.ui.account.AccountScreen
 import ir.persiancalendar.app.ui.calendar.CalendarScreen
 import ir.persiancalendar.app.ui.calendar.DayDetailScreen
-import ir.persiancalendar.app.ui.components.BannerAd
 import ir.persiancalendar.app.ui.events.EventEditorSheet
 import ir.persiancalendar.app.ui.events.EventsScreen
 import ir.persiancalendar.app.ui.prayer.PrayerScreen
@@ -73,28 +77,30 @@ import ir.persiancalendar.app.ui.settings.AdminScreen
 import ir.persiancalendar.app.ui.settings.SettingsScreen
 import ir.persiancalendar.app.ui.support.SupportScreen
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+/** آیتم منوی سه‌نقطه — نسخه ۱.۱۱.۵: هر آیتم tab یا action مشخص دارد */
 private data class MenuItem(
     val title: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val tab: Int = -1,
+    val action: String? = null
 )
 
 /** سبز دکمه «+» — مطابق طراحی خواسته‌شده کاربر (نسخه ۱.۳) */
 private val FabGreen = Color(0xFF1EA84D)
 
 /**
- * بدنه اصلی اپلیکیشن — نسخه ۱.۱۱:
- *  - صفحه جدید «یادآورها» (نسخه ۱.۱۱): موتور یادآور عمومی آب/دارو/ورزش/شخصی با Room،
+ * بدنه اصلی اپلیکیشن — نسخه ۱.۱۱.۵:
+ *  - منوی سه‌نقطه (⋮) به سبک «پنل زیبا» باز می‌شود: کارت گوشه‌گرد با آیکن دایره‌ای،
+ *    بخش‌بندی (حساب/اشتراک‌گذاری، صفحه‌ها، ابزارها) و هایلایت تب فعلی — مطابق نمونه کاربر.
+ *  - آیتم‌های جدید منو: «حساب کاربری» و «اشتراک‌گذاری برنامه».
+ *  - نسخه ۱.۱۱.۵: تبلیغات بنری و اینترستیشال به‌طور کامل حذف شد (بنر AdMob،
+ *    بنرهای تصویری چرخشی و سکشن‌های پنل مدیریت مرتبط) — برنامه سبک‌تر است.
+ *  - صفحه «یادآورها» (نسخه ۱.۱۱): موتور یادآور عمومی آب/دارو/ورزش/شخصی با Room،
  *    AlarmManager دقیق، بازیابی بعد از ری‌استارت و اکشن‌های «انجام شد / بعداً یادآوری کن».
- *  - کارت اوقات شرعی (نوار افقی ۸ وقت مطابق عکس) در «پایین صفحه اصلی تقویم،
- *    پیش از مناسبت‌های ماه»؛ فلش سرصفحه کارت به صفحه اوقات شرعی می‌رود.
- *  - ناوبری با «منوی سه‌نقطه» سمت چپ نوار بالا (⋮): تقویم، اوقات شرعی، قبله‌نما، رویدادها،
- *    یادآورها، تنظیمات، پشتیبانی و پنل مدیریت.
+ *  - کارت اوقات شرعی (نوار افقی ۸ وقت) پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه.
  *  - زنگ اطلاعیه کنار منوی سه‌نقطه (نسخه ۱.۶): خبر و تبلیغ از پنل مدیریت با نقطه قرمز.
- *  - صفحه جدید «پشتیبانی»: کاربر درخواست تبلیغ/مشکل/پیشنهاد برای مدیر می‌فرستد.
- *  - فضای پایین = محدوده تبلیغات (بنرهای تصویری نامحدود چرخشی یا AdMob)
  *  - دکمه سبز «+»: در تقویم/رویدادها ثبت سریع رویداد، در یادآورها ساخت یادآور جدید
  *  - باز شدن مستقیم روی تب از اعلان همیشگی (openTabRequest)
  */
@@ -121,9 +127,6 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
         annList = AnnouncementBox.active(context)
         annUnseen = AnnouncementBox.unseenCount(context)
     }
-    // وضعیت عضویت ویژه — برای حذف تبلیغات
-    val isPremium by AppContainer.accountRepo(context).isPremium
-        .collectAsState(initial = false)
     // ویرایشگر رویداد
     var editorDate by remember { mutableStateOf<JalaliDate?>(null) }
     var editorExisting by remember { mutableStateOf<EventEntity?>(null) }
@@ -132,35 +135,24 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
     var remEditorVisible by remember { mutableStateOf(false) }
     var remEditing by remember { mutableStateOf<ir.persiancalendar.app.data.db.ReminderEntity?>(null) }
 
-    // آیتم‌های منوی سه‌نقطه — یادآورها بعد از رویدادها (نسخه ۱.۱۱)
+    // آیتم‌های منوی سه‌نقطه — نسخه ۱.۱۱.۵: حساب کاربری و اشتراک‌گذاری در بخش اول
     val menuItems = listOf(
-        MenuItem("تقویم", Icons.Filled.CalendarMonth),
-        MenuItem("اوقات شرعی", Icons.Filled.AccessTime),
-        MenuItem("قبله‌نما", Icons.Filled.Explore),
-        MenuItem("رویدادها", Icons.Filled.EventNote),
-        MenuItem("یادآورها", Icons.Filled.Alarm),
-        MenuItem("تنظیمات", Icons.Filled.Settings),
-        MenuItem("پشتیبانی", Icons.AutoMirrored.Filled.Help),
-        MenuItem("پنل مدیریت تبلیغات", Icons.Filled.Shield)
+        MenuItem("حساب کاربری", Icons.Filled.Person, action = "account"),
+        MenuItem("اشتراک‌گذاری برنامه", Icons.Filled.Share, action = "share"),
+        MenuItem("تقویم", Icons.Filled.CalendarMonth, tab = 0),
+        MenuItem("اوقات شرعی", Icons.Filled.AccessTime, tab = 1),
+        MenuItem("قبله‌نما", Icons.Filled.Explore, tab = 2),
+        MenuItem("رویدادها", Icons.Filled.EventNote, tab = 3),
+        MenuItem("یادآورها", Icons.Filled.Alarm, tab = 4),
+        MenuItem("تنظیمات", Icons.Filled.Settings, tab = 5),
+        MenuItem("پشتیبانی", Icons.AutoMirrored.Filled.Help, action = "support"),
+        MenuItem("پنل مدیریت", Icons.Filled.Shield, action = "admin")
     )
     val screenTitles = listOf("تقویم فارسی", "اوقات شرعی", "قبله‌نما", "رویدادها", "یادآورها", "تنظیمات")
 
     // رویدادها یک بار برای همه صفحه‌ها
     val events by AppContainer.eventDao(context).observeAll().collectAsState(initial = emptyList())
     val holidayRepo = remember { AppContainer.holidayRepo(context) }
-
-    // پیش‌بارگذاری اینترستیشال (فقط وقتی تبلیغات روشن و کاربر غیرویژه باشد)
-    LaunchedEffect(Unit, isPremium) {
-        val s = AppContainer.settingsRepo(context).settings.first()
-        AdManager.syncConfig(
-            adsEnabled = s.adsEnabled,
-            interstitialEnabled = s.interstitialEnabled,
-            testMode = s.adTestMode,
-            bannerUnitId = s.bannerUnitId,
-            interstitialUnitId = s.interstitialUnitId
-        )
-        if (!isPremium) AdManager.loadInterstitial(context)
-    }
 
     // باز شدن مستقیم روی تب از دکمه‌های اعلان همیشگی
     LaunchedEffect(openTabRequest) {
@@ -191,29 +183,6 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
             adminVisible -> adminVisible = false
             supportVisible -> supportVisible = false
             else -> selectedTab = 0
-        }
-    }
-
-    // اینترستیشال هنگام باز کردن جزئیات روز — تناوب قابل تنظیم از پنل مدیریت (نسخه ۱.۲)
-    LaunchedEffect(dayDetail) {
-        if (dayDetail != null && !isPremium) {
-            val repo = AppContainer.settingsRepo(context)
-            val s = repo.settings.first()
-            AdManager.syncConfig(
-                adsEnabled = s.adsEnabled,
-                interstitialEnabled = s.interstitialEnabled,
-                testMode = s.adTestMode,
-                bannerUnitId = s.bannerUnitId,
-                interstitialUnitId = s.interstitialUnitId
-            )
-            val count = s.interstitialCounter + 1
-            scope.launch(Dispatchers.IO) { repo.incrementInterstitialCounter() }
-            if (s.adsEnabled && s.interstitialEnabled &&
-                count % s.interstitialEvery == 0 && context is Activity
-            ) {
-                AdManager.showInterstitialIfReady(context)
-            }
-            AdManager.loadInterstitial(context)
         }
     }
 
@@ -260,40 +229,46 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                         androidx.compose.material3.IconButton(onClick = { menuOpen = true }) {
                             Icon(Icons.Filled.MoreVert, contentDescription = "منوی برنامه")
                         }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        // نسخه ۱.۱۱.۵: منوی سه‌نقطه به سبک پنل زیبا — کارت گوشه‌گرد با آیکن
+                        // دایره‌ای و بخش‌بندی (مطابق نمونه‌ای که کاربر فرستاد)
+                        DropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false },
+                            shape = RoundedCornerShape(16.dp),
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 8.dp,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
                             menuItems.forEachIndexed { index, item ->
-                                DropdownMenuItem(
-                                    text = { Text(item.title) },
-                                    leadingIcon = {
-                                        Icon(
-                                            item.icon,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    },
-                                    onClick = {
-                                        menuOpen = false
-                                        when (item.title) {
-                                            "پشتیبانی" -> supportVisible = true
-                                            "پنل مدیریت تبلیغات" -> adminVisible = true
-                                            else -> selectedTab = index
-                                        }
+                                // جداکننده بخش‌ها: پیش از «تقویم» و پیش از «تنظیمات»
+                                if (index == 2 || index == 7) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                                MenuRow(
+                                    title = item.title,
+                                    icon = item.icon,
+                                    active = item.tab >= 0 && item.tab == selectedTab,
+                                    primary = MaterialTheme.colorScheme.primary
+                                ) {
+                                    menuOpen = false
+                                    when (item.action) {
+                                        "account" -> accountVisible = true
+                                        "share" -> shareApp(context)
+                                        "support" -> supportVisible = true
+                                        "admin" -> adminVisible = true
+                                        else -> if (item.tab >= 0) selectedTab = item.tab
                                     }
-                                )
+                                }
                             }
                         }
                     }
                 }
             }
         },
-        // ---------- محدوده تبلیغات پایین — بنرهای تصویری نامحدود یا AdMob (نسخه ۱.۵) ----------
-        // نسخه ۱.۱۱.۲: navigationBarsPadding — بنر روی نوار ناوبری سیستم نمی‌نشیند
-        bottomBar = {
-            Box(Modifier.navigationBarsPadding()) {
-                if (!accountVisible && !adminVisible && !supportVisible) BannerAd()
-            }
-        },
+        // ---------- نسخه ۱.۱۱.۵: نوار پایین تبلیغات حذف شد — پایین صفحه محتواست ----------
         // ---------- دکمه سبز «+» — رویداد جدید در تقویم/رویدادها، یادآور جدید در یادآورها ----------
         floatingActionButton = {
             if (!accountVisible && !adminVisible && !supportVisible && dayDetail == null &&
@@ -505,5 +480,68 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                 editorDate = null
             }
         )
+    }
+}
+
+/**
+ * ردیف منوی سه‌نقطه — سبک پنل نمونه کاربر: آیکن در دایره ملایم + عنوان؛
+ * تب فعلی با رنگ اصلی هایلایت می‌شود (نسخه ۱.۱۱.۵)
+ */
+@Composable
+private fun MenuRow(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    active: Boolean,
+    primary: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(
+                    if (active) primary.copy(alpha = 0.16f) else primary.copy(alpha = 0.09f),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.size(12.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (active) primary else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+/** اشتراک‌گذاری برنامه از منوی سه‌نقطه — با لانچر امن (نسخه ۱.۱۱.۵) */
+private fun shareApp(context: android.content.Context) {
+    val ok = runCatching {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "تقویم فارسی — تقویم کامل شمسی با اوقات شرعی، قبله‌نما و یادآور\n" +
+                        "https://github.com/ahmaddaneshvar1992-oss/PersianCalendar/releases"
+            )
+        }
+        context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری برنامه"))
+    }.isSuccess
+    if (!ok) {
+        Toast.makeText(context, "برنامه‌ای برای اشتراک‌گذاری پیدا نشد", Toast.LENGTH_SHORT).show()
     }
 }

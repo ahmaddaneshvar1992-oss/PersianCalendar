@@ -13,8 +13,8 @@ android {
         applicationId = "ir.persiancalendar.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.11.4"
+        versionCode = 17
+        versionName = "1.11.5"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -77,8 +77,7 @@ dependencies {
     // DataStore (تنظیمات)
     implementation(libs.androidx.datastore.preferences)
 
-    // AdMob
-    implementation(libs.play.services.ads)
+    // نسخه ۱.۱۱.۵: وابستگی AdMob (play-services-ads) حذف شد — تبلیغات کامل از برنامه برداشته شدند
 
     // خرید درون‌برنامه‌ای (عضویت ویژه — Google Play)
     implementation(libs.billing.ktx)

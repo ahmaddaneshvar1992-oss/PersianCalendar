@@ -26,8 +26,15 @@ import kotlinx.coroutines.launch
  * - روی گوشی‌های بدون گوگل‌پلی (کافه‌بازار) اتصال ناموفق است و پیام مناسب نمایش می‌شود؛
  *   برای بازار از کد فعال‌سازی یا کتابخانه Poolakey استفاده کنید (docs/MEMBERSHIP-FA.md).
  *
+ * نسخه ۱.۱۱.۵ — هاردنینگ کامل (رفع خروج برنامه هنگام باز کردن صفحه حساب):
+ *  - هیچ متدی از این کلاس استثنا به بیرون نمی‌فرستد — همه مسیرها با runCatching
+ *    محافظت شده‌اند؛ روی گوشی‌های بدون سرویس گوگل هم هیچ کرشی رخ نمی‌دهد.
+ *  - کال‌بک‌های بایندر (onBillingSetupFinished، queryProductDetailsAsync،
+ *    queryPurchasesAsync، PurchasesUpdatedListener) هم محافظت شده‌اند؛
+ *    استثنا در این نخ‌ها کل برنامه را می‌بست.
+ *
  * پس از خرید موفق، AppContainer.accountRepo().grantDevicePremium("billing") فراخوانی
- * می‌شود و همه تبلیغات غیرفعال خواهند شد.
+ * می‌شود و مزایای ویژه فعال می‌شوند.
  */
 object BillingManager {
 
@@ -53,28 +60,38 @@ object BillingManager {
 
     /**
      * اتصال به فروشگاه. در پایان connect، خریدهای قبلی هم بازگردانی می‌شوند.
+     * هیچ‌وقت استثنا نمی‌فرستد (نسخه ۱.۱۱.۵ — روی گوشی‌های بدون گوگل‌پلی هم امن است).
      */
     fun start(context: Context) {
         if (billingClient != null) return
-        billingClient = BillingClient.newBuilder(context.applicationContext)
-            .setListener(purchasesListener)
-            .enablePendingPurchases(PendingPurchasesParams.newBuilder().build())
-            .build()
-        billingClient?.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(result: BillingResult) {
-                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    Log.d(TAG, "Billing connected")
-                    queryProductDetails()
-                    restorePurchases()
-                } else {
-                    Log.w(TAG, "Billing connect failed: ${result.responseCode} ${result.debugMessage}")
+        runCatching {
+            val client = BillingClient.newBuilder(context.applicationContext)
+                .setListener(purchasesListener)
+                .enablePendingPurchases(PendingPurchasesParams.newBuilder().build())
+                .build()
+            billingClient = client
+            client.startConnection(object : BillingClientStateListener {
+                override fun onBillingSetupFinished(result: BillingResult) {
+                    // این کال‌بک روی نخ بایندر گوگل اجرا می‌شود — هر استثنا برنامه را می‌بندد
+                    runCatching {
+                        if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                            Log.d(TAG, "Billing connected")
+                            queryProductDetails()
+                            restorePurchases()
+                        } else {
+                            Log.w(TAG, "Billing connect failed: ${result.responseCode} ${result.debugMessage}")
+                        }
+                    }
                 }
-            }
 
-            override fun onBillingServiceDisconnected() {
-                Log.w(TAG, "Billing disconnected")
-            }
-        })
+                override fun onBillingServiceDisconnected() {
+                    Log.w(TAG, "Billing disconnected")
+                }
+            })
+        }.onFailure { e ->
+            billingClient = null
+            Log.w(TAG, "Billing start failed — فروشگاه در دسترس نیست", e)
+        }
     }
 
     /** ثبت کالبک برای لحظه اعطای موفق عضویت (برای نمایش پیام در UI) */
@@ -83,85 +100,102 @@ object BillingManager {
     }
 
     private fun queryProductDetails() {
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(
-                listOf(
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(PREMIUM_PRODUCT_ID)
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build()
+        runCatching {
+            val params = QueryProductDetailsParams.newBuilder()
+                .setProductList(
+                    listOf(
+                        QueryProductDetailsParams.Product.newBuilder()
+                            .setProductId(PREMIUM_PRODUCT_ID)
+                            .setProductType(BillingClient.ProductType.INAPP)
+                            .build()
+                    )
                 )
-            )
-            .build()
-        billingClient?.queryProductDetailsAsync(params) { result, detailsList ->
-            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                premiumDetails = detailsList.firstOrNull { it.productId == PREMIUM_PRODUCT_ID }
-                premiumPrice = premiumDetails?.oneTimePurchaseOfferDetails?.formattedPrice
-                Log.d(TAG, "Product price: $premiumPrice")
+                .build()
+            billingClient?.queryProductDetailsAsync(params) { result, detailsList ->
+                runCatching {
+                    if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                        premiumDetails = detailsList.firstOrNull { it.productId == PREMIUM_PRODUCT_ID }
+                        premiumPrice = premiumDetails?.oneTimePurchaseOfferDetails?.formattedPrice
+                        Log.d(TAG, "Product price: $premiumPrice")
+                    }
+                }
             }
         }
     }
 
     /** بازگردانی خرید قبلی (مثلاً بعد از نصب مجدد اپ) */
     fun restorePurchases() {
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.INAPP)
-            .build()
-        billingClient?.queryPurchasesAsync(params) { result, purchases ->
-            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                purchases.forEach { handlePurchase(it, grantUiCallback = false) }
+        runCatching {
+            val params = QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+            billingClient?.queryPurchasesAsync(params) { result, purchases ->
+                runCatching {
+                    if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                        purchases.forEach { handlePurchase(it, grantUiCallback = false) }
+                    }
+                }
             }
         }
     }
 
     /** شروع جریان خرید؛ خروجی: آیا جریان راه‌اندازی شد */
     fun launchPremiumPurchase(activity: Activity): Boolean {
-        val details = premiumDetails
-        if (!isReady() || details == null) return false
-        val flowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(
-                listOf(
-                    BillingFlowParams.ProductDetailsParams.newBuilder()
-                        .setProductDetails(details)
-                        .build()
+        if (!isReady()) return false
+        return runCatching {
+            val details = premiumDetails ?: return@runCatching false
+            val flowParams = BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(
+                    listOf(
+                        BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(details)
+                            .build()
+                    )
                 )
-            )
-            .build()
-        val result = billingClient?.launchBillingFlow(activity, flowParams)
-        return result?.responseCode == BillingClient.BillingResponseCode.OK
+                .build()
+            val result = billingClient?.launchBillingFlow(activity, flowParams)
+            result?.responseCode == BillingClient.BillingResponseCode.OK
+        }.getOrDefault(false)
     }
 
     private val purchasesListener = PurchasesUpdatedListener { result, purchases ->
-        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-            Log.w(TAG, "Purchase flow ended: ${result.responseCode}")
-            return@PurchasesUpdatedListener
+        // نخ بایندر گوگل — استثنا اینجا برنامه را می‌بندد (نسخه ۱.۱۱.۵)
+        runCatching {
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                Log.w(TAG, "Purchase flow ended: ${result.responseCode}")
+                return@PurchasesUpdatedListener
+            }
+            purchases?.forEach { handlePurchase(it, grantUiCallback = true) }
         }
-        purchases?.forEach { handlePurchase(it, grantUiCallback = true) }
     }
 
     private fun handlePurchase(purchase: Purchase, grantUiCallback: Boolean) {
-        if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
-        if (!purchase.products.contains(PREMIUM_PRODUCT_ID)) return
+        runCatching {
+            if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
+            if (!purchase.products.contains(PREMIUM_PRODUCT_ID)) return
 
-        val appContext = AppContainer.appContext
-        if (appContext == null) {
-            Log.w(TAG, "AppContext not set — cannot grant premium")
-            return
-        }
-        val repo = AppContainer.accountRepo(appContext)
-        CoroutineScope(Dispatchers.IO).launch {
-            // تأیید خرید (acknowledge) اگر نشده باشد
-            if (!purchase.isAcknowledged) {
-                val ackParams = AcknowledgePurchaseParams.newBuilder()
-                    .setPurchaseToken(purchase.purchaseToken)
-                    .build()
-                billingClient?.acknowledgePurchase(ackParams) { ackResult ->
-                    Log.d(TAG, "Acknowledge: ${ackResult.responseCode}")
-                }
+            val appContext = AppContainer.appContext
+            if (appContext == null) {
+                Log.w(TAG, "AppContext not set — cannot grant premium")
+                return
             }
-            if (purchase.products.contains(PREMIUM_PRODUCT_ID)) {
-                repo.grantDevicePremium("billing")
-                if (grantUiCallback) onPremiumGranted?.invoke()
+            val repo = AppContainer.accountRepo(appContext)
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching {
+                    // تأیید خرید (acknowledge) اگر نشده باشد
+                    if (!purchase.isAcknowledged) {
+                        val ackParams = AcknowledgePurchaseParams.newBuilder()
+                            .setPurchaseToken(purchase.purchaseToken)
+                            .build()
+                        billingClient?.acknowledgePurchase(ackParams) { ackResult ->
+                            runCatching { Log.d(TAG, "Acknowledge: ${ackResult.responseCode}") }
+                        }
+                    }
+                    if (purchase.products.contains(PREMIUM_PRODUCT_ID)) {
+                        repo.grantDevicePremium("billing")
+                        if (grantUiCallback) onPremiumGranted?.invoke()
+                    }
+                }
             }
         }
     }

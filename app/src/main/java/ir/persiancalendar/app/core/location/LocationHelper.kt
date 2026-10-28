@@ -12,15 +12,20 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * دریافت یک‌باره موقعیت کاربر — نسخه ۱.۱۱.۴ (رفع مشکل «GPS موقعیت را پیدا نمی‌کند»)
+ * دریافت یک‌باره موقعیت کاربر — نسخه ۱.۱۱.۵ (رفع باگ «سرویس در دسترس نیست»)
  *
- * مشکلات روش قبلی که باگ می‌ساخت:
+ * باگ نسخه ۱.۱۱.۴: نام provider (مثل "gps") به‌اشتباه به checkSelfPermission داده
+ * می‌شد که همیشه DENIED برمی‌گرداند و کاربر همیشه پیام «هیچ سرویس موقعیتی در
+ * دسترس نیست» می‌دید. اکنون فهرست providerها ثابت است و فقط مجوز کلی + روشن
+ * بودن providerها چک می‌شود.
+ *
+ * مشکلات روش قدیمی‌تر (پیش از ۱.۱۱.۴) که باگ می‌ساخت:
  *  ۱) requestSingleUpdate فقط از GPS_PROVIDER استفاده می‌کرد — در فضای بسته هرگز فیکس نمی‌شد.
  *  ۲) SecurityException با مجوز coarse-only بی‌صدا خورده می‌شد و هیچ اتفاقی نمی‌افتاد.
  *  ۳) روشن بودن سرویس موقعیت گوشی چک نمی‌شد — اگر خاموش بود، بی‌صدا شکست می‌خورد.
  *  ۴) تایم‌اوت وجود نداشت — کاربر تا ابد در «منتظر سیگنال» می‌ماند.
  *
- * روش جدید:
+ * روش فعلی:
  *  ۱) چک مجوز (fine یا coarse کافی است) و چک روشن بودن سرویس موقعیت با پیام روشن.
  *  ۲) ابتدا آخرین موقعیت شناخته‌شده همه providerها (GPS/شبکه/منفعل) — اگر کمتر از ۱۰ دقیقه کهنه باشد کافی است.
  *  ۳) در غیر این صورت درخواست به‌روزرسانی زنده از «همه» providerهای فعال به‌طور هم‌زمان؛
@@ -62,17 +67,15 @@ object LocationHelper {
         }
 
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        // نسخه ۱.۱۱.۵ — رفع باگ «هیچ سرویس موقعیتی در دسترس نیست»:
+        // در نسخه ۱.۱۱.۴ نام provider (مثل "gps") به‌اشتباه به checkSelfPermission داده می‌شد
+        // که همیشه PERMISSION_DENIED برمی‌گرداند و پیام خطا همیشه نمایش داده می‌شد؛
+        // مجوز کلی (fine/coarse) بالاتر بررسی شد — نام provider مجوز نیست.
         val permitted = listOf(
             LocationManager.GPS_PROVIDER,
             LocationManager.NETWORK_PROVIDER,
             LocationManager.PASSIVE_PROVIDER
-        ).filter { p ->
-            ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED
-        }
-        if (permitted.isEmpty()) {
-            main.post { onError("هیچ سرویس موقعیتی در دسترس نیست") }
-            return {}
-        }
+        )
 
         val enabled = permitted.filter { p ->
             runCatching { lm.isProviderEnabled(p) }.getOrDefault(false)
