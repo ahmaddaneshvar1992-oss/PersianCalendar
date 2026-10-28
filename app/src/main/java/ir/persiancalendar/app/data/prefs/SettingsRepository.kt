@@ -130,16 +130,16 @@ class SettingsRepository(private val context: Context) {
         val AD_TEST_MODE = booleanPreferencesKey("ad_test_mode")
         val BANNER_UNIT = stringPreferencesKey("banner_unit_id")
         val INTERSTITIAL_UNIT = stringPreferencesKey("interstitial_unit_id")
-        val ADMIN_PIN = stringPreferencesKey("admin_pin"),
+        val ADMIN_PIN = stringPreferencesKey("admin_pin")
         // ---------- نسخه ۱.۳ ----------
-        val BANNER_IMG = stringPreferencesKey("banner_image_path"),
-        val BANNER_LINK = stringPreferencesKey("banner_link"),
-        val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif"),
+        val BANNER_IMG = stringPreferencesKey("banner_image_path")
+        val BANNER_LINK = stringPreferencesKey("banner_link")
+        val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
         // ---------- نسخه ۱.۴ ----------
-        val BANNER_IMG2 = stringPreferencesKey("banner_image_path2"),
-        val BANNER_IMG3 = stringPreferencesKey("banner_image_path3"),
-        val BANNER_LINK2 = stringPreferencesKey("banner_link2"),
-        val BANNER_LINK3 = stringPreferencesKey("banner_link3"),
+        val BANNER_IMG2 = stringPreferencesKey("banner_image_path2")
+        val BANNER_IMG3 = stringPreferencesKey("banner_image_path3")
+        val BANNER_LINK2 = stringPreferencesKey("banner_link2")
+        val BANNER_LINK3 = stringPreferencesKey("banner_link3")
         // ---------- نسخه ۱.۵ ----------
         val BANNER_LIST_JSON = stringPreferencesKey("banner_list_json")
     }
