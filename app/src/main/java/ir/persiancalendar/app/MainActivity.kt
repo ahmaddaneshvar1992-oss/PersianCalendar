@@ -1,10 +1,14 @@
 package ir.persiancalendar.app
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -16,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.core.content.ContextCompat
 import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.notifications.OngoingDateNotifier
 import ir.persiancalendar.app.ui.MainScreen
@@ -38,17 +43,39 @@ class MainActivity : ComponentActivity() {
     /** تب درخواستی از اعلان (۰=تقویم ۱=اوقات شرعی ۲=قبله ۳=رویدادها ۴=یادآورها ۵=تنظیمات؛ ‎-1‎ = هیچ) */
     private val openTabRequest = mutableIntStateOf(-1)
 
+    /**
+     * نسخه ۱.۱۱.۱۱ (گزارش کاربر: «اعلان‌ها فعال نیست») — اگر کاربر آنبوردینگ را قبلاً کامل
+     * کرده باشد اما مجوز اعلان هنوز داده نشده باشد (مثلاً ارتقا از نسخه‌های قدیمی یا رد شدن
+     * در گام چهارم)، بلافاصله پس از اجرا یک بار سیستم همان دیالوگ مجوز اعلان را نشان می‌دهد.
+     * اگر کاربر «دیگر نپرس» زده باشد، سیستم بی‌صدا رد می‌کند و آزاردهنده نیست.
+     */
+    private val notifPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* نتیجه فقط برای فعال‌شدن مجوز مهم است؛ UI نیازی به آن ندارد */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openTabRequest.intValue = tabFromIntent(intent)
 
+        val settingsRepo = AppContainer.settingsRepo(this)
+        // خواندن اولیه همگام برای جلوگیری از فلش ویزارد در هر اجرای مجدد
+        val initialSettings = runCatching {
+            kotlinx.coroutines.runBlocking { settingsRepo.settings.first() }
+        }.getOrDefault(ir.persiancalendar.app.data.prefs.AppSettings())
+
+        // ---------- درخواست یک‌باره مجوز اعلان برای کاربران ارتقایی (نسخه ۱.۱۱.۱۱) ----------
+        if (initialSettings.onboardingDone &&
+            Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+        ) {
+            runCatching {
+                notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
         setContent {
-            val settingsRepo = AppContainer.settingsRepo(this)
-            // خواندن اولیه همگام برای جلوگیری از فلش ویزارد در هر اجرای مجدد
-            val initialSettings = runCatching {
-                kotlinx.coroutines.runBlocking { settingsRepo.settings.first() }
-            }.getOrDefault(ir.persiancalendar.app.data.prefs.AppSettings())
             val settings by settingsRepo.settings.collectAsState(initial = initialSettings)
 
             PersianCalendarTheme(themeMode = settings.themeMode, accent = settings.accent) {

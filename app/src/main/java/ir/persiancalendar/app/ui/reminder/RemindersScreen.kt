@@ -315,20 +315,31 @@ private fun ReminderRow(
                 Switch(checked = r.enabled, onCheckedChange = onToggle)
             }
             Spacer(Modifier.height(4.dp))
-            val times = r.timesList.joinToString("، ") { fmtMinute(it, fa) }
+            val times = r.timesList.sorted().joinToString("  ·  ") { fmtMinute(it, fa) }
+            // نسخه ۱.۱۱.۱۱ (گزارش کاربر): ساعت‌های نوبت قبلاً داخل یک متن خاکستری کوچک گم می‌شدند؛
+            // اکنون در یک سطر مجزا و با رنگ اصلی و درشت نمایش داده می‌شوند.
+            if (times.isNotEmpty()) {
+                Text(
+                    times,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(2.dp))
+            }
             val schedule = buildString {
                 append(repeatLabel(r))
-                if (times.isNotEmpty()) append(" · $times")
                 if (r.type == ReminderEntity.TYPE_WATER && r.targetCount > 0) {
                     append(" · هدف ${PersianText.toPersianDigits(r.targetCount.toString())} لیوان")
                 }
                 if (r.note.isNotBlank()) append(" · ${r.note}")
             }
-            Text(
-                schedule,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (schedule.isNotBlank()) {
+                Text(
+                    schedule,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -550,5 +561,49 @@ private fun PermissionBanners() {
                 }) { Text("باز کردن تنظیمات") }
             }
         }
+    }
+
+    // بهینه‌سازی باتری — نسخه ۱.۱۱.۱۱: روی گوشی‌های شیائومی/سامسونگ و… بدون استثنا شدن از
+    // بهینه‌سازی، آلارم‌ها گاهی اجرا نمی‌شوند و همین دلیل اصلی «اعلان نمی‌آید» است.
+    if (!isIgnoringBattery(context)) {
+        SectionCard {
+            Column(Modifier.padding(14.dp)) {
+                Text("بهینه‌سازی باتری مانع اعلان‌هاست", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "برای رسیدن حتماً و سرِ وقت یادآوری‌ها، اذان و اعلان تاریخ، برنامه را از " +
+                        "بهینه‌سازی باتری مستثنا کنید. در گوشی‌های شیائومی، گزینه «Autostart» را هم روشن کنید.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+                TextButton(onClick = { requestIgnoreBattery(context) }) {
+                    Text("استثنا کردن از بهینه‌سازی باتری")
+                }
+            }
+        }
+    }
+}
+
+/** آیا برنامه از بهینه‌سازی باتری مستثنا شده است؟ */
+internal fun isIgnoringBattery(context: android.content.Context): Boolean {
+    val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+    return pm.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+/** درخواست استثنا شدن از بهینه‌سازی باتری (دیالوگ سیستمی مستقیم؛ در نبودش صفحه تنظیمات) */
+internal fun requestIgnoreBattery(context: android.content.Context) {
+    val ok = runCatching {
+        context.startActivity(
+            Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .setData(Uri.parse("package:${context.packageName}"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }.isSuccess
+    if (!ok) runCatching {
+        context.startActivity(
+            Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 }

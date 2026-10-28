@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -14,13 +16,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +46,6 @@ import ir.persiancalendar.app.data.model.RepeatType
 import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.notifications.AlarmScheduler
 import ir.persiancalendar.app.ui.components.JalaliDatePickerDialog
-import ir.persiancalendar.app.ui.components.SimpleDropdown
 import ir.persiancalendar.app.ui.theme.EventDotColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,9 +53,13 @@ import kotlinx.coroutines.launch
 
 /**
  * حالت ویرایشگر رویداد (پایین‌صفحه شیشه‌ای).
+ * نسخه ۱.۱۱.۱۱ (گزارش کاربر): انتخابگر ساعت خراب بود — دو فهرست کشویی «ساعت/دقیقه»
+ * داخل شیت پایین‌صفحه باز نمی‌شد و برچسب‌شان هم دیده نمی‌شد؛ جایگزین شد با یک دکمه بزرگ
+ * «۰۹:۰۰» که دیالوگ انتخابگر ساعت متریال را باز می‌کند + زیرعنوان پویای «تمام‌روز»
+ * (وقتی ساعت دارد، همان ساعت را نشان می‌دهد) + چیپ‌های یادآوری/تکرار به‌جای منوی کشویی.
  * @param existing اگر null باشد یعنی رویداد جدید
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EventEditorSheet(
     initialDate: JalaliDate,
@@ -75,6 +85,7 @@ fun EventEditorSheet(
     var repeat by remember { mutableStateOf(RepeatType.fromOrdinal(existing?.repeatType ?: 0)) }
     var colorIndex by remember { mutableStateOf(existing?.colorIndex ?: 0) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -125,12 +136,13 @@ fun EventEditorSheet(
             }
             Spacer(Modifier.height(10.dp))
 
-            // ساعت
+            // ساعت — نسخه ۱.۱۱.۱۱: زیرعنوان پویا + دکمه انتخابگر زمان (رفع باگ منوی کشویی در شیت)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("تمام‌روز", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "بدون ساعت مشخص",
+                        if (allDay) "بدون ساعت مشخص"
+                        else "ساعت رویداد: " + PersianText.timeHM(hour, minute, true),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -138,46 +150,45 @@ fun EventEditorSheet(
                 Switch(checked = allDay, onCheckedChange = { allDay = it })
             }
             if (!allDay) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                Button(
+                    onClick = { showTimePicker = true },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 ) {
-                    SimpleDropdown(
-                        modifier = Modifier.weight(1f),
-                        label = "ساعت",
-                        items = (0..23).map { PersianText.toPersianDigits(String.format("%02d", it)) },
-                        selectedIndex = hour,
-                        onSelected = { hour = it }
-                    )
-                    SimpleDropdown(
-                        modifier = Modifier.weight(1f),
-                        label = "دقیقه",
-                        items = (0..55 step 5).map { PersianText.toPersianDigits(String.format("%02d", it)) },
-                        selectedIndex = minute / 5,
-                        onSelected = { minute = it * 5 }
+                    Text("انتخاب ساعت: " + PersianText.timeHM(hour, minute, true))
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+
+            // یادآوری — چیپ‌های قابل لمس به‌جای منوی کشویی (نسخه ۱.۱۱.۱۱)
+            Text("یادآوری", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(6.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ReminderOption.entries.forEach { opt ->
+                    FilterChip(
+                        selected = reminder == opt,
+                        onClick = { reminder = opt },
+                        label = { Text(opt.label) }
                     )
                 }
             }
             Spacer(Modifier.height(10.dp))
 
-            // یادآوری
-            SimpleDropdown(
-                modifier = Modifier.fillMaxWidth(),
-                label = "یادآوری",
-                items = ReminderOption.entries.map { it.label },
-                selectedIndex = ReminderOption.entries.indexOf(reminder),
-                onSelected = { reminder = ReminderOption.entries[it] }
-            )
-            Spacer(Modifier.height(10.dp))
-
-            // تکرار
-            SimpleDropdown(
-                modifier = Modifier.fillMaxWidth(),
-                label = "تکرار",
-                items = RepeatType.entries.map { it.label },
-                selectedIndex = RepeatType.entries.indexOf(repeat),
-                onSelected = { repeat = RepeatType.entries[it] }
-            )
+            // تکرار — چیپ‌های قابل لمس به‌جای منوی کشویی (نسخه ۱.۱۱.۱۱)
+            Text("تکرار", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(6.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                RepeatType.entries.forEach { rep ->
+                    FilterChip(
+                        selected = repeat == rep,
+                        onClick = { repeat = rep },
+                        label = { Text(rep.label) }
+                    )
+                }
+            }
             Spacer(Modifier.height(12.dp))
 
             // رنگ
@@ -245,6 +256,26 @@ fun EventEditorSheet(
             onSelected = {
                 date = it
                 showDatePicker = false
+            }
+        )
+    }
+
+    // ---------- انتخابگر ساعت رویداد (نسخه ۱.۱۱.۱۱ — جایگزین دو منوی کشویی خراب) ----------
+    if (showTimePicker) {
+        val timeState = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("ساعت رویداد") },
+            text = { TimePicker(state = timeState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    hour = timeState.hour
+                    minute = timeState.minute
+                    showTimePicker = false
+                }) { Text("تأیید") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("انصراف") }
             }
         )
     }

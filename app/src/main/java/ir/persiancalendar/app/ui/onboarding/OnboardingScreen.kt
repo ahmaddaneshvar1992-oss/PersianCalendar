@@ -31,7 +31,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,8 +50,11 @@ import ir.persiancalendar.app.core.location.LocationHelper
 import ir.persiancalendar.app.core.prayer.Cities
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.di.AppContainer
+import ir.persiancalendar.app.notifications.AlarmScheduler
 import ir.persiancalendar.app.ui.components.CityPickerDialog
 import ir.persiancalendar.app.ui.components.SectionCard
+import ir.persiancalendar.app.ui.reminder.isIgnoringBattery
+import ir.persiancalendar.app.ui.reminder.requestIgnoreBattery
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -61,7 +66,9 @@ import java.time.LocalTime
  *  ۱) گام اول: تنظیم افق — انتخاب شهر (با جست‌وجو) یا مکان‌یاب GPS
  *  ۲) گام دوم: تنظیم تاریخ و زمان — نمایش تاریخ شمسی/میلادی/قمری و ساعت
  *  ۳) گام سوم: اذان‌ها — انتخاب کدام اوقات اعلان اذان داده شود (صبح، ظهر، عصر، مغرب، عشا)
- *  ۴) گام چهارم: اعلان‌ها — درخواست مجوز اعلان اندروید ۱۳+ با گزینه «فعلاً نه»
+ *  ۴) گام چهارم: اعلان‌ها — چک‌لیست کامل مجوزها (نسخه ۱.۱۱.۱۱):
+ *     مجوز اعلان اندروید ۱۳+ + آلارم دقیق اندروید ۱۲+ + استثنا از بهینه‌سازی باتری
+ *     با وضعیت زنده (بعد از برگشت از تنظیمات خودکار به‌روز می‌شود)
  *  ۵) گام پنجم: حساب کاربری — معرفی عضویت ویژه (اختیاری؛ می‌توان بعداً ثبت‌نام کرد)
  *
  * نتیجه در DataStore ذخیره می‌شود (onboardingDone=true) و MainScreen جایگزین می‌شود.
@@ -91,6 +98,20 @@ fun OnboardingScreen(settings: AppSettings) {
     val repo = remember { AppContainer.settingsRepo(context) }
 
     var step by remember { mutableStateOf(0) }
+
+    // ---------- بازخوانی وضعیت مجوزها بعد از برگشت از تنظیمات (نسخه ۱.۱۱.۱۱) ----------
+    val activity = context as? androidx.activity.ComponentActivity
+    var resumeTick by remember { mutableIntStateOf(0) }
+    DisposableEffect(activity) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) resumeTick++
+        }
+        activity?.lifecycle?.addObserver(obs)
+        onDispose { activity?.lifecycle?.removeObserver(obs) }
+    }
+    val notifOk = remember(resumeTick) { notifGranted(context) }
+    val exactOk = remember(resumeTick) { AlarmScheduler.canExact(context) }
+    val batteryOk = remember(resumeTick) { isIgnoringBattery(context) }
 
     // ---------- گام ۱: شهر ----------
     var cityIndex by remember { mutableStateOf(settings.cityIndex) }
@@ -318,34 +339,38 @@ fun OnboardingScreen(settings: AppSettings) {
                 }
             }
 
-            // ---------------- گام ۴: اعلان‌ها ----------------
+            // ---------------- گام ۴: اعلان‌ها — چک‌لیست کامل مجوزها (نسخه ۱.۱۱.۱۱) ----------------
             3 -> {
                 SectionCard {
                     Column(Modifier.padding(14.dp)) {
                         Text("اجازه اعلان‌ها", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "برای یادآورها (آب، دارو، ورزش و کارهای شخصی)، اذان و اعلان همیشگی تاریخ، برنامه به اجازه اعلان نیاز دارد.",
+                            "برای یادآورها (آب، دارو، ورزش و کارهای شخصی)، اذان و اعلان همیشگی تاریخ، " +
+                                "برنامه به هر سه اجازه زیر نیاز دارد تا همه اعلان‌ها سرِ وقت برسند.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(10.dp))
+
+                        // --- ۱) مجوز اعلان (اندروید ۱۳+) ---
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                if (notifState) "✓" else "✗",
-                                color = if (notifState) MaterialTheme.colorScheme.primary
+                                if (notifOk) "✓" else "✗",
+                                color = if (notifOk) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(Modifier.size(8.dp))
                             Text(
-                                if (notifState) "اعلان‌ها فعال است"
-                                else "اعلان‌ها غیرفعال است — بخشی از امکانات کار نمی‌کند",
-                                style = MaterialTheme.typography.bodyMedium
+                                if (notifOk) "اعلان‌ها فعال است"
+                                else "مجوز اعلان داده نشده — بخشی از امکانات کار نمی‌کند",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
                             )
                         }
-                        Spacer(Modifier.height(10.dp))
-                        if (!notifState) {
+                        if (!notifOk) {
+                            Spacer(Modifier.height(8.dp))
                             Button(
                                 onClick = {
                                     if (Build.VERSION.SDK_INT >= 33) {
@@ -366,11 +391,66 @@ fun OnboardingScreen(settings: AppSettings) {
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("باز کردن تنظیمات اعلان‌های گوشی") }
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // --- ۲) آلارم دقیق (اندروید ۱۲+) ---
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "اگر «فعلاً نه» را انتخاب کنید، می‌توانید بعداً از تنظیمات گوشی یا خود برنامه فعالش کنید.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                if (exactOk) "✓" else "✗",
+                                color = if (exactOk) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.titleMedium
                             )
+                            Spacer(Modifier.size(8.dp))
+                            Text(
+                                if (exactOk) "آلارم دقیق فعال است"
+                                else "آلارم دقیق غیرفعال — یادآوری‌ها ممکن است تأخیر داشته باشند",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (!exactOk) {
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                                .setData(android.net.Uri.parse("package:${context.packageName}"))
+                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("اجازه آلارم دقیق") }
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // --- ۳) بهینه‌سازی باتری ---
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                if (batteryOk) "✓" else "✗",
+                                color = if (batteryOk) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(Modifier.size(8.dp))
+                            Text(
+                                if (batteryOk) "از بهینه‌سازی باتری مستثنا است"
+                                else "بهینه‌سازی باتری — بدون استثنا، اعلان‌ها روی بعضی گوشی‌ها نمی‌رسند",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (!batteryOk) {
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { requestIgnoreBattery(context) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("استثنا کردن از بهینه‌سازی باتری") }
                         }
                     }
                 }
@@ -425,7 +505,16 @@ fun OnboardingScreen(settings: AppSettings) {
         }
         Spacer(Modifier.height(8.dp))
         if (step < 4) {
-            TextButton(onClick = { persistAndFinish() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            TextButton(
+                onClick = {
+                    // نسخه ۱.۱۱.۱۱: حتی هنگام رد کردن گام‌ها، مجوز اعلان یک بار پرسیده می‌شود
+                    if (Build.VERSION.SDK_INT >= 33 && !notifGranted(context)) {
+                        notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    persistAndFinish()
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
                 Text("رد کردن همه گام‌ها و شروع برنامه")
             }
         }

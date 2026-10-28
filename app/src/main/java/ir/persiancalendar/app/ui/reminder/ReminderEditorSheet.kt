@@ -2,6 +2,8 @@ package ir.persiancalendar.app.ui.reminder
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,7 +54,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /** ویرایشگر یادآور — نسخه ۱.۱۱ (آب / دارو / ورزش / شخصی) */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReminderEditorSheet(
     existing: ReminderEntity?,
@@ -152,24 +154,37 @@ fun ReminderEditorSheet(
             Spacer(Modifier.height(12.dp))
 
             // ---------- نوبت‌های ساعت ----------
+            // نسخه ۱.۱۱.۱۱ (گزارش کاربر): چیپ‌ها داخل Row معمولی بودند و با چند نوبت،
+            // دکمه «+ ساعت» از صفحه بیرون می‌زد و دیده نمی‌شد؛ اکنون FlowRow است و
+            // هر تعداد ساعت به سطر بعدی می‌رود و دکمه افزودن همیشه پیدا است.
             Text("ساعت‌های یادآوری *", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(6.dp))
-            Row {
-                times.forEach { m ->
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                times.sorted().forEach { m ->
                     AssistChip(
                         onClick = { times = times - m },
                         label = { Text(fmtMinute(m, true)) },
                         trailingIcon = {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "حذف ساعت",
+                                contentDescription = "حذف ساعت $m",
                                 modifier = Modifier.size(14.dp)
                             )
-                        },
-                        modifier = Modifier.padding(end = 6.dp)
+                        }
                     )
                 }
                 OutlinedButton(onClick = { timePickerOpen = true }) { Text("+ ساعت") }
+            }
+            if (times.isEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "هنوز ساعتی اضافه نشده — با دکمه «+ ساعت» نوبت‌های یادآوری را اضافه کنید.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Spacer(Modifier.height(12.dp))
 
