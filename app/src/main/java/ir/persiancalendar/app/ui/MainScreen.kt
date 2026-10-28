@@ -14,11 +14,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.AccessTime
@@ -35,7 +39,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FloatingActionButton
@@ -58,7 +61,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.window.PopupPositionProvider
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.data.prefs.AppSettings
@@ -91,12 +102,14 @@ private data class MenuItem(
 private val FabGreen = Color(0xFF1EA84D)
 
 /**
- * بدنه اصلی اپلیکیشن — نسخه ۱.۱۱.۵:
+ * بدنه اصلی اپلیکیشن — نسخه ۱.۱۱.۶:
+ *  - پنل منوی سه‌نقطه دقیقاً کنار خود دکمه ⋮ (سمت چپ گوشی) باز می‌شود —
+ *    جای‌گذاری قطعی با PopupPositionProvider اختصاصی، مستقل از جهت چیدمان (گزارش کاربر).
  *  - منوی سه‌نقطه (⋮) به سبک «پنل زیبا» باز می‌شود: کارت گوشه‌گرد با آیکن دایره‌ای،
  *    بخش‌بندی (حساب/اشتراک‌گذاری، صفحه‌ها، ابزارها) و هایلایت تب فعلی — مطابق نمونه کاربر.
- *  - آیتم‌های جدید منو: «حساب کاربری» و «اشتراک‌گذاری برنامه».
- *  - نسخه ۱.۱۱.۵: تبلیغات بنری و اینترستیشال به‌طور کامل حذف شد (بنر AdMob،
- *    بنرهای تصویری چرخشی و سکشن‌های پنل مدیریت مرتبط) — برنامه سبک‌تر است.
+ *  - آیتم‌های منو: «حساب کاربری» و «اشتراک‌گذاری برنامه».
+ *  - نسخه ۱.۱۱.۵: تبلیغات بنری AdMob و اینترستیشال حذف شدند؛ از نسخه ۱.۱۱.۶ بنرهای
+ *    اختصاصی مدیر (پنل مدیریت ← تبلیغات صفحه اصلی) در صفحه اصلی تقویم نمایش داده می‌شوند.
  *  - صفحه «یادآورها» (نسخه ۱.۱۱): موتور یادآور عمومی آب/دارو/ورزش/شخصی با Room،
  *    AlarmManager دقیق، بازیابی بعد از ری‌استارت و اکشن‌های «انجام شد / بعداً یادآوری کن».
  *  - کارت اوقات شرعی (نوار افقی ۸ وقت) پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه.
@@ -226,40 +239,68 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                             }
                         }
                         // سه‌نقطه در سمت چپ (در RTL پایان سطر = چپ)
-                        androidx.compose.material3.IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "منوی برنامه")
-                        }
-                        // نسخه ۱.۱۱.۵: منوی سه‌نقطه به سبک پنل زیبا — کارت گوشه‌گرد با آیکن
-                        // دایره‌ای و بخش‌بندی (مطابق نمونه‌ای که کاربر فرستاد)
-                        DropdownMenu(
-                            expanded = menuOpen,
-                            onDismissRequest = { menuOpen = false },
-                            shape = RoundedCornerShape(16.dp),
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 8.dp,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                        ) {
-                            menuItems.forEachIndexed { index, item ->
-                                // جداکننده بخش‌ها: پیش از «تقویم» و پیش از «تنظیمات»
-                                if (index == 2 || index == 7) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                    )
-                                }
-                                MenuRow(
-                                    title = item.title,
-                                    icon = item.icon,
-                                    active = item.tab >= 0 && item.tab == selectedTab,
-                                    primary = MaterialTheme.colorScheme.primary
+                        // نسخه ۱.۱۱.۶: پنل منو داخل Box همین دکمه با Popup اختصاصی باز می‌شود
+                        // تا دقیقاً زیر خود دکمه ⋮ (سمت چپ گوشی) و کنارش قرار بگیرد
+                        Box {
+                            androidx.compose.material3.IconButton(onClick = { menuOpen = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = "منوی برنامه")
+                            }
+                            if (menuOpen) {
+                                val density = LocalDensity.current
+                                val marginPx = with(density) { 10.dp.roundToPx() }
+                                val gapPx = with(density) { 4.dp.roundToPx() }
+                                Popup(
+                                    popupPositionProvider = remember(marginPx, gapPx) {
+                                        LeftAnchoredMenuProvider(marginPx, gapPx)
+                                    },
+                                    onDismissRequest = { menuOpen = false },
+                                    properties = PopupProperties(focusable = true)
                                 ) {
-                                    menuOpen = false
-                                    when (item.action) {
-                                        "account" -> accountVisible = true
-                                        "share" -> shareApp(context)
-                                        "support" -> supportVisible = true
-                                        "admin" -> adminVisible = true
-                                        else -> if (item.tab >= 0) selectedTab = item.tab
+                                    // پنل زیبا — کارت گوشه‌گرد با آیکن دایره‌ای و بخش‌بندی
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        shadowElevation = 8.dp,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.outlineVariant
+                                        ),
+                                        modifier = Modifier.widthIn(min = 232.dp, max = 312.dp)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .heightIn(max = 460.dp)
+                                                .verticalScroll(rememberScrollState())
+                                        ) {
+                                            menuItems.forEachIndexed { index, item ->
+                                                // جداکننده بخش‌ها: پیش از «تقویم» و پیش از «تنظیمات»
+                                                if (index == 2 || index == 7) {
+                                                    HorizontalDivider(
+                                                        modifier = Modifier.padding(
+                                                            horizontal = 10.dp,
+                                                            vertical = 4.dp
+                                                        ),
+                                                        color = MaterialTheme.colorScheme
+                                                            .outlineVariant.copy(alpha = 0.5f)
+                                                    )
+                                                }
+                                                MenuRow(
+                                                    title = item.title,
+                                                    icon = item.icon,
+                                                    active = item.tab >= 0 && item.tab == selectedTab,
+                                                    primary = MaterialTheme.colorScheme.primary
+                                                ) {
+                                                    menuOpen = false
+                                                    when (item.action) {
+                                                        "account" -> accountVisible = true
+                                                        "share" -> shareApp(context)
+                                                        "support" -> supportVisible = true
+                                                        "admin" -> adminVisible = true
+                                                        else -> if (item.tab >= 0) selectedTab = item.tab
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -480,6 +521,32 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                 editorDate = null
             }
         )
+    }
+}
+
+/**
+ * جای‌گذار پنل منو — نسخه ۱.۱۱.۶ (گزارش کاربر)
+ *
+ * پنل همیشه دقیقاً زیر دکمه سه‌نقطه و هم‌تراز لبه دکمه (سمت چپ گوشی) باز می‌شود؛
+ * برخلاف DropdownMenu پیش‌فرض، جهت چیدمان (RTL) در محل باز شدن اثر ندارد و
+ * اگر پنل از عرض صفحه بزرگ‌تر باشد به داخل صفحه محدود می‌شود.
+ */
+private class LeftAnchoredMenuProvider(
+    private val marginPx: Int,
+    private val gapPx: Int
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize
+    ): IntOffset {
+        // لبه شروع پنل = لبه دکمه سه‌نقطه؛ خروج از صفحه با حاشیه امن محدود می‌شود
+        val maxX = (windowSize.width - popupContentSize.width - marginPx).coerceAtLeast(marginPx)
+        val x = anchorBounds.left.coerceIn(marginPx, maxX)
+        val maxY = (windowSize.height - popupContentSize.height - marginPx).coerceAtLeast(0)
+        val y = (anchorBounds.bottom + gapPx).coerceIn(0, maxY)
+        return IntOffset(x, y)
     }
 }
 

@@ -51,6 +51,7 @@ import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.data.model.EventRepetition
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.ui.components.JalaliDatePickerDialog
+import ir.persiancalendar.app.ui.components.MainAdsSection
 import ir.persiancalendar.app.ui.prayer.PrayerTimesCard
 import ir.persiancalendar.app.ui.theme.EventDotColors
 import ir.persiancalendar.app.ui.theme.holidayColor
@@ -209,6 +210,13 @@ fun CalendarScreen(
                 selected = selectedJalali
             )
         }
+
+        Spacer(Modifier.height(10.dp))
+
+        // ---------- بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶ (درخواست کاربر) ----------
+        // هر چند بنر که مدیر در «پنل مدیریت ← تبلیغات صفحه اصلی» ساخته باشد، همین‌جا
+        // به‌ترتیب از بالا به پایین نمایش داده می‌شود؛ اگر بنری نباشد این بخش کلاً حذف است.
+        MainAdsSection()
 
         Spacer(Modifier.height(10.dp))
 

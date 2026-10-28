@@ -1,6 +1,8 @@
 package ir.persiancalendar.app.ui.settings
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,25 +38,30 @@ import ir.persiancalendar.app.data.db.UserEntity
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.data.support.Announcement
 import ir.persiancalendar.app.data.support.AnnouncementBox
+import ir.persiancalendar.app.data.support.MainAd
+import ir.persiancalendar.app.data.support.MainAdBox
 import ir.persiancalendar.app.data.support.SupportBox
 import ir.persiancalendar.app.data.support.SupportMessage
 import ir.persiancalendar.app.di.AppContainer
+import ir.persiancalendar.app.ui.components.AdColorNames
 import ir.persiancalendar.app.ui.components.SectionCard
 import ir.persiancalendar.app.ui.components.SimpleDropdown
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * پنل مدیریت — نسخه ۱.۱۱.۵
+ * پنل مدیریت — نسخه ۱.۱۱.۶
  *
  * صفحه‌ای مخصوص توسعه‌دهنده (با رمز) برای:
+ *  - تبلیغات صفحه اصلی: بنرهای اختصاصی مدیر، هر چند تا که بخواهد — نسخه ۱.۱۱.۶
+ *    (تصویر از گالری یا URL، رنگ، دکمه و لینک اختیاری + ترتیب نمایش + روشن/خاموش)
  *  - اطلاعیه‌ها: خبر و تبلیغ زنگ کنار منوی سه‌نقطه — نسخه ۱.۶
  *  - صندوق پشتیبانی: پیام‌های کاربران (تبلیغ/مشکل/پیشنهاد) — نسخه ۱.۵
  *  - مشاهده آمار و فهرست کاربران ثبت‌نام‌شده
  *  - تغییر رمز پنل — رمز می‌تواند حروف و اعداد با هم داشته باشد — نسخه ۱.۳
  *
- * نسخه ۱.۱۱.۵: تبلیغات بنری و اینترستیشال به‌طور کامل از برنامه حذف شد؛
- * سکشن‌های AdMob و بنرهای تصویری چرخشی از این پنل برداشته شدند.
+ * یادداشت: SDK تبلیغاتی بیرونی (AdMob) و اینترستیشال همچنان کاملاً حذف است؛
+ * بنرهای صفحه اصلی فقط تبلیغ‌های خود مدیر هستند (نسخه ۱.۱۱.۶).
  */
 @Composable
 fun AdminScreen(onBack: () -> Unit) {
@@ -75,6 +82,15 @@ fun AdminScreen(onBack: () -> Unit) {
     var annTitle by remember { mutableStateOf("") }
     var annBody by remember { mutableStateOf("") }
     var annLink by remember { mutableStateOf("") }
+    // بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶
+    var ads by remember { mutableStateOf<List<MainAd>>(emptyList()) }
+    var adTitle by remember { mutableStateOf("") }
+    var adBody by remember { mutableStateOf("") }
+    var adCta by remember { mutableStateOf("") }
+    var adLink by remember { mutableStateOf("") }
+    var adColorIndex by remember { mutableStateOf(0) }
+    var adPickedImage by remember { mutableStateOf("") }
+    var adImageUrl by remember { mutableStateOf("") }
 
     // بارگذاری فهرست کاربران و پیام‌های پشتیبانی پس از ورود
     LaunchedEffect(authed) {
@@ -85,6 +101,28 @@ fun AdminScreen(onBack: () -> Unit) {
             }
             anns = kotlinx.coroutines.withContext(Dispatchers.IO) {
                 AnnouncementBox.load(context)
+            }
+            ads = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                MainAdBox.load(context)
+            }
+        }
+    }
+
+    // انتخاب تصویر بنر از گالری — کپی به filesDir/ads (نسخه ۱.۱۱.۶)
+    val adImagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                val saved = MainAdBox.saveImageFromUri(context, uri)
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    if (saved.isNotBlank()) {
+                        adPickedImage = saved
+                        Toast.makeText(context, "تصویر بنر انتخاب شد", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "خواندن تصویر ممکن نشد", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
@@ -110,7 +148,7 @@ fun AdminScreen(onBack: () -> Unit) {
                     Text("ورود توسعه‌دهنده", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "این پنل برای مدیریت اطلاعیه‌ها و مشاهده کاربران است. رمز پیش‌فرض ۱۲۳۴ است؛ حتماً قبل از انتشار عوضش کنید.",
+                        "این پنل برای مدیریت بنرهای تبلیغ صفحه اصلی، اطلاعیه‌ها و مشاهده کاربران است. رمز پیش‌فرض ۱۲۳۴ است؛ حتماً قبل از انتشار عوضش کنید.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -138,16 +176,182 @@ fun AdminScreen(onBack: () -> Unit) {
                 }
             }
         } else {
-            // ---------- نسخه ۱.۱۱.۵: تبلیغات حذف شد — کارت اطلاع‌رسانی ----------
+            // ---------- تبلیغات صفحه اصلی — بنرهای اختصاصی مدیر (نسخه ۱.۱۱.۶) ----------
             SectionCard {
                 Column(Modifier.padding(14.dp)) {
-                    Text("تبلیغات حذف شد", style = MaterialTheme.typography.titleMedium)
+                    Text("تبلیغات صفحه اصلی", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "از نسخه ۱٫۱۱٫۵ بنر تبلیغاتی و اینترستیشال به‌طور کامل از برنامه حذف شده است؛ این پنل برای اطلاعیه‌ها، صندوق پشتیبانی، آمار و کاربران است.",
+                        "بنرهای تبلیغ خودتان را به صفحه اصلی تقویم اضافه کنید — هر چند تا که بخواهید. " +
+                                "بنرهای فعال به‌ترتیب از بالا به پایین، پیش از کارت اوقات شرعی نمایش داده می‌شوند. " +
+                                "تصویر و لینک اختیاری‌اند؛ اگر بنری نسازید صفحه اصلی بدون هیچ تبلیغی می‌ماند.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(Modifier.height(8.dp))
+                    if (ads.isEmpty()) {
+                        Text(
+                            "هنوز بنری نساخته‌اید",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        ads.forEachIndexed { idx, ad ->
+                            Column(Modifier.padding(vertical = 6.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(ad.title, style = MaterialTheme.typography.titleSmall)
+                                        Text(
+                                            (if (ad.on) "فعال" else "خاموش") +
+                                                    (if (ad.image.isNotBlank()) " · تصویردار" else "") +
+                                                    (if (ad.link.isNotBlank()) " · لینک‌دار" else ""),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    TextButton(
+                                        onClick = {
+                                            scope.launch(Dispatchers.IO) {
+                                                MainAdBox.move(context, ad.id, -1)
+                                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                                    ads = MainAdBox.load(context)
+                                                }
+                                            }
+                                        },
+                                        enabled = idx > 0
+                                    ) { Text("▲") }
+                                    TextButton(
+                                        onClick = {
+                                            scope.launch(Dispatchers.IO) {
+                                                MainAdBox.move(context, ad.id, 1)
+                                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                                    ads = MainAdBox.load(context)
+                                                }
+                                            }
+                                        },
+                                        enabled = idx < ads.size - 1
+                                    ) { Text("▼") }
+                                    Switch(
+                                        checked = ad.on,
+                                        onCheckedChange = { on ->
+                                            scope.launch(Dispatchers.IO) {
+                                                MainAdBox.setEnabled(context, ad.id, on)
+                                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                                    ads = MainAdBox.load(context)
+                                                }
+                                            }
+                                        }
+                                    )
+                                    TextButton(onClick = {
+                                        scope.launch(Dispatchers.IO) {
+                                            MainAdBox.delete(context, ad.id)
+                                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                                ads = MainAdBox.load(context)
+                                            }
+                                        }
+                                    }) { Text("حذف") }
+                                }
+                                if (ad.body.isNotBlank()) {
+                                    Text(ad.body, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    // ---------- فرم افزودن بنر جدید ----------
+                    Text("افزودن بنر جدید", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = adTitle,
+                        onValueChange = { adTitle = it },
+                        label = { Text("عنوان بنر (مثلاً: تخفیف ویژه فروشگاه)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = adBody,
+                        onValueChange = { adBody = it },
+                        label = { Text("توضیح کوتاه (اختیاری)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = adCta,
+                        onValueChange = { adCta = it },
+                        label = { Text("متن دکمه (اختیاری — پیش‌فرض: مشاهده)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = adLink,
+                        onValueChange = { adLink = it },
+                        label = { Text("لینک (اختیاری)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    SimpleDropdown(
+                        modifier = Modifier.fillMaxWidth(),
+                        label = "رنگ بنر",
+                        items = AdColorNames,
+                        selectedIndex = adColorIndex,
+                        onSelected = { idx -> adColorIndex = idx }
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = { adImagePicker.launch("image/*") }) {
+                            Text("انتخاب تصویر از گالری")
+                        }
+                        Spacer(Modifier.padding(horizontal = 4.dp))
+                        if (adPickedImage.isNotBlank()) {
+                            Text(
+                                "تصویر انتخاب شد ✓",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            TextButton(onClick = { adPickedImage = "" }) { Text("حذف") }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = adLinkUrl,
+                        onValueChange = { adLinkUrl = it },
+                        label = { Text("یا آدرس اینترنتی تصویر (URL — اختیاری)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            if (adTitle.trim().length < 2) {
+                                Toast.makeText(context, "عنوان بنر را وارد کنید", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            val finalImage = adPickedImage.ifBlank { adImageUrl.trim() }
+                            scope.launch(Dispatchers.IO) {
+                                MainAdBox.add(
+                                    context,
+                                    title = adTitle,
+                                    body = adBody,
+                                    cta = adCta,
+                                    link = adLink,
+                                    image = finalImage,
+                                    colorIndex = adColorIndex
+                                )
+                                val fresh = MainAdBox.load(context)
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    ads = fresh
+                                    adTitle = ""; adBody = ""; adCta = ""; adLink = ""
+                                    adPickedImage = ""; adImageUrl = ""; adColorIndex = 0
+                                    Toast.makeText(
+                                        context,
+                                        "بنر به صفحه اصلی اضافه شد",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("+ افزودن بنر به صفحه اصلی") }
                 }
             }
 
@@ -168,6 +372,10 @@ fun AdminScreen(onBack: () -> Unit) {
                     )
                     Text(
                         "اطلاعیه‌های فعال (زنگ): ${anns.count { it.on }} از ${anns.size}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "بنرهای تبلیغ صفحه اصلی: ${ads.count { it.on }} از ${ads.size}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
