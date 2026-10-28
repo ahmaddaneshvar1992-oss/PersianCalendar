@@ -49,9 +49,9 @@ data class AppSettings(
     val prayerMethod: PrayerMethod = PrayerMethod.TEHRAN,
     val prayerNotifications: Set<Int> = setOf(1, 3, 5), // صبح، ظهر، مغرب
     val useCurrentLocation: Boolean = false,
-    // ---------- نسخه ۱.۲: اذان دلخواه + پنل مدیریت ----------
-    /** صدای اذان: mashhad / hajjaghar / najaf / none */
-    val adhanSound: String = "mashhad",
+    // ---------- نسخه ۱.۲: اذان دلخواه + پنل مدیریت (۱.۱۱.۸: اذان‌های واقعی) ----------
+    /** صدای اذان: moazenzadeh / rezayian / none (کلیدهای قدیمی در AdhanSounds نرمال می‌شوند) */
+    val adhanSound: String = "moazenzadeh",
     /** رمز پنل مدیریت (حروف و/یا اعداد — نسخه ۱.۳) */
     val adminPin: String = "1234",
     /** اعلان همیشگی تاریخ امروز در نوار وضعیت */
@@ -94,7 +94,7 @@ class SettingsRepository(private val context: Context) {
             // ماسک بیت‌ها: ۱=صبح ۲=طلوع ۴=ظهر ۸=عصر ۱۶=غروب ۳۲=مغرب ۶۴=عشا
             prayerNotifications = decodeMask(p[Keys.PRAYER_NOTIF] ?: (1 or 4 or 32)),
             useCurrentLocation = p[Keys.USE_LOCATION] ?: false,
-            adhanSound = p[Keys.ADHAN_SOUND] ?: "mashhad",
+            adhanSound = p[Keys.ADHAN_SOUND] ?: "moazenzadeh",
             adminPin = p[Keys.ADMIN_PIN] ?: "1234",
             ongoingDateNotif = p[Keys.ONGOING_DATE] ?: true,
             onboardingDone = p[Keys.ONBOARDING_DONE] ?: false

@@ -5,36 +5,51 @@ import android.media.MediaPlayer
 import ir.persiancalendar.app.R
 
 /**
- * صدای اذان دلخواه — نسخه ۱.۲
+ * صدای اذان دلخواه — نسخه ۱.۱۱.۸
  *
- * سه فایل نمونه در res/raw موجود است:
- *   adhan_mashhad.wav · adhan_hajjaghar.wav · adhan_najaf.wav
+ * گزارش کاربر: «اذان هارو جایگزین کن» — سه نمونه ساده‌شده قدیمی (مشهد/حاج‌اصغر/نجف)
+ * حذف شدند و دو اذان کامل و واقعی جایگزین شدند:
+ *   adhan_moazenzadeh.mp3 — اذان رحیم مؤذن‌زاده اردبیلی (حدود ۴:۲۶)
+ *   adhan_rezayian.mp3    — اذان حسن رضائیان (شورای عالی قرآن، حدود ۴:۳۰)
  *
- * ⚠️ این فایل‌ها «نمونه صوتی ساده‌شده» هستند. برای تجربه واقعی، فایل اذان دلخواه خود را
- * (mp3 یا wav) با همان نام در res/raw جایگزین کنید — نیازی به تغییر کد نیست.
- * آموزش کامل در docs/WHATS-NEW-v1.2-FA.md آمده است.
+ * هر دو فایل اذان کامل mp3 هستند و با MediaPlayer پخش می‌شوند
+ * (هم پیش‌نمایش داخل برنامه و هم سرویس AzanPlaybackService هنگام اعلان اذان).
  */
 object AdhanSounds {
 
     /** کلیدهای مجاز صدا (مقدار DataStore) */
-    val KEYS = listOf("mashhad", "hajjaghar", "najaf", "none")
+    val KEYS = listOf("moazenzadeh", "rezayian", "none")
 
     /** برچسب فارسی هر کلید برای نمایش در UI */
     val LABELS = listOf(
-        "اذان مشهد",
-        "اذان حاج‌اصغر (تهران)",
-        "اذان نجف اشراف",
+        "اذان مؤذن‌زاده اردبیلی",
+        "اذان حسن رضائیان",
         "بدون صدا — فقط اعلان"
     )
 
-    fun labelOf(key: String): String =
-        LABELS[KEYS.indexOf(key).takeIf { it >= 0 } ?: 0]
+    /**
+     * نگاشت کلیدهای قدیمی (نسخه‌های ۱.۲ تا ۱.۱۱.۷ که نمونه‌های ساده داشتند)
+     * به اذان‌های جدید — تا تنظیم ذخیره‌شده کاربران قدیمی بی‌اعتبار نشود:
+     *   mashhad (پیش‌فرض قدیم) → مؤذن‌زاده · hajjaghar/najaf → رضائیان
+     */
+    private val LEGACY_ALIASES = mapOf(
+        "mashhad" to "moazenzadeh",
+        "hajjaghar" to "rezayian",
+        "najaf" to "rezayian"
+    )
+
+    /** نرمال‌سازی کلید: کلیدهای قدیمی به اذان جدید معادل تبدیل می‌شوند */
+    private fun normalize(key: String): String = LEGACY_ALIASES[key] ?: key
+
+    fun labelOf(key: String): String {
+        val k = normalize(key)
+        return LABELS[KEYS.indexOf(k).takeIf { it >= 0 } ?: 0]
+    }
 
     /** منبع صوتی هر کلید؛ «none» یعنی بدون پخش صدا */
-    fun resIdFor(key: String): Int? = when (key) {
-        "hajjaghar" -> R.raw.adhan_hajjaghar
-        "najaf" -> R.raw.adhan_najaf
-        "mashhad" -> R.raw.adhan_mashhad
+    fun resIdFor(key: String): Int? = when (normalize(key)) {
+        "moazenzadeh" -> R.raw.adhan_moazenzadeh
+        "rezayian" -> R.raw.adhan_rezayian
         else -> null
     }
 

@@ -391,7 +391,7 @@ fun PrayerScreen(
                     Text("آزمایش اعلان اذان")
                 }
                 Text(
-                    "فایل‌های اذان نمونه در res/raw قرار دارند و می‌توانید آنها را با اذان واقعی دلخواه جایگزین کنید",
+                    "دو اذان کامل و واقعی (مؤذن‌زاده اردبیلی و حسن رضائیان) داخل برنامه موجود است؛ با دکمه پخش همین‌جا بشنوید",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
