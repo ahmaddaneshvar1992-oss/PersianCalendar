@@ -1,20 +1,21 @@
 package ir.persiancalendar.app.ui.prayer
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -41,10 +42,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ir.persiancalendar.app.core.calendar.CalendarConverter
+import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
+import ir.persiancalendar.app.core.events.HolidayRepository
 import ir.persiancalendar.app.core.prayer.Cities
 import ir.persiancalendar.app.core.prayer.PrayerTimesCalculator
 import ir.persiancalendar.app.data.prefs.AppSettings
@@ -52,6 +56,7 @@ import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.ui.calendar.formatHour
 import ir.persiancalendar.app.ui.components.CityPickerDialog
 import ir.persiancalendar.app.ui.components.SectionCard
+import ir.persiancalendar.app.ui.theme.holidayColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -61,9 +66,15 @@ import java.time.LocalDateTime
  * کارت اوقات شرعی (نوار افقی ۸ وقت) — نسخه ۱.۱۰:
  * مو‌به‌مو مطابق عکس ارسالی کاربر و به درخواست او در «پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه»
  * قرار می‌گیرد (پیش‌تر نسخه ۱.۹ فقط در صفحه اوقات شرعی بود). این کامپوزابل کاملاً مستقل است:
- * سرصفحه (آیکون طلوع + عنوان + فلش رفتن به صفحه اوقات شرعی + «بخش اذان» + پخش اذان + منوی سه‌نقطه)،
- * فلش باز/بسته کردن جدول ماهانه، نوار افقی ۸ وقت با جداکننده عمودی و هایلایت نزدیک‌ترین وقت،
- * خط پایین (شهر + نزدیک‌ترین وقت + شمارش معکوس زنده هر ۳۰ ثانیه) و جدول ماهانه.
+ * سرصفحه (آیکون طلوع + «اوقات شرعی + نام شهر» + فلش رفتن به صفحه اوقات شرعی + «بخش اذان» + پخش اذان + منوی سه‌نقطه)،
+ * فلش باز/بسته کردن روزهای ماه، نوار افقی ۸ وقت با جداکننده عمودی و هایلایت نزدیک‌ترین وقت،
+ * خط پایین (شهر + نزدیک‌ترین وقت + شمارش معکوس زنده هر ۳۰ ثانیه) و پنل «روزهای ماه».
+ *
+ * نسخه ۱.۱۱.۱۰ (درخواست کاربر):
+ * ۱) نام شهرستان منتخب کنار عنوان «اوقات شرعی» نوشته می‌شود («اوقات شرعی تهران»).
+ * ۲) جدول ماهانه قدیمی (۳۱ ردیف اسکرول افقی) با «روزهای ماه مثل تقویم» جایگزین شد:
+ *    همان شبکه صفحه اصلی (سربرگ ش ی د س چ پ ج، امروز پرشده سبز، جمعه‌ها و تعطیل‌ها رنگ تعطیل)
+ *    با این تفاوت که لمس هر روز، نوار ۸ وقتِ همان روز را پایین شبکه نشان می‌دهد.
  */
 @Composable
 fun PrayerTimesCard(
@@ -80,6 +91,10 @@ fun PrayerTimesCard(
 
     val city = Cities.list[settings.cityIndex.coerceIn(0, Cities.list.size - 1)]
     val today = remember { LocalDate.now() }
+    val todayJ = CalendarConverter.gregorianToJalali(today.year, today.monthValue, today.dayOfMonth)
+    val holidayRepo = remember { AppContainer.holidayRepo(context) }
+    // روز انتخابی در پنل «روزهای ماه» — پیش‌فرض امروز (نسخه ۱.۱۱.۱۰)
+    var selectedDay by remember { mutableStateOf(todayJ.day) }
     val times = PrayerTimesCalculator.compute(
         today, city.lat, city.lng, Cities.IRAN_TZ_HOURS, settings.prayerMethod
     )
@@ -133,8 +148,9 @@ fun PrayerTimesCard(
                         modifier = Modifier.size(26.dp)
                     )
                     Spacer(Modifier.width(6.dp))
+                    // نسخه ۱.۱۱.۱۰: نام شهرستان منتخب جلوی عنوان (درخواست کاربر)
                     Text(
-                        "اوقات شرعی",
+                        "اوقات شرعی ${city.name}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -185,7 +201,7 @@ fun PrayerTimesCard(
                                 onClick = { cardMenuOpen = false; cityPickerVisible = true }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (monthTableVisible) "بستن جدول ماهانه" else "جدول ماهانه") },
+                                text = { Text(if (monthTableVisible) "بستن روزهای ماه" else "روزهای ماه") },
                                 onClick = { cardMenuOpen = false; monthTableVisible = !monthTableVisible }
                             )
                             DropdownMenuItem(
@@ -210,7 +226,7 @@ fun PrayerTimesCard(
                     }
                 }
                 HorizontalDivider()
-                // فلش رو به پایین — باز/بسته کردن جدول ماهانه (مانند عکس)
+                // فلش رو به پایین — باز/بسته کردن روزهای ماه (نسخه ۱.۱۱.۱۰)
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     IconButton(
                         onClick = { monthTableVisible = !monthTableVisible },
@@ -218,7 +234,7 @@ fun PrayerTimesCard(
                     ) {
                         Icon(
                             Icons.Filled.KeyboardArrowDown,
-                            contentDescription = "جدول ماهانه اوقات شرعی",
+                            contentDescription = "روزهای ماه و اوقات شرعی",
                             tint = if (monthTableVisible) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.graphicsLayer { rotationZ = if (monthTableVisible) 180f else 0f }
@@ -284,54 +300,99 @@ fun PrayerTimesCard(
             }
         }
 
-        // ---------- جدول ماهانه (فلش کارت — باز/بسته) ----------
+        // ---------- روزهای ماه مثل تقویم + اوقات روز انتخابی — نسخه ۱.۱۱.۱۰ (درخواست کاربر) ----------
         if (monthTableVisible) {
             Spacer(Modifier.height(10.dp))
             SectionCard {
                 Column(Modifier.padding(10.dp)) {
-                    val todayJ = CalendarConverter.gregorianToJalali(
-                        today.year, today.monthValue, today.dayOfMonth
-                    )
                     Text(
                         "اوقات شرعی ${city.name} — ${PersianText.monthYear(todayJ.year, todayJ.month, persianDigits)}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(8.dp))
-                    Column(
+                    // شبکه روزهای ماه — دقیقاً مثل تقویم صفحه اصلی (ش ی د س چ پ ج)
+                    PrayerMonthGrid(
+                        jy = todayJ.year,
+                        jm = todayJ.month,
+                        todayJ = todayJ,
+                        selectedDay = selectedDay,
+                        holidayRepo = holidayRepo,
+                        persianDigits = persianDigits,
+                        onSelect = { selectedDay = it }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
+                    // اوقات روز انتخابی — همان نوار ۸ وقت
+                    val selG = CalendarConverter.jalaliToGregorian(todayJ.year, todayJ.month, selectedDay)
+                    val selDate = LocalDate.of(selG.year, selG.month, selG.day)
+                    val selTimes = PrayerTimesCalculator.compute(
+                        selDate, city.lat, city.lng, Cities.IRAN_TZ_HOURS, settings.prayerMethod
+                    )
+                    val selValues = listOf(
+                        selTimes.fajr, selTimes.sunrise, selTimes.dhuhr, selTimes.asr,
+                        selTimes.sunset, selTimes.maghrib, selTimes.isha, selTimes.midnight
+                    )
+                    val wdIdx = PersianText.weekdayIndexSat0(selDate)
+                    val selDayText = if (persianDigits) PersianText.toPersianDigits(selectedDay.toString())
+                    else selectedDay.toString()
+                    Text(
+                        text = "${PersianText.weekDays[wdIdx]} $selDayText " +
+                                "${PersianText.jalaliMonths[todayJ.month - 1]} — اوقات شرعی ${city.name}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .height(IntrinsicSize.Min)
+                            .padding(vertical = 4.dp)
                     ) {
-                        // سربرگ جدول
-                        Row {
-                            TableCell("روز", 46.dp, header = true)
-                            shortLabels.forEach { TableCell(it, 56.dp, header = true) }
-                        }
-                        val days = CalendarConverter.jalaliMonthLength(todayJ.year, todayJ.month)
-                        for (d in 1..days) {
-                            val g = CalendarConverter.jalaliToGregorian(todayJ.year, todayJ.month, d)
-                            val t = PrayerTimesCalculator.compute(
-                                LocalDate.of(g.year, g.month, g.day), city.lat, city.lng,
-                                Cities.IRAN_TZ_HOURS, settings.prayerMethod
-                            )
-                            val vals = listOf(
-                                t.fajr, t.sunrise, t.dhuhr, t.asr,
-                                t.sunset, t.maghrib, t.isha, t.midnight
-                            )
-                            Row(
-                                modifier = if (d == todayJ.day) Modifier.background(
-                                    MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(6.dp)
-                                ) else Modifier
-                            ) {
-                                TableCell(
-                                    if (persianDigits) PersianText.toPersianDigits(d.toString()) else d.toString(),
-                                    46.dp, highlight = d == todayJ.day
+                        shortLabels.forEachIndexed { i, lbl ->
+                            if (i > 0) {
+                                Box(
+                                    Modifier
+                                        .width(1.dp)
+                                        .fillMaxHeight()
+                                        .background(MaterialTheme.colorScheme.outlineVariant)
                                 )
-                                vals.forEach { TableCell(formatHour(it, persianDigits), 56.dp, highlight = d == todayJ.day) }
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .padding(vertical = 2.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    lbl,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.height(3.dp))
+                                Text(
+                                    shortHour(selValues[i], persianDigits),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
                         }
                     }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "هر روز را لمس کنید تا اوقات شرعی همان روز نمایش داده شود",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
             }
         }
@@ -360,26 +421,101 @@ private fun shortHour(hourValue: Double, persianDigits: Boolean): String {
     return if (persianDigits) PersianText.toPersianDigits(text) else text
 }
 
-/** خانه جدول ماهانه اوقات شرعی */
+/**
+ * شبکه روزهای ماه اوقات شرعی — نسخه ۱.۱۱.۱۰ (درخواست کاربر: «می‌خوام مثل عکس
+ * روزهای تقویم نمایش داده بشه») — مو‌به‌مو با شبکه صفحه اصلی تقویم:
+ * سربرگ ش ی د س چ پ ج (جمعه رنگ تعطیل)، امروز با دکمه سبز پر، تعطیلی‌ها با رنگ تعطیل
+ * و روز انتخابی با قاب رنگی؛ لمس هر روز آن را برای نمایش اوقات انتخاب می‌کند.
+ */
 @Composable
-private fun TableCell(
-    text: String,
-    width: androidx.compose.ui.unit.Dp,
-    header: Boolean = false,
-    highlight: Boolean = false
+private fun PrayerMonthGrid(
+    jy: Int, jm: Int,
+    todayJ: JalaliDate,
+    selectedDay: Int,
+    holidayRepo: HolidayRepository,
+    persianDigits: Boolean,
+    onSelect: (Int) -> Unit
 ) {
-    Box(
-        modifier = Modifier.width(width),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (header || highlight) FontWeight.Bold else FontWeight.Normal,
-            color = if (header) MaterialTheme.colorScheme.onSurfaceVariant
-            else if (highlight) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(vertical = 5.dp)
-        )
+    val monthLen = CalendarConverter.jalaliMonthLength(jy, jm)
+    val firstG = CalendarConverter.jalaliToGregorian(jy, jm, 1)
+    val firstDate = LocalDate.of(firstG.year, firstG.month, firstG.day)
+    val firstIndex = PersianText.weekdayIndexSat0(firstDate) // ۰=شنبه
+
+    Column(Modifier.fillMaxWidth()) {
+        // سربرگ روزهای هفته — مثل تقویم صفحه اصلی
+        Row(modifier = Modifier.fillMaxWidth()) {
+            PersianText.weekDaysShort.forEach { wd ->
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = wd,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (wd == "ج") holidayColor() else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        // شش ردیف هفته — چینش دقیقاً مثل MonthGrid صفحه اصلی
+        var cellIndex = 0
+        repeat(6) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                repeat(7) {
+                    val dayOffset = cellIndex - firstIndex
+                    cellIndex++
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        if (dayOffset in 0 until monthLen) {
+                            val dayNum = dayOffset + 1
+                            val g = firstDate.plusDays(dayOffset.toLong())
+                            val j = JalaliDate(jy, jm, dayNum)
+                            val isToday = j == todayJ
+                            val isSelected = dayNum == selectedDay
+                            val isHoliday = holidayRepo.isHoliday(j, g)
+                            val numText = if (persianDigits) PersianText.toPersianDigits(dayNum.toString())
+                            else dayNum.toString()
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .padding(2.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        when {
+                                            isToday -> MaterialTheme.colorScheme.primary
+                                            isSelected -> MaterialTheme.colorScheme.primaryContainer
+                                            else -> Color.Transparent
+                                        }
+                                    )
+                                    .then(
+                                        if (isSelected && !isToday) Modifier.border(
+                                            width = 1.dp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) else Modifier
+                                    )
+                                    .clickable { onSelect(dayNum) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = numText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = when {
+                                        isToday -> MaterialTheme.colorScheme.onPrimary
+                                        isHoliday -> holidayColor()
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            }
+                        } else {
+                            Spacer(Modifier.aspectRatio(1f))
+                        }
+                    }
+                }
+            }
+        }
     }
 }

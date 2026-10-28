@@ -157,7 +157,8 @@ fun PrayerScreen(
         // ---------- سرصفحه: شهر و روش ----------
         SectionCard {
             Column(Modifier.padding(14.dp)) {
-                Text("اوقات شرعی", style = MaterialTheme.typography.headlineSmall)
+                // نسخه ۱.۱۱.۱۰: نام شهرستان منتخب جلوی عنوان (درخواست کاربر)
+                Text("اوقات شرعی ${city.name}", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(10.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
