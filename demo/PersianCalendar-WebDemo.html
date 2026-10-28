@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>پیش‌نمایش تعاملی — تقویم فارسی</title>
+<title>پیش‌نمایش تعاملی — باد خزان</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -316,7 +316,7 @@ textarea:focus{border-color:var(--primary)}
 
   <div class="card-note">
     <h2>این صفحه چیست؟</h2>
-    <p>فایل تحویل‌شده (<b>PersianCalendar-Source-v1.11.8.zip</b>) <b>کد منبع اپلیکیشن بومی اندروید (Kotlin)</b> است، نه یک وب‌اپلیکیشن. فایل‌های Kotlin باید در <b>Android Studio</b> با Gradle به APK کامپایل شوند و روی شبیه‌ساز یا گوشی اجرا شوند — به همین دلیل هیچ «اجرای زنده‌ای» از خود اپ اندروید در سایت وجود ندارد.</p>
+    <p>فایل تحویل‌شده (<b>PersianCalendar-Source-v1.11.9.zip</b>) <b>کد منبع اپلیکیشن بومی اندروید (Kotlin)</b> است، نه یک وب‌اپلیکیشن. فایل‌های Kotlin باید در <b>Android Studio</b> با Gradle به APK کامپایل شوند و روی شبیه‌ساز یا گوشی اجرا شوند — به همین دلیل هیچ «اجرای زنده‌ای» از خود اپ اندروید در سایت وجود ندارد.</p>
     <p style="margin-top:6px">اما برای اینکه طراحی و منطق را همین حالا ببینید، این <b>پیش‌نمایش تعاملی وب</b> با همان الگوریتم‌های واقعی پروژه ساخته شده: تقویم جلالی، تاریخ هجری قمری، مناسبت‌های رسمی ۱۴۰۴ تا ۱۴۰۶، اوقات شرعی (روش مؤسسه ژئوفیزیک تهران) و <b>موتور یادآور عمومی</b> (آب، دارو، ورزش، شخصی). گوشی شبیه‌سازی‌شده زیر را امتحان کنید؛ یادآور بسازید، لیوان آب ثبت کنید یا اعلان را با دکمه زنگ هر یادآور شبیه‌سازی کنید.</p>
   </div>
 
@@ -324,8 +324,8 @@ textarea:focus{border-color:var(--primary)}
     <div class="statusbar"><span id="sbTime">۹:۴۱</span><span class="sig">▂▄▆█ ۹۸٪</span></div>
     <div class="appbar">
       <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
-      <h1 id="appTitle">تقویم فارسی</h1>
-      <span class="ver-chip">نسخه ۱٫۱۱٫۸ — دمو</span>
+      <h1 id="appTitle">باد خزان</h1>
+      <span class="ver-chip">نسخه ۱٫۱۱٫۹ — دمو</span>
       <button class="bell" id="btnBell" title="اطلاعیه‌ها (خبر و تبلیغ)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg><span class="bell-dot" id="bellDot"></span></button>
       <button class="kebab" id="btnKebab" title="منوی برنامه"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
     </div>
@@ -354,7 +354,7 @@ textarea:focus{border-color:var(--primary)}
         <div class="notif" id="notifBar">
           <div class="n-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
           <div class="n-body">
-            <div class="n-title" id="notifTitle">تقویم فارسی</div>
+            <div class="n-title" id="notifTitle">باد خزان</div>
             <div class="n-sub" id="notifSub">اعلان همیشگی — همیشه در دسترس</div>
             <div class="n-actions">
               <button id="notifBtnEvents">لیست اعلان‌ها</button>
@@ -469,9 +469,8 @@ textarea:focus{border-color:var(--primary)}
           <div id="adhanRows"></div>
           <div class="field" style="margin-top:10px;margin-bottom:6px"><label>صدای اذان</label>
             <select id="selSound">
-              <option value="mashhad">اذان مشهد</option>
-              <option value="hajjaghar">اذان حاج‌اصغر (تهران)</option>
-              <option value="najaf">اذان نجف اشراف</option>
+              <option value="moazenzadeh">اذان مؤذن‌زاده اردبیلی</option>
+              <option value="rezayian">اذان حسن رضائیان</option>
               <option value="none">بدون صدا — فقط اعلان</option>
             </select>
           </div>
@@ -555,7 +554,7 @@ textarea:focus{border-color:var(--primary)}
         </div>
         <div class="card" style="margin-top:14px">
           <div style="font-size:13px;font-weight:800;margin-bottom:6px">درباره برنامه</div>
-          <div class="dd-conv">تقویم فارسی · نسخه ۱٫۱۱٫۸<br><b>موتور یادآور عمومی (جدید ۱٫۱۱)</b>: یک سیستم یادآور همه‌کاره برای آب، دارو، ورزش و کارهای شخصی — چند نوبت ساعت برای هر یادآور (مثلا آب هر روز ساعت ۱۰، ۱۲، ۱۴ و ۱۶)، روزهای هفته دلخواه، بازه تاریخ شروع تا پایان شمسی، حالت یک‌باره/روزانه/هفتگی، «برنامه امروز» با ثبت انجام‌شدن هر نوبت، پیشرفت آب روزانه با هدف لیوان، اعلان با دکمه‌های «انجام شد» و «بعداً یادآوری کن» (۱۰ دقیقه)، بازیابی خودکار آلارم‌ها پس از ری‌استارت گوشی و تغییر ساعت/منطقه زمانی، درخواست مجوز اعلان اندروید ۱۳+ و بنر راهنمای آلارم دقیق ۱۲+/۱۴.<br>تقویم جلالی + هجری قمری + میلادی، اوقات شرعی ۳۹۶ شهر/شهرستان با انتخاب استانی/شهرستانی و مکان‌یاب، کارت اوقات شرعی مطابق عکس — در <b>پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه</b> (نوار افقی ۸ وقت: صبح، طلوع، ظهر، عصر، غروب، مغرب، عشا، نیمه‌شب با هایلایت سبز نزدیک‌ترین وقت + سرصفحه «اوقات شرعی» و «بخش اذان» با پخش اذان + فلش بازکردن جدول ماهانه)، دکمه بازگشت به امروز در ماه‌های دیگر، زنگ اطلاعیه کنار منوی سه‌نقطه با خبر و تبلیغ از پنل مدیریت، اذان‌های دلخواه (انتخاب وقت و صدا + اعلان اذان با صدا)، اعلان همیشگی تاریخ، دکمه سبز «+» برای ثبت سریع رویداد و یادآور، منوی سه‌نقطه پنلی زیبا با آیکن که دقیقاً کنار خود دکمه ⋮ در سمت چپ گوشی باز می‌شود (حساب کاربری، اشتراک‌گذاری برنامه، تقویم، اوقات شرعی، قبله‌نما، رویدادها، یادآورها، تنظیمات، پشتیبانی، پنل مدیریت)، بخش پشتیبانی با ارسال پیام به مدیر، قبله‌نما با GPS و قطب‌نمای زنده، اطلاعیه‌های عکس‌دار از پنل مدیریت (گالری یا URL — جدید ۱٫۱۱٫۷)، مناسبت‌های روز لمس‌شده با همان فرم «مناسبت‌های این ماه» زیر تقویم (جدید ۱٫۱۱٫۷)، میان‌برهای قبله‌نما و یادآورها کنار زنگ اطلاعیه (جدید ۱٫۱۱٫۷)، پخش واقعی اذان هنگام نوتیف با سرویس اختصاصی حتی با بسته‌بودن برنامه + پلیر آزمایش اذان کنار «اذان دلخواه» (جدید ۱٫۱۱٫۷)، <b>اذان‌های کامل و واقعی رحیم مؤذن‌زاده اردبیلی و حسن رضائیان جایگزین نمونه‌های ساده شدند</b> (جدید ۱٫۱۱٫۸)، بنرهای تبلیغ اختصاصی مدیر در صفحه اصلی — هر چند تا که بخواهید با تصویر/رنگ/دکمه/لینک (۱٫۱۱٫۶، از پنل مدیریت؛ بدون هیچ AdMob و اینترستیشال)، یادآوری رویدادها، حساب کاربری و عضویت ویژه، ویجت ماهانه، پشتیبان‌گیری محلی و پشتیبانی کامل راست‌به‌چپ.<br><br>این یک پیش‌نمایش وب از طراحی است؛ ویژگی‌هایی مانند اعلان واقعی یادآور و اذان (AlarmManager دقیق)، ذخیره در Room، بازیابی پس از ری‌استارت، اعلان همیشگی در نوار وضعیت، حسگر قطب‌نما و GPS واقعی، ویجت، خرید درون‌برنامه‌ای و پشتیبان‌گیری فایل فقط در نسخه اندرویدی کار می‌کنند. راهنماها در فایل‌های README-FA و MEMBERSHIP-FA داخل سورس آمده است.</div>
+          <div class="dd-conv">باد خزان (تقویم فارسی) · نسخه ۱٫۱۱٫۹<br><b>موتور یادآور عمومی (جدید ۱٫۱۱)</b>: یک سیستم یادآور همه‌کاره برای آب، دارو، ورزش و کارهای شخصی — چند نوبت ساعت برای هر یادآور (مثلا آب هر روز ساعت ۱۰، ۱۲، ۱۴ و ۱۶)، روزهای هفته دلخواه، بازه تاریخ شروع تا پایان شمسی، حالت یک‌باره/روزانه/هفتگی، «برنامه امروز» با ثبت انجام‌شدن هر نوبت، پیشرفت آب روزانه با هدف لیوان، اعلان با دکمه‌های «انجام شد» و «بعداً یادآوری کن» (۱۰ دقیقه)، بازیابی خودکار آلارم‌ها پس از ری‌استارت گوشی و تغییر ساعت/منطقه زمانی، درخواست مجوز اعلان اندروید ۱۳+ و بنر راهنمای آلارم دقیق ۱۲+/۱۴.<br>تقویم جلالی + هجری قمری + میلادی، اوقات شرعی ۳۹۶ شهر/شهرستان با انتخاب استانی/شهرستانی و مکان‌یاب، کارت اوقات شرعی مطابق عکس — در <b>پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه</b> (نوار افقی ۸ وقت: صبح، طلوع، ظهر، عصر، غروب، مغرب، عشا، نیمه‌شب با هایلایت سبز نزدیک‌ترین وقت + سرصفحه «اوقات شرعی» و «بخش اذان» با پخش اذان + فلش بازکردن جدول ماهانه)، دکمه بازگشت به امروز در ماه‌های دیگر، زنگ اطلاعیه کنار منوی سه‌نقطه با خبر و تبلیغ از پنل مدیریت، اذان‌های دلخواه (انتخاب وقت و صدا + اعلان اذان با صدا)، اعلان همیشگی تاریخ، دکمه سبز «+» برای ثبت سریع رویداد و یادآور، منوی سه‌نقطه پنلی زیبا با آیکن که دقیقاً کنار خود دکمه ⋮ در سمت چپ گوشی باز می‌شود (حساب کاربری، اشتراک‌گذاری برنامه، تقویم، اوقات شرعی، قبله‌نما، رویدادها، یادآورها، تنظیمات، پشتیبانی، پنل مدیریت)، بخش پشتیبانی با ارسال پیام به مدیر، قبله‌نما با GPS و قطب‌نمای زنده، اطلاعیه‌های عکس‌دار از پنل مدیریت (گالری یا URL — جدید ۱٫۱۱٫۷)، مناسبت‌های روز لمس‌شده با همان فرم «مناسبت‌های این ماه» زیر تقویم (جدید ۱٫۱۱٫۷)، میان‌برهای قبله‌نما و یادآورها کنار زنگ اطلاعیه (جدید ۱٫۱۱٫۷)، پخش واقعی اذان هنگام نوتیف با سرویس اختصاصی حتی با بسته‌بودن برنامه + پلیر آزمایش اذان کنار «اذان دلخواه» (جدید ۱٫۱۱٫۷)، <b>اذان‌های کامل و واقعی رحیم مؤذن‌زاده اردبیلی و حسن رضائیان جایگزین نمونه‌های ساده شدند</b> (جدید ۱٫۱۱٫۸)، <b>روزهای قمر در عقرب سال ۱۴۰۵ — ورود و خروج ماه به برج عقرب با ساعت دقیق مطابق جدول رسمی — در مناسبت‌های ماه و مناسبت‌های روز لمس‌شده ثبت می‌شود</b> و نام برنامه به <b>باد خزان</b> تغییر کرد (جدید ۱٫۱۱٫۹)، بنرهای تبلیغ اختصاصی مدیر در صفحه اصلی — هر چند تا که بخواهید با تصویر/رنگ/دکمه/لینک (۱٫۱۱٫۶، از پنل مدیریت؛ بدون هیچ AdMob و اینترستیشال)، یادآوری رویدادها، حساب کاربری و عضویت ویژه، ویجت ماهانه، پشتیبان‌گیری محلی و پشتیبانی کامل راست‌به‌چپ.<br><br>این یک پیش‌نمایش وب از طراحی است؛ ویژگی‌هایی مانند اعلان واقعی یادآور و اذان (AlarmManager دقیق)، ذخیره در Room، بازیابی پس از ری‌استارت، اعلان همیشگی در نوار وضعیت، حسگر قطب‌نما و GPS واقعی، ویجت، خرید درون‌برنامه‌ای و پشتیبان‌گیری فایل فقط در نسخه اندرویدی کار می‌کنند. راهنماها در فایل‌های README-FA و MEMBERSHIP-FA داخل سورس آمده است.</div>
         </div>
       </section>
 
@@ -930,6 +929,8 @@ var OFFICIAL=[
 var FIXED=[[1,1,'عید نوروز',1],[1,2,'عید نوروز',1],[1,3,'عید نوروز',1],[1,4,'عید نوروز',1],[1,12,'روز جمهوری اسلامی',1],[1,13,'سیزده‌بدر - روز طبیعت',1],[3,14,'رحلت امام خمینی',1],[3,15,'قیام ۱۵ خرداد',1],[11,22,'پیروزی انقلاب اسلامی',1],[12,29,'ملی شدن صنعت نفت ایران',1]];
 /* مناسبت‌های قمری محاسباتی (الگوریتم کویت؛ برای سال‌های دارای داده رسمی فقط عنوان‌های تکراری حذف می‌شوند) */
 var LUNAR=[[9,1,'تاسوعای حسینی',1],[10,1,'عاشورای حسینی',1],[20,2,'اربعین حسینی',1],[28,2,'رحلت رسول خدا و شهادت امام حسن مجتبی',1],[99,2,'شهادت امام رضا',1],[8,3,'شهادت امام حسن عسکری',0],[12,3,'میلاد رسول خدا و امام جعفر صادق',1],[3,5,'شهادت حضرت فاطمه زهرا',1],[20,6,'میلاد حضرت فاطمه - روز زن',0],[13,7,'ولادت امام علی',0],[27,7,'مبعث رسول خدا',1],[15,8,'نیمه شعبان - میلاد امام زمان',1],[21,9,'شهادت امام علی',1],[1,10,'عید سعید فطر',1],[2,10,'تعطیل دوم عید سعید فطر',1],[25,10,'شهادت امام جعفر صادق',1],[10,12,'عید سعید قربان',1],[18,12,'عید سعید غدیر خم',1]];
+/* قمر در عقرب ۱۴۰۵ — جدول ورود و خروج ماه به برج عقرب (مطابق assets/qamar_dar_aqrab.json برنامه — جدید ۱٫۱۱٫۹) */
+var QAMAR=[[1405,1,17,'۱۰:۵۰',1,19,'۱۲:۲۰'],[1405,2,13,'۱۵:۳۰',2,15,'۱۷:۲۵'],[1405,3,9,'۲۱:۰۰',3,11,'۲۳:۱۷'],[1405,4,6,'۰۵:۴۰',4,8,'۰۸:۰۰'],[1405,5,2,'۱۰:۰۰',5,4,'۱۲:۰۵'],[1405,5,29,'۱۸:۳۰',5,31,'۱۹:۳۰'],[1405,6,26,'۰۲:۳۵',6,28,'۰۴:۴۰'],[1405,7,22,'۰۸:۵۰',7,24,'۱۰:۳۰'],[1405,8,19,'۱۹:۳۰',8,21,'۲۱:۳۸'],[1405,9,17,'۰۰:۱۰',9,19,'۰۲:۲۵'],[1405,10,14,'۰۵:۰۰',10,16,'۰۷:۱۵'],[1405,11,11,'۱۴:۱۰',11,13,'۱۶:۴۰'],[1405,12,8,'۱۹:۱۵',12,10,'۲۱:۲۵']];
 var EVC={green:['#1E9E55','#DCF3E3'],blue:['#2A7BD4','#DDE9FA'],amber:['#C98A1B','#F8ECD7'],red:['#D64545','#FADBDB'],purple:['#7C5CD6','#EAE3F9']};
 
 var _now=new Date();
@@ -943,7 +944,7 @@ var state={
   events:store.get('pcw_events',null),
   user:store.get('pcw_user',null),
   premium:store.get('pcw_premium',false),
-  adhan:store.get('pcw_adhan',{fajr:true,sunrise:false,dhuhr:true,asr:false,maghrib:true,midnight:false,sound:'mashhad'}),
+  adhan:store.get('pcw_adhan',{fajr:true,sunrise:false,dhuhr:true,asr:false,maghrib:true,midnight:false,sound:'moazenzadeh'}),
   adcfg:store.get('pcw_adcfg',{banner:true,inter:true,interEvery:3,test:true,bannerId:'ca-app-pub-3940256099942544/6300978111',interId:'ca-app-pub-3940256099942544/1033173712',price:'۹۸٬۰۰۰ تومان در ماه',img:null,link:''}),
   adminPin:store.get('pcw_adminpin','1234'),
   notifbar:store.get('pcw_notifbar',true),
@@ -956,6 +957,8 @@ if(state.adcfg.banners.length&&(!state.adcfg.banners[0]||!state.adcfg.banners[0]
   state.adcfg.banners=state.adcfg.banners.filter(function(b){return b&&b.img;}).map(function(b,i){return {id:i+1,img:b.img,link:b.link||'',on:true};});
   state.adcfg.bseq=state.adcfg.banners.length;store.set('pcw_adcfg',state.adcfg);
 }
+/* نسخه ۱٫۱۱٫۹ — مهاجرت کلیدهای قدیمی اذان به اذان‌های واقعی جدید */
+if(['mashhad','hajjaghar','najaf'].indexOf(state.adhan.sound)>=0){state.adhan.sound=(state.adhan.sound==='mashhad')?'moazenzadeh':'rezayian';store.set('pcw_adhan',state.adhan);}
 if(!state.events||!state.events.length){
   var d1=d2j(TODAY_JDN+1),d2=d2j(TODAY_JDN+2),d3=d2j(TODAY_JDN+5);
   state.events=[
@@ -1008,6 +1011,16 @@ function occasionsFor(jdn){
     if(o[0]===99)hit=(hj.hm===2&&hijriFromJDN(jdn+1).hm===3);
     else hit=(hj.hm===o[1]&&hj.hd===o[0]);
     if(hit&&!officialTitles[o[2]]&&!seen[o[2]]){out.push({title:o[2],holiday:!!o[3]});seen[o[2]]=1;}
+  }
+  /* قمر در عقرب (جدید ۱٫۱۱٫۹) */
+  var qv=j.jm*100+j.jd;
+  for(i=0;i<QAMAR.length;i++){
+    var q=QAMAR[i];
+    if(q[0]!==j.jy)continue;
+    var qe=q[1]*100+q[2],qx=q[4]*100+q[5];
+    if(qv<qe||qv>qx)continue;
+    var qt=(qv===qe)?('قمر در عقرب — ورود ماه به برج عقرب ساعت '+q[3]):(qv===qx)?('قمر در عقرب — خروج ماه از برج عقرب ساعت '+q[6]):'قمر در عقرب';
+    if(!seen[qt]){out.push({title:qt,holiday:false});seen[qt]=1;}
   }
   occCache[jdn]=out;
   return out;
@@ -1274,7 +1287,7 @@ function annAll(){return store.get('pcw_ann',null);}
   store.set('pcw_ann',[
     {id:now-1,type:'news',on:true,at:now,title:'نسخه ۱٫۶ منتشر شد',
      body:'اوقات شرعی مطابق طرح جدید (نوار ۸ وقت با پخش اذان)، دکمه بازگشت به امروز و اطلاعیه‌ها اضافه شد. جدول ماهانه اوقات شرعی را با فلش پایین کارت ببینید.'},
-    {id:now,type:'ad',on:true,at:now,title:'فرصت تبلیغ در تقویم فارسی',
+    {id:now,type:'ad',on:true,at:now,title:'فرصت تبلیغ در باد خزان',
      body:'برنامه شما می‌تواند جلوی هزاران کاربر نمایش داده شود. برای درخواست تبلیغ از منوی سه‌نقطه → پشتیبانی پیام بگذارید.'}
   ]);
   store.set('pcw_ann_seen',0);
@@ -1310,7 +1323,7 @@ el('btnPlayAdhan').addEventListener('click',function(){
   var c=CITIES[state.city]||CITIES[0];
   var b=this;b.classList.add('on');
   setTimeout(function(){b.classList.remove('on');},3200);
-  playAdhanSample(state.adhan.sound==='none'?'mashhad':state.adhan.sound);
+  playAdhanSample(state.adhan.sound==='none'?'moazenzadeh':state.adhan.sound);
   toast('پخش اذان — '+c[0]);
 });
 el('ptKebab').addEventListener('click',function(e){e.stopPropagation();el('ptMenu').classList.toggle('open');});
@@ -1336,7 +1349,7 @@ function switchTab(tab){
   document.body.setAttribute('data-tab',tab);
   document.querySelectorAll('.mi[data-tab]').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
   document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.id==='screen-'+tab);});
-  el('appTitle').textContent={calendar:'تقویم فارسی',events:'رویدادها',reminders:'یادآورها',prayer:'اوقات شرعی',qibla:'قبله‌نما',settings:'تنظیمات',support:'پشتیبانی'}[tab]||'تقویم فارسی';
+  el('appTitle').textContent={calendar:'باد خزان',events:'رویدادها',reminders:'یادآورها',prayer:'اوقات شرعی',qibla:'قبله‌نما',settings:'تنظیمات',support:'پشتیبانی'}[tab]||'باد خزان';
   if(tab==='events')renderEvents();
   if(tab==='reminders')renderReminders();
   if(tab==='prayer')renderPrayer();
@@ -1748,11 +1761,10 @@ el('cityBackdrop').addEventListener('click',closeCityPicker);
 var PRAYERS=[['fajr','اذان صبح'],['sunrise','طلوع آفتاب'],['dhuhr','اذان ظهر'],['asr','اذان عصر'],['sunset','غروب آفتاب'],['maghrib','اذان مغرب'],['isha','اذان عشاء'],['midnight','نیمه‌شب شرعی']];
 /* برچسب‌های کوتاه فهرست عمودی اوقات شرعی — دقیقاً مطابق عکس ارسالی */
 var PT_SHORT=[['fajr','صبح'],['sunrise','طلوع'],['dhuhr','ظهر'],['asr','عصر'],['sunset','غروب'],['maghrib','مغرب'],['isha','عشا'],['midnight','نیمه‌شب']];
-var SOUND_LABEL={mashhad:'اذان مشهد',hajjaghar:'اذان حاج‌اصغر',najaf:'اذان نجف اشراف',none:'بدون صدا'};
+var SOUND_LABEL={moazenzadeh:'اذان مؤذن‌زاده اردبیلی',rezayian:'اذان حسن رضائیان',none:'بدون صدا'};
 var ADHAN_SEQ={
-  mashhad:[[262,0],[330,.4],[392,.8],[523,1.2],[392,1.8],[523,2.2],[660,2.6]],
-  hajjaghar:[[294,0],[294,.45],[349,.9],[294,1.35],[262,1.8],[349,2.25],[294,2.7]],
-  najaf:[[220,0],[262,.45],[294,.9],[349,1.35],[294,1.9],[262,2.35],[247,2.8]]
+  moazenzadeh:[[262,0],[330,.4],[392,.8],[523,1.2],[392,1.8],[523,2.2],[660,2.6]],
+  rezayian:[[294,0],[294,.45],[349,.9],[294,1.35],[262,1.8],[349,2.25],[294,2.7]]
 };
 var actx=null;
 function playAdhanSample(k){
@@ -1760,7 +1772,7 @@ function playAdhanSample(k){
   try{
     if(actx)actx.close();
     actx=new (window.AudioContext||window.webkitAudioContext)();
-    var seq=ADHAN_SEQ[k]||ADHAN_SEQ.mashhad,now=actx.currentTime;
+    var seq=ADHAN_SEQ[k]||ADHAN_SEQ.moazenzadeh,now=actx.currentTime;
     for(var i=0;i<seq.length;i++){
       (function(step){
         var o=actx.createOscillator(),o2=actx.createOscillator(),g=actx.createGain();
@@ -2067,7 +2079,7 @@ window.addEventListener('deviceorientation',function(e){
 function tickNotif(){
   var n=new Date(),j=d2j(TODAY_JDN);
   var act=PRAYERS.filter(function(p){return state.adhan[p[0]];});
-  el('notifTitle').textContent='تقویم فارسی · '+WDN[wdOf(TODAY_JDN)]+' '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy);
+  el('notifTitle').textContent='باد خزان · '+WDN[wdOf(TODAY_JDN)]+' '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy);
   el('notifSub').textContent=toFa(pad2(n.getHours()))+':'+toFa(pad2(n.getMinutes()))+' — همیشه در دسترس · '+(act.length?toFa(act.length)+' اذان فعال':'اذان‌ها خاموش');
   el('notifBar').style.display=state.notifbar?'flex':'none';
 }
@@ -2097,7 +2109,7 @@ function checkPrayerNow(){
       var key=TODAY_JDN+'_'+p[0];
       if(hhmmEn(v)===now&&!firedPrayers[key]){
         firedPrayers[key]=1;
-        showHeadsUp(p[1]+' — '+c[0],'تقویم فارسی · '+SOUND_LABEL[state.adhan.sound]);
+        showHeadsUp(p[1]+' — '+c[0],'باد خزان · '+SOUND_LABEL[state.adhan.sound]);
         if(state.adhan.sound!=='none')playAdhanSample(state.adhan.sound);
       }
     });
@@ -2105,7 +2117,7 @@ function checkPrayerNow(){
 }
 el('btnTestAdhan').addEventListener('click',function(){
   var c=CITIES[state.city]||CITIES[0];
-  showHeadsUp('نمونه اعلان اذان — '+c[0],'تقویم فارسی · '+SOUND_LABEL[state.adhan.sound]);
+  showHeadsUp('نمونه اعلان اذان — '+c[0],'باد خزان · '+SOUND_LABEL[state.adhan.sound]);
   playAdhanSample(state.adhan.sound);
 });
 

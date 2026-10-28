@@ -277,7 +277,7 @@ fun AccountScreen(onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            "• پشتیبانی سریع‌تر از توسعه‌دهنده\n• حمایت از توسعه تقویم فارسی\n• اولویت دریافت امکانات جدید",
+                            "• پشتیبانی سریع‌تر از توسعه‌دهنده\n• حمایت از توسعه باد خزان\n• اولویت دریافت امکانات جدید",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

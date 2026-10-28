@@ -17,6 +17,8 @@ import java.time.LocalDate
  *     (دقت جدولی حدود یک روز — برای سال‌های دارای فایل رسمی، مورد ۴ جایگزین می‌شود)
  *  ۴. فایل assets/holidays.json با تاریخ‌های رسمی اعلام‌شده (۱۴۰۴ تا ۱۴۰۶)
  *     که هر زمان بخواهید می‌توانید آن را ویرایش/به‌روزرسانی کنید.
+ *  ۵. فایل assets/qamar_dar_aqrab.json با روزها و ساعت ورود/خروج ماه به برج عقرب
+ *     (قمر در عقرب — نسخه ۱.۱۱.۹، درخواست کاربر؛ فعلاً سال ۱۴۰۵ مطابق جدول ارسالی)
  */
 class HolidayRepository(context: Context) {
 
@@ -99,6 +101,15 @@ class HolidayRepository(context: Context) {
     private val curated = HashMap<String, MutableList<Occasion>>() // key: "jy-jm-jd"
     private val curatedTitlesByYear = HashMap<Int, MutableSet<String>>()
 
+    // ---------- ۵) قمر در عقرب (نسخه ۱.۱۱.۹ — درخواست کاربر «میخوام روزهای قمر در عقرب در مناسبت های این روز ثبت کنی») ----------
+    /** یک دوره قمر در عقرب: ورود ماه به برج عقرب تا خروج از آن */
+    private data class QamarPeriod(
+        val jy: Int, val enterM: Int, val enterD: Int, val enterTime: String,
+        val exitM: Int, val exitD: Int, val exitTime: String
+    )
+
+    private val qamarPeriods = mutableListOf<QamarPeriod>()
+
     init {
         runCatching {
             val json = context.assets.open("holidays.json").bufferedReader().use { it.readText() }
@@ -116,6 +127,19 @@ class HolidayRepository(context: Context) {
                 curatedTitlesByYear.getOrPut(jy) { mutableSetOf() }.add(title)
             }
         }
+        runCatching {
+            val json = context.assets.open("qamar_dar_aqrab.json").bufferedReader().use { it.readText() }
+            val arr = JSONObject(json).getJSONArray("periods")
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                qamarPeriods.add(
+                    QamarPeriod(
+                        o.getInt("jy"), o.getInt("enterM"), o.getInt("enterD"), o.getString("enterTime"),
+                        o.getInt("exitM"), o.getInt("exitD"), o.getString("exitTime")
+                    )
+                )
+            }
+        }
     }
 
     /** طول ماه قمری با الگوریتم جدولی */
@@ -126,6 +150,27 @@ class HolidayRepository(context: Context) {
         val d1 = CalendarConverter.g2d(g1.year, g1.month, g1.day)
         val d2 = CalendarConverter.g2d(g2.year, g2.month, g2.day)
         return (d2 - d1).toInt()
+    }
+
+    /** مناسبت‌های قمر در عقرب این روز (ورود/میانی/خروج — منبع ۵) */
+    private fun qamarOccasions(jalali: JalaliDate): List<Occasion> {
+        if (qamarPeriods.isEmpty()) return emptyList()
+        val v = jalali.month * 100 + jalali.day
+        val out = mutableListOf<Occasion>()
+        for (p in qamarPeriods) {
+            if (p.jy != jalali.year) continue
+            val enter = p.enterM * 100 + p.enterD
+            val exit = p.exitM * 100 + p.exitD
+            if (v < enter || v > exit) continue
+            out.add(
+                when (v) {
+                    enter -> Occasion("قمر در عقرب — ورود ماه به برج عقرب ساعت ${p.enterTime}", false)
+                    exit -> Occasion("قمر در عقرب — خروج ماه از برج عقرب ساعت ${p.exitTime}", false)
+                    else -> Occasion("قمر در عقرب", false)
+                }
+            )
+        }
+        return out
     }
 
     /** همه مناسبت‌های یک روز جلالی */
@@ -161,6 +206,9 @@ class HolidayRepository(context: Context) {
                     result.add(Occasion(occ.title, occ.holiday))
             }
         }
+
+        // منبع ۵: قمر در عقرب (در پایان فهرست؛ تعطیل رسمی نیست)
+        result.addAll(qamarOccasions(jalali))
 
         return result
     }

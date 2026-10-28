@@ -166,7 +166,7 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
         MenuItem("پشتیبانی", Icons.AutoMirrored.Filled.Help, action = "support"),
         MenuItem("پنل مدیریت", Icons.Filled.Shield, action = "admin")
     )
-    val screenTitles = listOf("تقویم فارسی", "اوقات شرعی", "قبله‌نما", "رویدادها", "یادآورها", "تنظیمات")
+    val screenTitles = listOf("باد خزان", "اوقات شرعی", "قبله‌نما", "رویدادها", "یادآورها", "تنظیمات")
 
     // رویدادها یک بار برای همه صفحه‌ها
     val events by AppContainer.eventDao(context).observeAll().collectAsState(initial = emptyList())
@@ -220,7 +220,7 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            screenTitles.getOrElse(selectedTab) { "تقویم فارسی" },
+                            screenTitles.getOrElse(selectedTab) { "باد خزان" },
                             style = MaterialTheme.typography.titleLarge
                         )
                         Spacer(Modifier.weight(1f))
@@ -634,7 +634,7 @@ private fun shareApp(context: android.content.Context) {
             type = "text/plain"
             putExtra(
                 Intent.EXTRA_TEXT,
-                "تقویم فارسی — تقویم کامل شمسی با اوقات شرعی، قبله‌نما و یادآور\n" +
+                "باد خزان (تقویم فارسی) — تقویم کامل شمسی با اوقات شرعی، قبله‌نما و یادآور\n" +
                         "https://github.com/ahmaddaneshvar1992-oss/PersianCalendar/releases"
             )
         }

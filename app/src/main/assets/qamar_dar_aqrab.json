@@ -1,0 +1,18 @@
+{
+  "note": "روزهای قمر در عقرب سال ۱۴۰۵ هجری شمسی — بر اساس جدول «روزهای قمر در عقرب در عقر سال ۱۴۰۵» (ورود و خروج ماه به برج عقرب). هر دوره شامل روز و ساعت ورود ماه به برج عقرب و روز و ساعت خروج آن است؛ روز ورود، روزهای میانی و روز خروج همگی «قمر در عقرب» محسوب می‌شوند. ساعت‌ها با ارقام فارسی ذخیره شده‌اند. برای افزودن سال‌های بعد، ردیف‌های جدید به فهرست periods اضافه کنید.",
+  "periods": [
+    {"jy": 1405, "enterM": 1, "enterD": 17, "enterTime": "۱۰:۵۰", "exitM": 1, "exitD": 19, "exitTime": "۱۲:۲۰"},
+    {"jy": 1405, "enterM": 2, "enterD": 13, "enterTime": "۱۵:۳۰", "exitM": 2, "exitD": 15, "exitTime": "۱۷:۲۵"},
+    {"jy": 1405, "enterM": 3, "enterD": 9, "enterTime": "۲۱:۰۰", "exitM": 3, "exitD": 11, "exitTime": "۲۳:۱۷"},
+    {"jy": 1405, "enterM": 4, "enterD": 6, "enterTime": "۰۵:۴۰", "exitM": 4, "exitD": 8, "exitTime": "۰۸:۰۰"},
+    {"jy": 1405, "enterM": 5, "enterD": 2, "enterTime": "۱۰:۰۰", "exitM": 5, "exitD": 4, "exitTime": "۱۲:۰۵"},
+    {"jy": 1405, "enterM": 5, "enterD": 29, "enterTime": "۱۸:۳۰", "exitM": 5, "exitD": 31, "exitTime": "۱۹:۳۰"},
+    {"jy": 1405, "enterM": 6, "enterD": 26, "enterTime": "۰۲:۳۵", "exitM": 6, "exitD": 28, "exitTime": "۰۴:۴۰"},
+    {"jy": 1405, "enterM": 7, "enterD": 22, "enterTime": "۰۸:۵۰", "exitM": 7, "exitD": 24, "exitTime": "۱۰:۳۰"},
+    {"jy": 1405, "enterM": 8, "enterD": 19, "enterTime": "۱۹:۳۰", "exitM": 8, "exitD": 21, "exitTime": "۲۱:۳۸"},
+    {"jy": 1405, "enterM": 9, "enterD": 17, "enterTime": "۰۰:۱۰", "exitM": 9, "exitD": 19, "exitTime": "۰۲:۲۵"},
+    {"jy": 1405, "enterM": 10, "enterD": 14, "enterTime": "۰۵:۰۰", "exitM": 10, "exitD": 16, "exitTime": "۰۷:۱۵"},
+    {"jy": 1405, "enterM": 11, "enterD": 11, "enterTime": "۱۴:۱۰", "exitM": 11, "exitD": 13, "exitTime": "۱۶:۴۰"},
+    {"jy": 1405, "enterM": 12, "enterD": 8, "enterTime": "۱۹:۱۵", "exitM": 12, "exitD": 10, "exitTime": "۲۱:۲۵"}
+  ]
+}

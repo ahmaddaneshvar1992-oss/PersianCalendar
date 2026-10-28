@@ -80,7 +80,7 @@ object OngoingDateNotifier {
         val timeText = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
         val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ONGOING)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("تقویم فارسی")
+            .setContentTitle("باد خزان")
             .setContentText(todayText())
             .setStyle(
                 NotificationCompat.BigTextStyle()

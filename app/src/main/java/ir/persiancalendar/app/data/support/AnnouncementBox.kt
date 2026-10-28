@@ -77,7 +77,7 @@ object AnnouncementBox {
             at = System.currentTimeMillis() - 86_400_000L
         ),
         Announcement(
-            id = 2L, type = "ad", title = "فرصت تبلیغ در تقویم فارسی",
+            id = 2L, type = "ad", title = "فرصت تبلیغ در باد خزان",
             body = "برنامه شما می‌تواند جلوی هزاران کاربر نمایش داده شود. " +
                     "برای درخواست تبلیغ از منوی سه‌نقطه → پشتیبانی پیام بگذارید.",
             at = System.currentTimeMillis()

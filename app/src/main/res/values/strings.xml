@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">تقویم فارسی</string>
+    <string name="app_name">باد خزان</string>
     <string name="widget_description">تقویم شمسی ماه جاری با تعطیلات</string>
-    <string name="widget_label">تقویم فارسی - ماه</string>
+    <string name="widget_label">باد خزان - ماه</string>
     <string name="channel_events">یادآوری رویدادها</string>
     <string name="channel_prayers">اوقات شرعی</string>
 </resources>
