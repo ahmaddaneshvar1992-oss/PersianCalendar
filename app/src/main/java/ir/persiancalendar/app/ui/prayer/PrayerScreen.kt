@@ -64,7 +64,7 @@ import java.time.LocalDate
 fun PrayerScreen(
     settings: AppSettings,
     persianDigits: Boolean,
-    onSettingsChange: suspend () -> Unit
+    onSettingsChange: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

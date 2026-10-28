@@ -50,14 +50,17 @@ object ActivationCode {
      */
     fun findSerial(code: String): Int? {
         if (!isValidFormat(code)) return null
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(SECRET.toByteArray(Charsets.UTF_8), "HmacSHA256"))
         val target = code.uppercase()
         for (serial in 1..MAX_SERIAL) {
-            val hex = mac.doFinal("PF-PREMIUM-$serial".toByteArray(Charsets.UTF_8))
-                .joinToString("") { "%02x".format(it) }
-            if (hex.take(12).uppercase() == target) return serial
+            if (hmacHex(SECRET, "PF-PREMIUM-$serial").take(12).uppercase() == target) return serial
         }
         return null
+    }
+
+    private fun hmacHex(key: String, message: String): String {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(key.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+        return mac.doFinal(message.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
     }
 }

@@ -177,7 +177,7 @@ class SettingsRepository(private val context: Context) {
 
     /** خواندن همگام تنظیمات — فقط از نخ پس‌زمینه (BroadcastReceiver / coroutine IO) */
     fun settingsBlocking(): AppSettings = kotlinx.coroutines.runBlocking {
-        context.dataStore.data.first()
+        settings.first()
     }
 
     suspend fun setThemeMode(mode: ThemeMode) = context.dataStore.edit { it[Keys.THEME] = mode.ordinal }

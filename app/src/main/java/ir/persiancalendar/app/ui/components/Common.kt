@@ -44,6 +44,7 @@ import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
 import ir.persiancalendar.app.core.prayer.City
 import ir.persiancalendar.app.data.prefs.AppSettings
+import ir.persiancalendar.app.data.prefs.bannerEntries
 import ir.persiancalendar.app.di.AppContainer
 import java.io.File
 

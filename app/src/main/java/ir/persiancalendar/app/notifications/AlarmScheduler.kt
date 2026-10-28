@@ -40,7 +40,7 @@ object AlarmScheduler {
     private const val REQUEST_PRAYER_BASE = 910 // + 0..6
 
     private fun alarmManager(context: Context): AlarmManager =
-        context.getSystemService(Context.ALARM_MANAGER) as AlarmManager
+        context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     /** آیا آلارم دقیق مجاز است؟ (اندروید ۱۲ به بالا نیاز به مجوز SCHEDULE_EXACT_ALARM دارد) */
     fun canExact(context: Context): Boolean {

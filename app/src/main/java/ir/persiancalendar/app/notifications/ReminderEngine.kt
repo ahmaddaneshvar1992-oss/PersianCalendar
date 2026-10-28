@@ -130,7 +130,7 @@ object ReminderEngine {
 
     /** لغو آلارم «نوبت بعدی» و «به‌تعویق» یک یادآور — برای حذف/غیرفعال‌سازی */
     fun cancel(context: Context, reminderId: Long) {
-        val am = context.getSystemService(Context.ALARM_MANAGER) as android.app.AlarmManager
+        val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
         am.cancel(nextIntent(context, reminderId))
         am.cancel(snoozeIntent(context, reminderId, 0))
         NotificationHelper.cancelReminder(context, reminderId)

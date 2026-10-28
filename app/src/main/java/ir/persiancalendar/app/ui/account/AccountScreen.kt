@@ -200,6 +200,7 @@ fun AccountScreen(onBack: () -> Unit) {
                 }
             }
         } else {
+            val u = user!! // مرجع ثابت برای جلوگیری از مشکل smart cast روی property delegate
             // ---------- پروفایل ----------
             SectionCard {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -210,21 +211,21 @@ fun AccountScreen(onBack: () -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            user.name.trim().take(1),
+                            u.name.trim().take(1),
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                     Spacer(Modifier.size(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(user.name, style = MaterialTheme.typography.titleMedium)
+                        Text(u.name, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            user.username,
+                            u.username,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "عضو از " + formatJalaliDate(user.createdAt),
+                            "عضو از " + formatJalaliDate(u.createdAt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

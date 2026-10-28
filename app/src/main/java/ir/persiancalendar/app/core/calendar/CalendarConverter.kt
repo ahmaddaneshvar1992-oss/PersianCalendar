@@ -140,7 +140,8 @@ object CalendarConverter {
         // جست‌وجوی تقریبی روی شماره روز جولیَن تا رسیدن به تاریخ درست
         var jdn = 1948439L + (hy - 1) * 354L + (hy / 30) * 11L + hd
         for (i in 0 until 80) {
-            val h = gregorianToHijri(d2g(jdn))
+            val g = d2g(jdn)
+            val h = gregorianToHijri(g.year, g.month, g.day)
             if (h.year == hy && h.month == hm && h.day == hd) return d2g(jdn)
             val target = hy * 12L + hm
             val cur = h.year * 12L + h.month
