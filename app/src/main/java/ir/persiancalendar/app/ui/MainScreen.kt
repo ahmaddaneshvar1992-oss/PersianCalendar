@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
@@ -204,9 +206,12 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
             if (!accountVisible && !adminVisible && !supportVisible && dayDetail == null) {
                 var menuOpen by remember { mutableStateOf(false) }
                 Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
+                    // نسخه ۱.۱۱.۲: statusBarsPadding — دکمه سه‌نقطه و زنگ اطلاعیه و عنوان
+                    // دیگر زیر نوار وضعیت سیستم (ساعت/باتری) نمی‌روند (گزارش کاربر)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .statusBarsPadding()
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -266,8 +271,11 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
             }
         },
         // ---------- محدوده تبلیغات پایین — بنرهای تصویری نامحدود یا AdMob (نسخه ۱.۵) ----------
+        // نسخه ۱.۱۱.۲: navigationBarsPadding — بنر روی نوار ناوبری سیستم نمی‌نشیند
         bottomBar = {
-            if (!accountVisible && !adminVisible && !supportVisible) BannerAd()
+            Box(Modifier.navigationBarsPadding()) {
+                if (!accountVisible && !adminVisible && !supportVisible) BannerAd()
+            }
         },
         // ---------- دکمه سبز «+» — رویداد جدید در تقویم/رویدادها، یادآور جدید در یادآورها ----------
         floatingActionButton = {
