@@ -259,7 +259,7 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                                     // پنل زیبا — کارت گوشه‌گرد با آیکن دایره‌ای و بخش‌بندی
                                     Surface(
                                         shape = RoundedCornerShape(16.dp),
-                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        color = MaterialTheme.colorScheme.surface,
                                         shadowElevation = 8.dp,
                                         border = BorderStroke(
                                             1.dp,

@@ -314,8 +314,8 @@ fun AdminScreen(onBack: () -> Unit) {
                     }
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
-                        value = adLinkUrl,
-                        onValueChange = { adLinkUrl = it },
+                        value = adImageUrl,
+                        onValueChange = { adImageUrl = it },
                         label = { Text("یا آدرس اینترنتی تصویر (URL — اختیاری)") },
                         modifier = Modifier.fillMaxWidth()
                     )
