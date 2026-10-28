@@ -7,8 +7,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.location.LocationListener
-import android.location.LocationManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,7 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -49,10 +49,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import ir.persiancalendar.app.core.calendar.PersianText
+import ir.persiancalendar.app.core.location.LocationHelper
 import ir.persiancalendar.app.core.prayer.Cities
 import ir.persiancalendar.app.core.prayer.PrayerTimesCalculator
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.ui.components.SectionCard
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -126,28 +128,24 @@ fun QiblaScreen(settings: AppSettings) {
     val bearing = PrayerTimesCalculator.qiblaDirection(lat, lng)
     val distance = Cities.distanceKm(lat, lng, KAABA_LAT, KAABA_LNG)
 
+    // نشانگر «رو به قبله» — وقتی اختلاف جهت گوشی و قبله کمتر از ۵ درجه باشد (نسخه ۱.۱۱.۴)
+    val aligned = heading?.let { hd ->
+        abs(((bearing - hd + 540.0) % 360.0) - 180.0) <= 5.0
+    } ?: false
+
     fun fetchGps() {
-        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val last = runCatching {
-            lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-        }.getOrNull()
-        if (last != null) {
-            gps = last.latitude to last.longitude
-            gpsCity = Cities.nearest(last.latitude, last.longitude).second.name
-        } else {
-            runCatching {
-                lm.requestSingleUpdate(
-                    LocationManager.GPS_PROVIDER,
-                    LocationListener { l ->
-                        gps = l.latitude to l.longitude
-                        gpsCity = Cities.nearest(l.latitude, l.longitude).second.name
-                    },
-                    null
-                )
-            }
-            Toast.makeText(context, "منتظر سیگنال GPS…", Toast.LENGTH_SHORT).show()
-        }
+        // نسخه ۱.۱۱.۴ — رفع باگ «GPS پیدا نمی‌کند»:
+        // همه providerها (GPS+شبکه) با هم، آخرین موقعیت شناخته‌شده، پیام خطای روشن و تایم‌اوت
+        Toast.makeText(context, "در حال یافتن موقعیت…", Toast.LENGTH_SHORT).show()
+        LocationHelper.fetchOnce(
+            context,
+            onResult = { la, lo ->
+                gps = la to lo
+                gpsCity = Cities.nearest(la, lo).second.name
+                Toast.makeText(context, "موقعیت یافت شد: " + gpsCity, Toast.LENGTH_SHORT).show()
+            },
+            onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+        )
     }
 
     val permLauncher = rememberLauncherForActivityResult(
@@ -194,7 +192,8 @@ fun QiblaScreen(settings: AppSettings) {
                         heading = heading,
                         bearing = bearing.toFloat(),
                         primary = primary,
-                        onPrimary = onPrimary
+                        onPrimary = onPrimary,
+                        aligned = aligned
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -203,10 +202,19 @@ fun QiblaScreen(settings: AppSettings) {
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+                if (aligned) {
+                    // نشانگر سبز هم‌راستایی (نسخه ۱.۱۱.۴)
+                    Text(
+                        "رو به قبله ✓",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFF1EA84D)
+                    )
+                    Spacer(Modifier.height(2.dp))
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = if (heading != null)
-                        "گوشی را صاف رو به قبله نگه دارید — سرِ قرمز به سمت " + dirLabel(bearing)
+                        "گوشی را صاف نگه دارید و بچرخانید تا کعبه روی نشانگر سبز بیفتد — جهت قبله: " + dirLabel(bearing)
                     else
                         "از " + (gps?.let { gpsCity } ?: city.name) +
                             " حدوداً به سمت " + dirLabel(bearing) +
@@ -276,8 +284,14 @@ fun QiblaScreen(settings: AppSettings) {
     }
 }
 
-/** رسم صفحه قطب‌نما: حلقه + تیک‌ها + برچسب‌های جهات + سوزن قبله (کعبه) */
-private fun DrawScope.drawCompass(heading: Float?, bearing: Float, primary: Color, onPrimary: Color) {
+/** رسم صفحه قطب‌نما: حلقه + تیک‌ها + برچسب‌های جهات + سوزن قبله با گرافیک کعبه (نسخه ۱.۱۱.۴) */
+private fun DrawScope.drawCompass(
+    heading: Float?,
+    bearing: Float,
+    primary: Color,
+    onPrimary: Color,
+    aligned: Boolean
+) {
     val cx = size.width / 2f
     val cy = size.height / 2f
     val r = size.width / 2f - 8f
@@ -312,10 +326,6 @@ private fun DrawScope.drawCompass(heading: Float?, bearing: Float, primary: Colo
             textSize = 12.sp.toPx()
             color = android.graphics.Color.parseColor("#77837A")
         }
-        val blackPaint = android.graphics.Paint().apply {
-            isAntiAlias = true
-            color = android.graphics.Color.parseColor("#171D19")
-        }
 
         nc.drawText("شمال", cx, cy - r + 34f, redPaint)
         nc.drawText("شرق", cx + r - 34f, cy + 5f, grayPaint)
@@ -324,21 +334,58 @@ private fun DrawScope.drawCompass(heading: Float?, bearing: Float, primary: Colo
 
         rotate(degrees = bearing, pivot = Offset(cx, cy)) {
             val tipY = cy - r * 0.66f
-            val sq = 11.dp.toPx()
-            // مربع کعبه در نوک سوزن
-            nc.drawRect(cx - sq / 2, tipY - sq, cx + sq / 2, tipY, blackPaint)
-            // سوزن قرمز
+            // سوزن — هم‌راستا با قبله سبز می‌شود (نسخه ۱.۱۱.۴)
             val needle = Path().apply {
                 moveTo(cx, tipY)
                 lineTo(cx - 9.dp.toPx(), cy)
                 lineTo(cx + 9.dp.toPx(), cy)
                 close()
             }
-            drawPath(needle, NeedleRed, style = Fill)
+            drawPath(needle, if (aligned) Color(0xFF1EA84D) else NeedleRed, style = Fill)
+            // گرافیک کعبه روی نوک سوزن — مکّه (نسخه ۱.۱۱.۴: کعبه بزرگ‌تر و خواناتر)
+            drawKaaba(cx = cx, tipY = tipY, w = 24.dp.toPx())
         }
     }
 
     // مرکز صفحه
     drawCircle(color = primary, radius = 9.dp.toPx(), style = Fill)
     drawCircle(color = onPrimary, radius = 3.5.dp.toPx(), style = Fill)
+}
+
+/**
+ * گرافیک کعبه — بدنه مشکی، حزام و در طلایی (نسخه ۱.۱۱.۴)
+ * روی نوک سوزن قبله رسم می‌شود و با صفحه قطب‌نما می‌چرخد؛
+ * وقتی کعبه به بالای صفحه و نشانگر سبز برسد، گوشی رو به قبله است.
+ */
+private fun DrawScope.drawKaaba(cx: Float, tipY: Float, w: Float) {
+    val h = w * 0.78f
+    val left = cx - w / 2f
+    val top = tipY - h
+    // بدنه
+    drawRoundRect(
+        color = Color(0xFF1B1410),
+        topLeft = Offset(left, top),
+        size = Size(w, h),
+        cornerRadius = CornerRadius(2.5f, 2.5f)
+    )
+    // حزام طلایی
+    drawRect(
+        color = Color(0xFFC9A227),
+        topLeft = Offset(left, top + h * 0.38f),
+        size = Size(w, h * 0.2f)
+    )
+    // در طلایی
+    drawRect(
+        color = Color(0xFFC9A227),
+        topLeft = Offset(cx - w * 0.14f, tipY - h * 0.3f),
+        size = Size(w * 0.28f, h * 0.3f)
+    )
+    // قاب دور برای دیده‌شدن روی پس‌زمینه روشن
+    drawRoundRect(
+        color = Color(0xFF8A7A55),
+        topLeft = Offset(left, top),
+        size = Size(w, h),
+        cornerRadius = CornerRadius(2.5f, 2.5f),
+        style = Stroke(width = 1.6f)
+    )
 }

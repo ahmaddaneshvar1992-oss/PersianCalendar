@@ -82,7 +82,10 @@ data class AppSettings(
     val bannerLink3: String = "",
     // ---------- نسخه ۱.۵: بنرهای تصویری بدون محدودیت (JSON) ----------
     /** فهرست بنرها به‌صورت JSON: [{"p":مسیر,"l":لینک,"on":روشن}] */
-    val bannerListJson: String = ""
+    val bannerListJson: String = "",
+    // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
+    /** آیا ویزارد ۵ گامی قبل از ورود به برنامه تکمیل شده؟ */
+    val onboardingDone: Boolean = false
 )
 
 /** یک بنر تصویری اختصاصی (نسخه ۱.۵) */
@@ -142,6 +145,8 @@ class SettingsRepository(private val context: Context) {
         val BANNER_LINK3 = stringPreferencesKey("banner_link3")
         // ---------- نسخه ۱.۵ ----------
         val BANNER_LIST_JSON = stringPreferencesKey("banner_list_json")
+        // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
+        val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -171,7 +176,8 @@ class SettingsRepository(private val context: Context) {
             bannerImagePath3 = p[Keys.BANNER_IMG3] ?: "",
             bannerLink2 = p[Keys.BANNER_LINK2] ?: "",
             bannerLink3 = p[Keys.BANNER_LINK3] ?: "",
-            bannerListJson = p[Keys.BANNER_LIST_JSON] ?: ""
+            bannerListJson = p[Keys.BANNER_LIST_JSON] ?: "",
+            onboardingDone = p[Keys.ONBOARDING_DONE] ?: false
         )
     }
 
@@ -240,6 +246,10 @@ class SettingsRepository(private val context: Context) {
     // ---------- نسخه ۱.۵: بنرهای تصویری بدون محدودیت ----------
     suspend fun setBannerListJson(json: String) =
         context.dataStore.edit { it[Keys.BANNER_LIST_JSON] = json.trim() }
+
+    // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
+    suspend fun setOnboardingDone(b: Boolean) =
+        context.dataStore.edit { it[Keys.ONBOARDING_DONE] = b }
 
     companion object {
         fun encodeMask(s: Set<Int>): Int = s.fold(0) { acc, i -> acc or (1 shl i) }

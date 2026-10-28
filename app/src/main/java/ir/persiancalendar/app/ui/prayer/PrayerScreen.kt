@@ -3,8 +3,7 @@ package ir.persiancalendar.app.ui.prayer
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.LocationListener
-import android.location.LocationManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -413,29 +412,14 @@ private fun qiblaLabel(deg: Double): String = when {
     else -> "شمال‌غربی"
 }
 
-/** گرفتن مختصات فعلی از LocationManager (بدون وابستگی گوگل) — سپس نزدیک‌ترین شهر یافت می‌شود */
+/** گرفتن مختصات فعلی و یافتن نزدیک‌ترین شهر — نسخه ۱.۱۱.۴ با LocationHelper
+ *  (رفع باگ GPS: همه providerها + تایم‌اوت + پیام خطای روشن) */
 private fun locateNearestCity(context: Context, onResult: (Double, Double) -> Unit) {
-    runCatching {
-        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val providers = listOfNotNull(
-            LocationManager.NETWORK_PROVIDER,
-            LocationManager.GPS_PROVIDER,
-            LocationManager.PASSIVE_PROVIDER
-        )
-        for (p in providers) {
-            if (ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED) {
-                val loc = lm.getLastKnownLocation(p)
-                if (loc != null) {
-                    onResult(loc.latitude, loc.longitude)
-                    return
-                }
-            }
+    ir.persiancalendar.app.core.location.LocationHelper.fetchOnce(
+        context,
+        onResult = { la, lo -> onResult(la, lo) },
+        onError = { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
-        // اگر موقعیت ذخیره‌شده نبود، یک بار به‌روزرسانی درخواست کن
-        if (ContextCompat.checkSelfPermission(context, LocationManager.NETWORK_PROVIDER) == PackageManager.PERMISSION_GRANTED) {
-            lm.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, LocationListener { l ->
-                onResult(l.latitude, l.longitude)
-            }, null)
-        }
-    }
+    )
 }

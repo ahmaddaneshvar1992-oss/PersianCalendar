@@ -19,15 +19,19 @@ import androidx.compose.ui.unit.LayoutDirection
 import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.notifications.OngoingDateNotifier
 import ir.persiancalendar.app.ui.MainScreen
+import ir.persiancalendar.app.ui.onboarding.OnboardingScreen
 import ir.persiancalendar.app.ui.theme.PersianCalendarTheme
+import kotlinx.coroutines.flow.first
 
 /**
  * اکتیویتی اصلی — کل اپلیکیشن با Jetpack Compose و راست‌به‌چپ کامل.
  *
  * نسخه ۱.۳: پشتیبانی از باز شدن مستقیم روی تب مشخص از دکمه‌های
  * «اعلان همیشگی تاریخ» (لیست اعلان‌ها / تنظیم یادآورها) با extra «open_tab».
- * نسخه ۱.۱۱: تب یادآورها (۴) + درخواست مجوز اعلان در اندروید ۱۳ به بالا
- * (یک بار در اولین اجرا — چک‌لیست موتور یادآور عمومی).
+ * نسخه ۱.۱۱: تب یادآورها (۴).
+ * نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ۵ گامی (افق، تاریخ/زمان، اذان‌ها، اعلان‌ها، حساب)
+ * قبل از ورود به برنامه نمایش داده می‌شود؛ درخواست مجوز اعلان از onStart حذف و
+ * به گام چهارم ویزارد منتقل شد.
  */
 class MainActivity : ComponentActivity() {
 
@@ -38,20 +42,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openTabRequest.intValue = tabFromIntent(intent)
-        askNotificationPermissionOnce()
 
         setContent {
             val settingsRepo = AppContainer.settingsRepo(this)
-            val settings by settingsRepo.settings.collectAsState(initial = ir.persiancalendar.app.data.prefs.AppSettings())
+            // خواندن اولیه همگام برای جلوگیری از فلش ویزارد در هر اجرای مجدد
+            val initialSettings = runCatching {
+                kotlinx.coroutines.runBlocking { settingsRepo.settings.first() }
+            }.getOrDefault(ir.persiancalendar.app.data.prefs.AppSettings())
+            val settings by settingsRepo.settings.collectAsState(initial = initialSettings)
 
             PersianCalendarTheme(themeMode = settings.themeMode, accent = settings.accent) {
                 // راست‌به‌چپ برای همه صفحه‌ها
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     Surface(modifier = Modifier.fillMaxSize()) {
-                        MainScreen(
-                            settings = settings,
-                            openTabRequest = openTabRequest.intValue
-                        )
+                        if (settings.onboardingDone) {
+                            MainScreen(
+                                settings = settings,
+                                openTabRequest = openTabRequest.intValue
+                            )
+                        } else {
+                            // ---------- ویزارد راه‌اندازی اولیه (نسخه ۱.۱۱.۴) ----------
+                            OnboardingScreen(settings = settings)
+                        }
                     }
                 }
             }
@@ -75,24 +87,5 @@ class MainActivity : ComponentActivity() {
         OngoingDateNotifier.TAB_PRAYER -> 1
         OngoingDateNotifier.TAB_REMINDERS -> 4
         else -> -1
-    }
-
-    /**
-     * درخواست مجوز اعلان در اندروید ۱۳ به بالا — فقط یک بار در اولین اجرا
-     * (چک‌لیست موتور یادآور: «درخواست مجوز اعلان در اندروید ۱۳ به بالا»).
-     * در نسخه‌های قدیمی‌تر مجوز در نص خودکار اعطا می‌شود.
-     */
-    private fun askNotificationPermissionOnce() {
-        if (android.os.Build.VERSION.SDK_INT < 33) return
-        val prefs = getSharedPreferences("pc_flags", android.content.Context.MODE_PRIVATE)
-        if (prefs.getBoolean("notif_asked", false)) return
-        prefs.edit().putBoolean("notif_asked", true).apply()
-        runCatching {
-            androidx.core.app.ActivityCompat.requestPermissions(
-                this,
-                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-                1001
-            )
-        }
     }
 }
