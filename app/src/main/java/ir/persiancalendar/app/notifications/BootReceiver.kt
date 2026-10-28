@@ -38,6 +38,8 @@ class BootReceiver : BroadcastReceiver() {
                 ReminderEngine.rescheduleAll(context)
                 // اعلان همیشگی تاریخ پس از ری‌استارت (نسخه ۱.۳)
                 OngoingDateNotifier.update(context)
+                // ویجت هواشناسی پس از ری‌استارت (نسخه ۱.۱۱.۱۳)
+                ir.persiancalendar.app.widget.WeatherWidgetProvider.updateAll(context)
             } finally {
                 pending.finish()
             }

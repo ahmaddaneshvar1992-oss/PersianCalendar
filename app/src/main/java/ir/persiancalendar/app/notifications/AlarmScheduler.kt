@@ -283,6 +283,8 @@ class DailyTickReceiver : BroadcastReceiver() {
                 OngoingDateNotifier.update(context)
                 // زمان‌بندی مجدد موتور یادآور عمومی (نسخه ۱.۱۱) — زنجیره آلارم‌ها همیشه زنده می‌ماند
                 ReminderEngine.rescheduleAll(context)
+                // تازه‌سازی ویجت هواشناسی در نیمه‌شب (نسخه ۱.۱۱.۱۳)
+                ir.persiancalendar.app.widget.WeatherWidgetProvider.updateAll(context)
                 CalendarWidgetProvider.updateAll(context)
             } finally {
                 pending.finish()

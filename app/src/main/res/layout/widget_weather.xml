@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ویجت هواشناسی باد خزان — نسخه ۱.۱۱.۱۳ (راست‌به‌چپ، هم‌سبک با ویجت تقویم) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_weather_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layoutDirection="rtl"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="12dp">
+
+    <!-- ردیف اول: نام شهر + ساعت به‌روزرسانی -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/ww_city"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#1B7F4E"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:text="هواشناسی" />
+
+        <TextView
+            android:id="@+id/ww_updated"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#6F7972"
+            android:textSize="10sp"
+            android:text="" />
+    </LinearLayout>
+
+    <!-- ردیف دوم: دمای بزرگ + وضعیت -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="2dp">
+
+        <TextView
+            android:id="@+id/ww_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#2B2F2C"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:text="--" />
+
+        <TextView
+            android:id="@+id/ww_cond"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:textColor="#4B554E"
+            android:textSize="14sp"
+            android:gravity="start"
+            android:text="در حال دریافت…" />
+    </LinearLayout>
+
+    <!-- ردیف سوم: بیشترین/کمترین، باد، رطوبت -->
+    <TextView
+        android:id="@+id/ww_details"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="#6F7972"
+        android:textSize="11sp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:text="" />
+</LinearLayout>

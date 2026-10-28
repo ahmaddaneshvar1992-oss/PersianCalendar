@@ -110,7 +110,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setAccent(accent: AccentPalette) = context.dataStore.edit { it[Keys.ACCENT] = accent.ordinal }
     suspend fun setPersianDigits(b: Boolean) = context.dataStore.edit { it[Keys.PERSIAN_DIGITS] = b }
     suspend fun setShowHijri(b: Boolean) = context.dataStore.edit { it[Keys.SHOW_HIJRI] = b }
-    suspend fun setCityIndex(i: Int) = context.dataStore.edit { it[Keys.CITY] = i }
+    suspend fun setCityIndex(i: Int) {
+        context.dataStore.edit { it[Keys.CITY] = i }
+        // ویجت هواشناسی — نسخه ۱.۱۱.۱۳: با تغییر شهر، کش باطل و ویجت تازه شود
+        // (هرگز نباید ذخیره‌سازی تنظیمات را مختل کند)
+        runCatching { ir.persiancalendar.app.widget.WeatherWidgetProvider.onCityChanged(context) }
+    }
     suspend fun setPrayerMethod(m: PrayerMethod) = context.dataStore.edit { it[Keys.PRAYER_METHOD] = m.ordinal }
     suspend fun setPrayerNotifications(s: Set<Int>) =
         context.dataStore.edit { it[Keys.PRAYER_NOTIF] = encodeMask(s) }

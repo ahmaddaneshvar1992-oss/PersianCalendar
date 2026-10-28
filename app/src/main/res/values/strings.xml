@@ -3,6 +3,8 @@
     <string name="app_name">باد خزان</string>
     <string name="widget_description">تقویم شمسی ماه جاری با تعطیلات</string>
     <string name="widget_label">باد خزان - ماه</string>
+    <string name="widget_weather_label">باد خزان - هوا</string>
+    <string name="widget_weather_description">هوای امروز شهر انتخابی شما: دما، وضعیت، بیشترین و کمترین</string>
     <string name="channel_events">یادآوری رویدادها</string>
     <string name="channel_prayers">اوقات شرعی</string>
 </resources>
