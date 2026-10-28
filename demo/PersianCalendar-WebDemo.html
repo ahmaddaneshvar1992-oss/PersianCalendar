@@ -1,0 +1,2208 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پیش‌نمایش تعاملی — تقویم فارسی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{font-family:'Vazirmatn',Tahoma,'Segoe UI',sans-serif;background:radial-gradient(1200px 700px at 70% -10%,#14532d 0%,#052e16 45%,#020d07 100%);color:#e8f2ea;display:flex;justify-content:center;padding:26px 12px 46px}
+.stage{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;max-width:720px}
+.card-note{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px);border-radius:18px;padding:18px 20px;width:100%;max-width:660px}
+.card-note h2{font-size:16.5px;font-weight:800;margin-bottom:8px;color:#86efac}
+.card-note p,.card-note li{font-size:13.5px;line-height:2;color:#d3e2d6}
+.card-note ol{padding-inline-start:20px}
+.card-note b{color:#fff}
+.muted{color:#9db8a2}
+/* ---------- قاب گوشی ---------- */
+.phone{width:400px;max-width:97vw;height:min(820px,94vh);background:var(--bg);border-radius:30px;overflow:hidden;position:relative;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.18);box-shadow:0 30px 70px rgba(0,0,0,.55);
+--bg:#eef3ef;--surface:#ffffff;--surface2:#f5f8f5;--text:#17211a;--muted:#5f6e63;--primary:#15803d;--pcontrast:#ffffff;--psoft:#dcf3e3;--holiday:#c62828;--occasion:#8a6d1c;--outline:#dce4dd;--outline2:#c9d5cb}
+.phone[data-theme="dark"]{--bg:#0e1310;--surface:#171d19;--surface2:#1d2620;--text:#e4ebe5;--muted:#93a29a;--primary:#3fbf6f;--pcontrast:#04210f;--psoft:#16361f;--holiday:#ff7b7b;--occasion:#d9b45b;--outline:#26302a;--outline2:#314036}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:9px 18px 3px;font-size:11.5px;color:var(--muted)}
+.statusbar .sig{letter-spacing:2px;font-size:10px}
+.appbar{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;color:var(--text)}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--primary);color:var(--pcontrast);display:flex;align-items:center;justify-content:center;flex:none}
+.logo svg{width:17px;height:17px}
+.appbar h1{font-size:19px;font-weight:800;flex:1}
+.ver-chip{font-size:10.5px;color:var(--muted);border:1px solid var(--outline);padding:2px 8px;border-radius:20px}
+/* ---------- صفحه‌ها ---------- */
+.screens{flex:1;position:relative;overflow:hidden}
+.screen{position:absolute;inset:0;overflow-y:auto;padding:2px 14px 18px;display:none;scrollbar-width:thin}
+.screen.active{display:block}
+.scr-title{font-size:17px;font-weight:800;color:var(--text);margin:8px 2px 12px}
+/* نوار ماه */
+.cal-head{display:flex;align-items:center;gap:6px;margin:6px 0 10px}
+.cal-title{flex:1}
+.cal-title .m{font-size:17.5px;font-weight:800;color:var(--text)}
+.cal-title .sub{font-size:11px;color:var(--muted);margin-top:1px}
+.iconbtn{width:34px;height:34px;border-radius:11px;border:1px solid var(--outline);background:var(--surface);color:var(--text);font-size:19px;line-height:1;cursor:pointer;flex:none}
+.iconbtn:hover{background:var(--psoft)}
+.btn{background:var(--primary);color:var(--pcontrast);border:none;border-radius:12px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:var(--surface);color:var(--primary);border:1px solid var(--outline2)}
+.btn.sm{padding:6px 11px;font-size:12px;border-radius:10px}
+/* شبکه ماه */
+.weekrow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.weekrow span{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:4px 0}
+.weekrow span.fri{color:var(--holiday)}
+.grid{margin-bottom:12px}
+.cell{aspect-ratio:1/1.04;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:11px;cursor:pointer;position:relative;transition:background .12s}
+.cell:hover{background:var(--psoft)}
+.cell.dim{opacity:.32}
+.cell .d{font-weight:600;font-size:14.5px;line-height:1;color:var(--text)}
+.cell .h{font-size:8.5px;color:var(--muted);margin-top:3px;line-height:1}
+.cell.hday .d{color:var(--holiday)}
+.cell.hday .h{color:var(--holiday);opacity:.8}
+.cell.today .d{width:27px;height:27px;border-radius:50%;background:var(--primary);color:var(--pcontrast);display:flex;align-items:center;justify-content:center;font-size:12.5px}
+.cell.hday.today .d{color:var(--pcontrast)}
+.cell.sel{box-shadow:inset 0 0 0 1.6px var(--primary);background:var(--psoft)}
+/* کارت‌ها */
+.card{background:var(--surface);border:1px solid var(--outline);border-radius:16px;padding:14px;margin-bottom:12px;color:var(--text)}
+.dd-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dd-date{font-size:15.5px;font-weight:800}
+.dd-conv{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.9}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.chip{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px}
+.chip.hol{background:rgba(198,40,40,.1);color:var(--holiday);border:1px solid rgba(198,40,40,.28)}
+.chip.occ{background:rgba(138,109,28,.1);color:var(--occasion);border:1px solid rgba(138,109,28,.3)}
+.dd-events{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.dd-ev{display:flex;align-items:center;gap:8px;font-size:12.5px;background:var(--surface2);border-radius:10px;padding:7px 10px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dd-ev .t{flex:1}
+.dd-ev .tm{color:var(--muted);font-size:11px}
+.occ-block{background:var(--surface);border:1px solid var(--outline);border-radius:16px;padding:13px 14px;color:var(--text)}
+.occ-title{font-size:13.5px;font-weight:800;margin-bottom:8px}
+.occ-row{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--outline)}
+.occ-row:last-child{border-bottom:none}
+.occ-row .dt{color:var(--primary);font-weight:700;min-width:74px;flex:none;font-size:11.5px}
+.occ-row.hol .tt{color:var(--holiday);font-weight:600}
+.occ-row .tt{color:var(--text)}
+.empty{color:var(--muted);font-size:12.5px;text-align:center;padding:10px 0;line-height:2}
+/* رویدادها */
+.ev-list{display:flex;flex-direction:column;gap:8px}
+.ev-item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--outline);border-radius:14px;padding:11px 12px;color:var(--text)}
+.ev-item .meta{flex:1;min-width:0}
+.ev-item .tt{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-item .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.del{width:30px;height:30px;border-radius:9px;border:1px solid var(--outline);background:var(--surface2);color:var(--holiday);cursor:pointer;font-size:14px;flex:none}
+.fab{position:absolute;bottom:18px;inset-inline-start:18px;width:56px;height:56px;border-radius:18px;border:none;background:#1ea84d;color:#fff;cursor:pointer;box-shadow:0 10px 24px rgba(18,140,65,.45);display:none;align-items:center;justify-content:center;z-index:6;transition:transform .15s}
+.fab:hover{transform:translateY(-2px)}
+.fab svg{width:27px;height:27px}
+body[data-tab="calendar"] .fab,body[data-tab="events"] .fab{display:flex}
+/* اوقات شرعی */
+.pr-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--outline)}
+.pr-row:last-child{border-bottom:none}
+.pr-ic{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.pr-ic svg{width:19px;height:19px}
+.pr-row .nm{flex:1;font-size:13.5px;font-weight:600}
+.pr-row .tm{font-size:15px;font-weight:800;color:var(--primary)}
+.note-method{font-size:11px;color:var(--muted);text-align:center;line-height:1.9;padding:2px 8px 6px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+select,input[type=text],input[type=time]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--outline);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13.5px;outline:none}
+select:focus,input:focus{border-color:var(--primary)}
+.field input.err,.field select.err{border:1.6px solid #d64545!important;background:#fdf0f0!important;animation:shakeX .35s}
+@keyframes shakeX{0%,100%{transform:translateX(0)}25%{transform:translateX(5px)}75%{transform:translateX(-5px)}}
+/* تنظیمات */
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--outline);border-radius:14px;padding:13px 14px;margin-bottom:9px;color:var(--text)}
+.set-row .lbl{font-size:13.5px;font-weight:600}
+.set-row .desc{font-size:11px;color:var(--muted);margin-top:2px}
+.set-row select{width:150px}
+.sw{appearance:none;-webkit-appearance:none;width:46px;height:26px;border-radius:13px;background:var(--outline);position:relative;transition:.2s;cursor:pointer;flex:none}
+.sw:checked{background:var(--primary)}
+.sw::after{content:'';position:absolute;top:3px;inset-inline-start:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.sw:checked::after{transform:translateX(-20px)}
+/* منوی سه‌نقطه سمت چپ (نسخه ۱٫۵) */
+.kebab{width:36px;height:36px;border-radius:11px;border:1px solid var(--outline);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.kebab:hover{background:var(--psoft)}
+.kebab svg{width:20px;height:20px}
+.menupop{position:absolute;top:90px;inset-inline-end:12px;min-width:214px;background:var(--surface);border:1px solid var(--outline2);border-radius:16px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.3);z-index:45;display:none}
+.menupop.open{display:block}
+.mi{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;text-align:right;border-radius:10px}
+.mi svg{width:18px;height:18px;color:var(--muted);flex:none}
+.mi:hover{background:var(--psoft)}
+.mi.active{color:var(--primary);background:var(--psoft)}
+.mi.active svg{color:var(--primary)}
+.mi-sep{height:1px;background:var(--outline);margin:4px 6px}
+/* اوقات شرعی کارتی (نسخه ۱٫۵) */
+.pr-hero{display:flex;align-items:center;gap:12px;background:var(--primary);color:var(--pcontrast);border-radius:16px;padding:13px 14px;margin-bottom:10px}
+.pr-hero .hv{font-size:19px;font-weight:800;line-height:1.5}
+.pr-hero .hk{font-size:10.5px;opacity:.85;line-height:1.7}
+.pr-row.next{background:var(--psoft);border-radius:12px;padding:10px 8px;margin:0 -8px 2px;border-bottom:none}
+textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--outline);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13.5px;outline:none;min-height:96px;resize:vertical}
+textarea:focus{border-color:var(--primary)}
+/* پشتیبانی و بنرهای نامحدود (نسخه ۱٫۵) */
+.sup-chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--psoft);color:var(--primary);margin-inline-end:6px}
+.ban-item{border:1px solid var(--outline);border-radius:14px;padding:10px;margin-bottom:8px;background:var(--surface2)}
+.ban-item img{width:100%;height:58px;object-fit:cover;border-radius:10px;margin:6px 0;display:block}
+.ban-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ban-btns{display:flex;gap:5px;flex:none;align-items:center}
+.mini{width:28px;height:28px;border-radius:9px;border:1px solid var(--outline);background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;font-family:inherit;flex:none;line-height:1}
+.mini.warn{color:var(--holiday)}
+/* شیت و پس‌زمینه */
+.backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.2s;z-index:25}
+.backdrop.open{opacity:1;pointer-events:auto}
+.sheet{position:absolute;inset-inline:0;bottom:0;background:var(--surface);border-radius:22px 22px 0 0;padding:18px 18px 22px;transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.3,1),visibility 0s .25s;z-index:30;color:var(--text);visibility:hidden;max-height:88%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.sheet.open{transform:none;visibility:visible;transition:transform .25s cubic-bezier(.2,.8,.3,1)}
+.sheet h3{font-size:15.5px;font-weight:800;margin-bottom:12px}
+.sheet-actions{display:flex;gap:8px;margin-top:14px}
+.sheet-actions .btn{flex:1}
+.btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--outline)}
+.swatches{display:flex;gap:8px}
+.swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2.5px solid transparent}
+.swatch.on{border-color:var(--text)}
+.toast{position:absolute;bottom:86px;inset-inline:26px;background:#232b26;color:#fff;font-size:12.5px;padding:11px 14px;border-radius:13px;opacity:0;pointer-events:none;transition:.25s;z-index:40;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.toast.show{opacity:1}
+.qibla-line{display:flex;align-items:center;gap:10px;font-size:13px}
+.qibla-line .deg{font-size:20px;font-weight:800;color:var(--primary)}
+/* قبله‌نما (نسخه ۱٫۴) */
+.compass{width:236px;max-width:88%;height:auto;display:block;margin:4px auto 0}
+.q-deg{font-size:27px;font-weight:800;color:var(--primary);line-height:1.4}
+.q-sub{font-size:11.5px;color:var(--muted);line-height:2;margin-top:2px}
+/* انتخاب شهر و عضویت (نسخه ۱.۱) */
+.city-btn{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--outline);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13.5px;cursor:pointer;text-align:right}
+.city-list{height:320px;overflow-y:auto;border:1px solid var(--outline);border-radius:12px;margin-top:2px}
+.city-item{display:flex;justify-content:space-between;align-items:center;width:100%;padding:9px 12px;background:none;border:none;border-bottom:1px solid var(--outline);font-family:inherit;font-size:13px;color:var(--text);cursor:pointer;text-align:right}
+.city-item:last-child{border-bottom:none}
+.city-item:hover{background:var(--psoft)}
+.city-item.on{color:var(--primary);font-weight:700}
+.city-item .prov{font-size:10.5px;color:var(--muted);margin-inline-start:8px;flex:none}
+/* محدوده تبلیغات پایین (نسخه ۱٫۴ — جای منوی قبلی) */
+.adzone{border-top:1px solid var(--outline);background:var(--surface);padding:5px 10px 9px;position:relative;z-index:10}
+.adzone .adlabel{display:flex;justify-content:space-between;gap:8px;font-size:9px;color:var(--muted);margin-bottom:4px}
+.adbanner{height:66px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:#e8eef0;background:repeating-linear-gradient(45deg,#2a3a30,#2a3a30 8px,#24332a 8px,#24332a 16px);cursor:pointer;overflow:hidden;text-align:center;padding:0 10px;line-height:1.9}
+.adbanner button{background:var(--primary);color:var(--pcontrast);border:none;border-radius:8px;padding:3px 8px;font-size:10px;font-family:inherit;font-weight:700;cursor:pointer;flex:none}
+.adbanner.imgmode{padding:0;background:#000}
+.adbanner.imgmode img{width:100%;height:66px;object-fit:cover;display:block}
+.addots{position:absolute;top:8px;inset-inline-end:12px;display:flex;gap:3px}
+.addots i{width:5px;height:5px;border-radius:50%;background:var(--outline2);display:block}
+.addots i.on{background:var(--primary)}
+.muted-text{font-size:11px;color:var(--muted)}
+/* نسخه ۱.۲ — استان/شهرستان آبشاری، مکان‌یاب، اذان دلخواه، پنل مدیریت */
+.duo{display:flex;gap:6px}
+.duo select{flex:1;min-width:0}
+.rowbtns{display:flex;gap:6px;margin-top:8px;align-items:center}
+.adh-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 2px;border-bottom:1px dashed var(--outline)}
+.adh-row:last-child{border-bottom:none}
+.adh-row .nm{font-size:12.5px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.on-dot{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block}
+.inter{position:absolute;inset:0;background:rgba(2,10,5,.82);z-index:55;display:none;align-items:center;justify-content:center}
+.inter.open{display:flex}
+.inter-card{background:var(--surface);border-radius:20px;padding:20px 18px;width:84%;max-width:330px;text-align:center;color:var(--text);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.inter-card .big{font-size:15px;font-weight:800;margin:6px 0 4px}
+.inter-box{margin:12px auto;padding:18px 10px;border-radius:14px;background:repeating-linear-gradient(45deg,#2a3a30,#2a3a30 8px,#24332a 8px,#24332a 16px);color:#e8eef0;font-size:12px;line-height:2}
+.count{font-size:11.5px;color:var(--muted);margin:8px 0;min-height:16px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:6px 0 8px}
+.stat{background:var(--surface2);border:1px solid var(--outline);border-radius:12px;padding:8px 4px;text-align:center}
+.stat .v{font-size:14px;font-weight:800;color:var(--primary)}
+.stat .k{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.6}
+.admin-sec{font-size:12.5px;font-weight:800;color:var(--primary);margin:14px 0 6px}
+.sheet.admin{max-height:86%;overflow-y:auto}
+.u-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 2px;border-bottom:1px dashed var(--outline)}
+/* نسخه ۱.۳ — بنر تصویری، اعلان همیشگی، اعلان اذان، دکمه سبز + */
+.notif{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--outline);border-radius:14px;padding:10px 12px;margin:2px 0 10px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.notif .n-ic{width:34px;height:34px;border-radius:11px;background:var(--psoft);color:var(--primary);display:flex;align-items:center;justify-content:center;flex:none}
+.notif .n-ic svg{width:18px;height:18px}
+.notif .n-body{flex:1;min-width:0}
+.notif .n-title{font-size:12.5px;font-weight:700;color:var(--text)}
+.notif .n-sub{font-size:10.5px;color:var(--muted);margin-top:2px}
+.notif .n-actions{display:flex;gap:6px;margin-top:8px}
+.notif .n-actions button{font-family:inherit;font-size:10.5px;font-weight:700;color:var(--primary);background:var(--surface2);border:1px solid var(--outline);border-radius:9px;padding:5px 10px;cursor:pointer}
+.heads{position:absolute;top:10px;inset-inline:12px;background:var(--surface);border:1px solid var(--outline2);border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:48;transform:translateY(-130%);opacity:0;transition:.3s}
+.heads.show{transform:none;opacity:1}
+.heads .h-ic{width:36px;height:36px;border-radius:12px;background:var(--psoft);color:var(--primary);display:flex;align-items:center;justify-content:center;flex:none}
+.heads .h-ic svg{width:19px;height:19px}
+.heads .h-title{font-size:13px;font-weight:800;color:var(--text)}
+.heads .h-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.adm-prev{width:100%;height:52px;object-fit:cover;border-radius:10px;border:1px solid var(--outline);margin-top:8px}
+/* نسخه ۱.۶ — اوقات شرعی مو‌به‌مو مطابق عکس، زنگ اطلاعیه، بازگشت به امروز */
+.pt-card{padding:0;overflow:hidden}
+.pt-head{display:flex;align-items:center;gap:8px;padding:13px 14px;border-bottom:1px solid var(--outline)}
+.pt-head .pt-ic{width:30px;height:30px;color:#e0a010;display:flex;align-items:center;justify-content:center;flex:none}
+.pt-head .pt-ic svg{width:26px;height:26px}
+.pt-head .pt-title{font-size:15.5px;font-weight:800;color:var(--text)}
+.pt-back{border:none;background:none;color:var(--muted);font-size:19px;cursor:pointer;font-family:inherit;padding:0 2px;line-height:1}
+.pt-back:hover{color:var(--primary)}
+.pt-playwrap{display:flex;align-items:center;gap:6px;margin-inline-start:auto}
+.pt-playlbl{font-size:12.5px;color:var(--muted);font-weight:600}
+.pt-play{width:32px;height:32px;border-radius:50%;border:1px solid var(--outline);background:var(--surface2);color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.pt-play svg{width:17px;height:17px}
+.pt-play.on{background:var(--psoft);border-color:var(--primary);animation:ptpulse 1.1s ease-in-out infinite}
+@keyframes ptpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.pt-kebab{width:30px;height:30px;border-radius:9px;border:none;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.pt-kebab:hover{background:var(--psoft);color:var(--text)}
+.pt-kebab svg{width:17px;height:17px}
+/* نسخه ۱.۱۰ — نوار افقی اوقات شرعی مطابق عکس (پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه) */
+.pt-chevwrap{display:flex;justify-content:center;padding:5px 0 1px;border-bottom:1px solid var(--outline)}
+.pt-chevron{border:none;background:none;color:var(--muted);cursor:pointer;padding:3px 22px;border-radius:10px;display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.pt-chevron svg{width:19px;height:19px}
+.pt-chevron.open{transform:rotate(180deg);color:var(--primary)}
+.pt-chevron:hover{color:var(--primary)}
+.pt-strip{display:flex;align-items:stretch;padding:12px 4px 12px}
+.pt-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:5px 1px;position:relative;border-radius:10px}
+.pt-col+.pt-col{border-inline-start:1px solid var(--outline)}
+.pt-col.next{background:var(--psoft)}
+.pt-name{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap}
+.pt-time{font-size:14.5px;font-weight:800;color:#3f4a42;white-space:nowrap}
+[data-theme="dark"] .pt-time{color:var(--text)}
+.pt-col.next .pt-name,.pt-col.next .pt-time{color:var(--primary)}
+.pt-sub{font-size:11px;color:var(--muted);text-align:center;padding:9px 12px 11px;line-height:1.9;border-top:1px solid var(--outline);margin-top:6px}
+.pt-count{font-size:11.5px;font-weight:700;color:var(--primary)}
+.pt-month{overflow-x:auto}
+.pt-mtable{width:100%;border-collapse:collapse;font-size:10.5px;min-width:430px}
+.pt-mtable th{font-weight:700;color:var(--muted);padding:5px 3px;border-bottom:1.5px solid var(--outline2);white-space:nowrap;font-size:10px}
+.pt-mtable td{padding:5px 3px;text-align:center;border-bottom:1px dashed var(--outline);white-space:nowrap;color:var(--text)}
+.pt-mtable td:first-child{font-weight:700;color:var(--primary)}
+.pt-mtable tr.today td{background:var(--psoft);font-weight:800}
+.pt-mtable tr:last-child td{border-bottom:none}
+.pt-menu{position:absolute;top:52px;inset-inline-start:52px;background:var(--surface);border:1px solid var(--outline2);border-radius:14px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.25);z-index:20;display:none;min-width:170px}
+.pt-menu.open{display:block}
+.btn.today-attn{background:var(--primary);color:var(--pcontrast);border-color:var(--primary);animation:todayPulse 1.6s ease-in-out infinite;box-shadow:0 3px 12px rgba(21,128,61,.4)}
+@keyframes todayPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.bell{width:36px;height:36px;border-radius:11px;border:1px solid var(--outline);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;position:relative}
+.bell:hover{background:var(--psoft)}
+.bell svg{width:19px;height:19px}
+.bell-dot{position:absolute;top:7px;inset-inline-start:7px;width:8px;height:8px;border-radius:50%;background:#e53935;border:1.5px solid var(--surface);display:none}
+.bell-dot.on{display:block;animation:todayPulse 1.8s ease-in-out infinite}
+.annpop{position:absolute;top:90px;inset-inline-end:12px;width:min(310px,88%);max-height:min(420px,60%);overflow-y:auto;background:var(--surface);border:1px solid var(--outline2);border-radius:16px;padding:10px;box-shadow:0 18px 44px rgba(0,0,0,.3);z-index:45;display:none}
+.annpop.open{display:block}
+.annpop h4{font-size:13px;font-weight:800;color:var(--text);margin:2px 4px 8px;display:flex;align-items:center;gap:6px}
+.ann-item{border:1px solid var(--outline);border-radius:13px;padding:10px 11px;margin-bottom:8px;background:var(--surface2)}
+.ann-item .a-t{font-size:12.5px;font-weight:800;color:var(--text);margin:5px 0 3px}
+.ann-item .a-b{font-size:11.5px;color:var(--muted);line-height:1.9}
+.ann-item .a-d{font-size:9.5px;color:var(--muted);margin-top:5px}
+.ann-item .a-link{display:inline-block;font-size:10.5px;font-weight:700;color:var(--primary);background:var(--psoft);border:none;border-radius:8px;padding:4px 10px;margin-top:6px;cursor:pointer;font-family:inherit;text-decoration:none}
+.chip.news{background:rgba(21,128,61,.1);color:var(--primary);border:1px solid rgba(21,128,61,.3)}
+.chip.ad{background:rgba(201,138,27,.12);color:var(--occasion);border:1px solid rgba(201,138,27,.3)}
+.ann-row{border:1px solid var(--outline);border-radius:13px;padding:9px 10px;margin-bottom:7px;background:var(--surface2)}
+.ann-row .ban-head{margin-bottom:2px}
+/* ---------- یادآورها (نسخه ۱٫۱۱) ---------- */
+.rem-item{border:1px solid var(--outline);border-radius:14px;padding:11px 12px;background:var(--surface2);margin-bottom:8px}
+.rem-item .r-top{display:flex;align-items:center;gap:8px}
+.rem-item .r-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.rem-item .r-title{font-size:13.5px;font-weight:800;flex:1}
+.rem-item .r-sub{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.9}
+.rem-item .r-acts{display:flex;align-items:center;gap:4px;margin-top:6px}
+.rem-icbtn{width:30px;height:30px;border-radius:9px;border:1px solid var(--outline);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit}
+.rem-icbtn svg{width:15px;height:15px}
+.rem-icbtn.del{color:#d64545}
+.rem-icbtn:hover{background:var(--psoft)}
+.daychip{border:1px solid var(--outline2);background:var(--surface);color:var(--text);border-radius:999px;padding:4px 0;flex:1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center}
+.daychip.on{background:var(--psoft);border-color:var(--primary);color:var(--primary)}
+.tchip{display:inline-flex;align-items:center;gap:5px;background:var(--psoft);color:var(--primary);border:1px solid var(--primary);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;margin:0 0 6px 6px;cursor:pointer}
+.typechip{border:1px solid var(--outline2);background:var(--surface);color:var(--text);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.typechip.on{background:var(--psoft);border-color:currentColor}
+.wbar{height:9px;border-radius:999px;background:rgba(42,123,212,.14);overflow:hidden;margin:8px 0 4px}
+.wbar>div{height:100%;border-radius:999px;background:#2A7BD4;transition:width .3s}
+.rem-notif{border:1px solid var(--outline2);border-radius:14px;padding:10px 12px;background:var(--surface2);display:none;margin-bottom:10px}
+.rem-notif.open{display:block}
+.rem-notif .rn-title{font-weight:800;font-size:12.5px}
+.rem-notif .rn-sub{font-size:11px;color:var(--muted);margin:3px 0 8px}
+.rem-notif .rn-acts{display:flex;gap:8px}
+.today-row{display:flex;align-items:center;gap:10px;padding:5px 2px;cursor:pointer;border-radius:9px}
+.today-row:hover{background:var(--psoft)}
+.today-row .t-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.today-row .t-time{font-weight:800;font-size:12.5px;min-width:44px}
+.today-row .t-name{flex:1;font-size:12.5px}
+.today-row.done .t-time,.today-row.done .t-name{text-decoration:line-through;color:var(--muted)}
+.t-next{font-size:9.5px;font-weight:800;color:var(--primary);background:var(--psoft);border-radius:999px;padding:2px 8px}
+@media (max-width:430px){.phone{height:88vh;border-radius:22px}}
+</style>
+</head>
+<body data-tab="calendar">
+<div class="stage">
+
+  <div class="card-note">
+    <h2>این صفحه چیست؟</h2>
+    <p>فایل تحویل‌شده (<b>PersianCalendar-Source-v1.11.zip</b>) <b>کد منبع اپلیکیشن بومی اندروید (Kotlin)</b> است، نه یک وب‌اپلیکیشن. فایل‌های Kotlin باید در <b>Android Studio</b> با Gradle به APK کامپایل شوند و روی شبیه‌ساز یا گوشی اجرا شوند — به همین دلیل هیچ «اجرای زنده‌ای» از خود اپ اندروید در سایت وجود ندارد.</p>
+    <p style="margin-top:6px">اما برای اینکه طراحی و منطق را همین حالا ببینید، این <b>پیش‌نمایش تعاملی وب</b> با همان الگوریتم‌های واقعی پروژه ساخته شده: تقویم جلالی، تاریخ هجری قمری، مناسبت‌های رسمی ۱۴۰۴ تا ۱۴۰۶، اوقات شرعی (روش مؤسسه ژئوفیزیک تهران) و <b>موتور یادآور عمومی</b> (آب، دارو، ورزش، شخصی). گوشی شبیه‌سازی‌شده زیر را امتحان کنید؛ یادآور بسازید، لیوان آب ثبت کنید یا اعلان را با دکمه زنگ هر یادآور شبیه‌سازی کنید.</p>
+  </div>
+
+  <div class="phone" id="phone" data-theme="light">
+    <div class="statusbar"><span id="sbTime">۹:۴۱</span><span class="sig">▂▄▆█ ۹۸٪</span></div>
+    <div class="appbar">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
+      <h1 id="appTitle">تقویم فارسی</h1>
+      <span class="ver-chip">نسخه ۱٫۱۱٫۱ — دمو</span>
+      <button class="bell" id="btnBell" title="اطلاعیه‌ها (خبر و تبلیغ)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg><span class="bell-dot" id="bellDot"></span></button>
+      <button class="kebab" id="btnKebab" title="منوی برنامه"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+    </div>
+
+    <!-- زنگ اطلاعیه (نسخه ۱.۶) — خبر و تبلیغ از پنل مدیریت -->
+    <div class="annpop" id="annPop">
+      <h4><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-2.5-7.5L3 11Z"/></svg>اطلاعیه‌ها</h4>
+      <div id="annList"></div>
+    </div>
+
+    <div class="menupop" id="menuPop">
+      <button class="mi active" data-tab="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>تقویم</button>
+      <button class="mi" data-tab="prayer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>اوقات شرعی</button>
+      <button class="mi" data-tab="qibla"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2.4 5.4L9 15l2.4-5.4L15 9Z"/></svg>قبله‌نما</button>
+      <button class="mi" data-tab="events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>رویدادها</button>
+      <button class="mi" data-tab="reminders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.8M9.5 3h5M19.5 5.5l1.4 1.6M4.5 5.5 3.1 7.1"/></svg>یادآورها</button>
+      <button class="mi" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h13"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="19" cy="17" r="2"/></svg>تنظیمات</button>
+      <button class="mi" data-tab="support"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.4-.7L3 21l1.9-4.6A8.3 8.3 0 0 1 3.6 12a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8.4 7.9Z"/></svg>پشتیبانی</button>
+      <div class="mi-sep"></div>
+      <button class="mi" data-act="admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3l8 4v5c0 5-3.4 8-8 9-4.6-1-8-4-8-9V7l8-4Z"/><path d="M9.5 12l2 2 3.5-3.5"/></svg>پنل مدیریت تبلیغات</button>
+    </div>
+
+    <div class="screens">
+      <!-- ===== تقویم ===== -->
+      <section class="screen active" id="screen-calendar">
+        <div class="notif" id="notifBar">
+          <div class="n-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
+          <div class="n-body">
+            <div class="n-title" id="notifTitle">تقویم فارسی</div>
+            <div class="n-sub" id="notifSub">اعلان همیشگی — همیشه در دسترس</div>
+            <div class="n-actions">
+              <button id="notifBtnEvents">لیست اعلان‌ها</button>
+              <button id="notifBtnRemind">تنظیم یادآورها</button>
+            </div>
+          </div>
+        </div>
+        <div class="cal-head">
+          <button class="iconbtn" id="prevM" title="ماه قبل">›</button>
+          <div class="cal-title">
+            <div class="m" id="calTitle">—</div>
+            <div class="sub" id="calSub">—</div>
+          </div>
+          <button class="iconbtn" id="nextM" title="ماه بعد">‹</button>
+          <button class="btn ghost sm" id="btnToday">امروز</button>
+        </div>
+        <div class="weekrow"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span class="fri">ج</span></div>
+        <div class="grid" id="calGrid"></div>
+        <div class="card" id="dayDetail"></div>
+        <!-- کارت اوقات شرعی — نوار افقی ۸ وقت، مو‌به‌مو مطابق عکس؛ نسخه ۱.۱۰: پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه -->
+        <div class="card pt-card" id="ptCard" style="position:relative;margin-top:10px">
+          <div class="pt-head">
+            <span class="pt-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="10" r="4"/><path d="M12 2.5v1.6M5.3 5.3l1.1 1.1M18.7 5.3l-1.1 1.1M2.5 10h1.6M19.9 10h1.6"/><path d="M3 17.5h18"/><path d="M9.5 20.5l2.5-2 2.5 2"/></svg></span>
+            <span class="pt-title">اوقات شرعی</span>
+            <span class="pt-back" id="ptBack" title="رفتن به صفحه اوقات شرعی">›</span>
+            <span class="pt-playwrap">
+              <span class="pt-playlbl">بخش اذان</span>
+              <button class="pt-play" id="btnPlayAdhan" title="پخش اذان"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5 6.5 9H3v6h3.5L11 19V5Z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.2 6a9 9 0 0 1 0 12"/></svg></button>
+            </span>
+            <button class="pt-kebab" id="ptKebab" title="گزینه‌ها"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+          </div>
+          <div class="pt-chevwrap"><button class="pt-chevron" id="ptChevron" title="جدول ماهانه اوقات شرعی"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 9l7 7 7-7"/></svg></button></div>
+          <div class="pt-menu" id="ptMenu">
+            <button class="mi" id="ptMiCity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 21s-6.5-5.4-6.5-10a6.5 6.5 0 0 1 13 0C18.5 15.6 12 21 12 21Z"/><circle cx="12" cy="10.6" r="2.3"/></svg>تغییر شهرستان</button>
+            <button class="mi" id="ptMiMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>جدول ماهانه</button>
+            <button class="mi" id="ptMiShare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 10.9l7.6-3.8M8.2 13.1l7.6 3.8"/></svg>اشتراک‌گذاری</button>
+          </div>
+          <div class="pt-strip" id="ptStrip"></div>
+          <div class="pt-sub" id="ptSub">—</div>
+        </div>
+        <div class="card" id="ptMonthWrap" style="display:none;padding:10px 8px;margin-top:10px">
+          <div style="font-size:12.5px;font-weight:800;margin-bottom:6px" id="ptMonthTitle">جدول ماهانه اوقات شرعی</div>
+          <div class="pt-month" id="ptMonth"></div>
+        </div>
+        <div class="occ-block" id="occBlock">
+          <div class="occ-title" id="occTitle">مناسبت‌های این ماه</div>
+          <div id="monthOcc"></div>
+        </div>
+      </section>
+
+      <!-- ===== رویدادها ===== -->
+      <section class="screen" id="screen-events">
+        <div class="scr-title">رویدادها و یادآوری‌ها</div>
+        <div class="ev-list" id="eventsList"></div>
+      </section>
+
+      <!-- ===== یادآورها — موتور یادآور عمومی (نسخه ۱٫۱۱) ===== -->
+      <section class="screen" id="screen-reminders">
+        <div class="scr-title">یادآورها — آب، دارو، ورزش، شخصی</div>
+        <div class="note-method">یک <b>موتور یادآور عمومی</b> به‌جای چند سیستم جدا: هر یادآور چند نوبت ساعت، روزهای هفته (شنبه تا جمعه)، بازه تاریخ شروع تا پایان و حالت تکرار (یک‌باره/روزانه/هفتگی) دارد. در نسخه اندروید ذخیره‌سازی با <b>Room</b>، زمان‌بندی با <b>AlarmManager دقیق</b>، بازیابی خودکار پس از <b>ری‌استارت گوشی</b> و تغییر ساعت/منطقه زمانی، اعلان روی کانال اختصاصی با مجوز اندروید ۱۳+ و دو اکشن «انجام شد» و «بعداً یادآوری کن» (۱۰ دقیقه) است.</div>
+        <div class="rem-notif" id="remNotif">
+          <div class="rn-title" id="rnTitle">—</div>
+          <div class="rn-sub" id="rnSub">—</div>
+          <div class="rn-acts">
+            <button class="btn sm" id="rnDone">انجام شد</button>
+            <button class="btn ghost sm" id="rnSnooze">بعداً یادآوری کن</button>
+          </div>
+        </div>
+        <div class="card" id="remWater" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2A7BD4" stroke-width="1.9"><path d="M12 3s6.5 7.2 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10.2 12 3 12 3Z"/></svg>
+            <div style="font-size:13px;font-weight:800;flex:1">آب امروز</div>
+            <span id="waterStat" style="font-size:12px;font-weight:800;color:#2A7BD4"></span>
+          </div>
+          <div class="wbar"><div id="waterFill" style="width:0%"></div></div>
+          <div class="rowbtns"><button class="btn sm" id="btnGlass" style="flex:1">یک لیوان نوشیدم</button></div>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;font-weight:800;margin-bottom:4px">برنامه امروز</div>
+          <div id="remToday"></div>
+          <div class="muted-text" style="margin-top:4px">لمس هر ردیف یعنی «انجام شد»؛ دوباره لمس کنید تا برداشته شود. دکمه زنگ هر یادآور، اعلان را با همان دو اکشن شبیه‌سازی می‌کند.</div>
+        </div>
+        <div class="rowbtns" id="remFilters"></div>
+        <div id="remList"></div>
+        <button class="btn" id="btnRemAdd" style="width:100%;margin-top:4px">+ یادآور جدید</button>
+        <div class="note-method" style="margin-top:8px">چک‌لیست انتشار در نسخه اندروید: مجوز اعلان ۱۳+ ✓ · آلارم دقیق ۱۲+/۱۴ با بنر راهنما ✓ · ذخیره در Room ✓ · بازیابی پس از ری‌استارت ✓ · لغو آلارم‌های حذف‌شده ✓ · سازگاری تغییر منطقه زمانی ✓ · آزمایش Doze روی گوشی واقعی پیش از انتشار.</div>
+      </section>
+
+      <!-- ===== اوقات شرعی ===== -->
+      <section class="screen" id="screen-prayer">
+        <div class="scr-title">اوقات شرعی</div>
+        <div class="card">
+          <div class="field" style="margin-bottom:6px">
+            <label>استان و شهرستان (۳۹۶ شهر/شهرستان ایران)</label>
+            <div class="duo">
+              <select id="selProv" title="انتخاب استان"></select>
+              <select id="selCity" title="انتخاب شهرستان"></select>
+            </div>
+            <div class="rowbtns">
+              <button class="btn ghost sm" id="btnLocate" style="flex:1">مکان‌یاب — نزدیک‌ترین شهر به من</button>
+              <button class="btn ghost sm" id="btnSearchCity">جست‌وجو</button>
+            </div>
+          </div>
+          <div class="dd-conv" id="prayerDate">—</div>
+        </div>
+        <div class="note-method" style="margin-top:10px">کارت اوقات شرعی (نوار افقی ۸ وقت + بخش اذان + فلش جدول ماهانه) در <b>پایین صفحه اصلی تقویم و پیش از مناسبت‌های ماه</b> قرار گرفت (نسخه ۱.۱۰ — به همان انداز و شکل عکس). این صفحه برای انتخاب شهرستان، روش محاسبه، اذان‌های دلخواه و نوار «نزدیک‌ترین وقت شرعی» است.</div>
+        <div class="pr-hero" id="prayerHero"></div>
+        <div class="card"><div class="qibla-line" id="qiblaInfo">—</div></div>
+        <div class="card">
+          <div style="font-size:13px;font-weight:800;margin-bottom:2px">اذان‌های دلخواه</div>
+          <div class="muted-text" style="margin-bottom:4px">انتخاب کنید کدام اوقات اعلان/اذان بدهند و با چه صدایی</div>
+          <div id="adhanRows"></div>
+          <div class="field" style="margin-top:10px;margin-bottom:6px"><label>صدای اذان</label>
+            <select id="selSound">
+              <option value="mashhad">اذان مشهد</option>
+              <option value="hajjaghar">اذان حاج‌اصغر (تهران)</option>
+              <option value="najaf">اذان نجف اشراف</option>
+              <option value="none">بدون صدا — فقط اعلان</option>
+            </select>
+          </div>
+          <div class="rowbtns">
+            <button class="btn sm" id="btnTestAdhan">آزمایش اعلان اذان</button>
+            <span class="muted-text" id="adhanSummary"></span>
+          </div>
+        </div>
+        <div class="note-method">روش محاسبه: مؤسسه ژئوفیزیک دانشگاه تهران (صبح ۱۷٫۷°، مغرب ۴٫۵°) · ساعت رسمی ایران UTC+3:30 · در نسخه اندروید اعلان دقیق اذان با AlarmManager در زمان انتخابی پخش می‌شود؛ فایل‌های اذان واقعی در res/raw قابل تعویض‌اند (اینجا نمونه ساده‌شده پخش می‌شود).</div>
+      </section>
+
+      <!-- ===== قبله‌نما ===== -->
+      <section class="screen" id="screen-qibla">
+        <div class="scr-title">قبله‌نما</div>
+        <div class="card" style="text-align:center">
+          <svg class="compass" viewBox="0 0 240 240">
+            <circle cx="120" cy="120" r="113" fill="none" stroke="var(--outline2)" stroke-width="2"/>
+            <circle cx="120" cy="120" r="95" fill="none" stroke="var(--outline)" stroke-width="1" stroke-dasharray="3 6"/>
+            <g id="gDial">
+              <g id="gTicks"></g>
+              <text x="120" y="36" text-anchor="middle" font-size="13" font-weight="800" fill="#D64545">شمال</text>
+              <text x="207" y="124" text-anchor="middle" font-size="11" font-weight="700" fill="var(--muted)">شرق</text>
+              <text x="120" y="214" text-anchor="middle" font-size="11" font-weight="700" fill="var(--muted)">جنوب</text>
+              <text x="33" y="124" text-anchor="middle" font-size="11" font-weight="700" fill="var(--muted)">غرب</text>
+              <g id="gNeedle">
+                <rect x="114" y="20" width="12" height="12" rx="2.5" fill="#171d19" stroke="#000" stroke-width="1"/>
+                <path d="M120 36 L128 120 L120 136 L112 120 Z" fill="#D64545"/>
+              </g>
+            </g>
+            <circle cx="120" cy="120" r="8" fill="var(--primary)"/>
+            <circle cx="120" cy="120" r="3.2" fill="var(--pcontrast)"/>
+          </svg>
+          <div class="q-deg" id="qDeg">—</div>
+          <div class="q-sub" id="qSub">در حال آماده‌سازی…</div>
+          <div class="rowbtns" style="justify-content:center;margin-top:10px">
+            <button class="btn sm" id="btnQiblaGps">مکان‌یابی با GPS</button>
+            <button class="btn ghost sm" id="btnQiblaCity">شهر اوقات شرعی</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="stat-grid">
+            <div class="stat"><div class="v" id="qAz">—</div><div class="k">زاویه از شمال جغرافیایی</div></div>
+            <div class="stat"><div class="v" id="qDist">—</div><div class="k">فاصله تا کعبه</div></div>
+            <div class="stat"><div class="v" id="qPos">—</div><div class="k">موقعیت مبنا</div></div>
+            <div class="stat"><div class="v" id="qSensor">—</div><div class="k">حسگر قطب‌نما</div></div>
+          </div>
+          <p class="note-method">در نسخه اندروید، جهت گوشی از حسگر قطب‌نما (Rotation Vector) خوانده می‌شود؛ گوشی را صاف نگه دارید تا صفحه بچرخد و سرِ قرمز (کعبه) دقیقاً رو به قبله بایستد. برای دقت بیشتر گوشی را چند بار به شکل ۸ بچرخانید. این دموی وب زاویه را نسبت به شمال جغرافیایی نشان می‌دهد؛ قطب‌نمای زنده فقط روی موبایل دارنده حسگر کار می‌کند.</p>
+        </div>
+      </section>
+
+      <!-- ===== تنظیمات ===== -->
+      <section class="screen" id="screen-settings">
+        <div class="scr-title">تنظیمات</div>
+        <div class="set-row">
+          <div><div class="lbl">تم تاریک</div><div class="desc">ظاهر تیره برای استفاده در شب</div></div>
+          <input type="checkbox" class="sw" id="swTheme">
+        </div>
+        <div class="set-row">
+          <div><div class="lbl">نمایش مناسبت‌ها</div><div class="desc">نمایش مناسبت‌های ماه و روز</div></div>
+          <input type="checkbox" class="sw" id="swOcc">
+        </div>
+        <div class="set-row">
+          <div><div class="lbl">اعلان همیشگی تاریخ</div><div class="desc">نمونه اعلان دائمی اندروید در بالای تقویم (همیشه فعال)</div></div>
+          <input type="checkbox" class="sw" id="swNotif">
+        </div>
+        <div class="set-row">
+          <div><div class="lbl">شهر اوقات شرعی</div><div class="desc">شهر پیش‌فرض محاسبه</div></div>
+          <button class="btn sm ghost" id="defCityBtn">تهران</button>
+        </div>
+        <div class="set-row">
+          <div><div class="lbl" id="premiumLbl">عضویت ویژه</div><div class="desc" id="premiumDesc">ثبت‌نام کاربر جدید و حذف تبلیغات</div></div>
+          <button class="btn sm" id="premiumBtn">شروع</button>
+        </div>
+        <div class="set-row">
+          <div><div class="lbl">پنل مدیریت تبلیغات</div><div class="desc">بنر/اینترستیشال، آپلود عکس بنر، آمار، کاربران (رمز دمو: ۱۲۳۴)</div></div>
+          <button class="btn sm ghost" id="adminBtn">ورود</button>
+        </div>
+        <div class="set-row">
+          <div><div class="lbl">داده‌های نمایشی</div><div class="desc">پاک کردن رویدادهای دمو از مرورگر</div></div>
+          <button class="btn sm secondary" id="btnClear">پاک کردن</button>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div style="font-size:13px;font-weight:800;margin-bottom:6px">درباره برنامه</div>
+          <div class="dd-conv">تقویم فارسی · نسخه ۱٫۱۱٫۱<br><b>موتور یادآور عمومی (جدید ۱٫۱۱)</b>: یک سیستم یادآور همه‌کاره برای آب، دارو، ورزش و کارهای شخصی — چند نوبت ساعت برای هر یادآور (مثلا آب هر روز ساعت ۱۰، ۱۲، ۱۴ و ۱۶)، روزهای هفته دلخواه، بازه تاریخ شروع تا پایان شمسی، حالت یک‌باره/روزانه/هفتگی، «برنامه امروز» با ثبت انجام‌شدن هر نوبت، پیشرفت آب روزانه با هدف لیوان، اعلان با دکمه‌های «انجام شد» و «بعداً یادآوری کن» (۱۰ دقیقه)، بازیابی خودکار آلارم‌ها پس از ری‌استارت گوشی و تغییر ساعت/منطقه زمانی، درخواست مجوز اعلان اندروید ۱۳+ و بنر راهنمای آلارم دقیق ۱۲+/۱۴.<br>تقویم جلالی + هجری قمری + میلادی، اوقات شرعی ۳۹۶ شهر/شهرستان با انتخاب استانی/شهرستانی و مکان‌یاب، کارت اوقات شرعی مطابق عکس — در <b>پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه</b> (نوار افقی ۸ وقت: صبح، طلوع، ظهر، عصر، غروب، مغرب، عشا، نیمه‌شب با هایلایت سبز نزدیک‌ترین وقت + سرصفحه «اوقات شرعی» و «بخش اذان» با پخش اذان + فلش بازکردن جدول ماهانه)، دکمه بازگشت به امروز در ماه‌های دیگر، زنگ اطلاعیه کنار منوی سه‌نقطه با خبر و تبلیغ از پنل مدیریت، اذان‌های دلخواه (انتخاب وقت و صدا + اعلان اذان با صدا)، اعلان همیشگی تاریخ، دکمه سبز «+» برای ثبت سریع رویداد و یادآور، منوی سه‌نقطه سمت چپ (تقویم، اوقات شرعی، قبله‌نما، رویدادها، یادآورها، تنظیمات، پشتیبانی، پنل مدیریت)، بخش پشتیبانی با ارسال پیام به مدیر، قبله‌نما با GPS و قطب‌نمای زنده، محدوده تبلیغات پایین با بنرهای تصویری بدون محدودیت چرخشی، یادآوری رویدادها، حساب کاربری و عضویت ویژه، ویجت ماهانه، پشتیبان‌گیری محلی و پشتیبانی کامل راست‌به‌چپ.<br><br>این یک پیش‌نمایش وب از طراحی است؛ ویژگی‌هایی مانند اعلان واقعی یادآور و اذان (AlarmManager دقیق)، ذخیره در Room، بازیابی پس از ری‌استارت، اعلان همیشگی در نوار وضعیت، حسگر قطب‌نما و GPS واقعی، ویجت، خرید درون‌برنامه‌ای و پشتیبان‌گیری فایل فقط در نسخه اندرویدی کار می‌کنند. راهنماها در فایل‌های README-FA، ADMOB-SETUP-FA و MEMBERSHIP-FA داخل سورس آمده است.</div>
+        </div>
+      </section>
+
+      <!-- ===== پشتیبانی (نسخه ۱٫۵) ===== -->
+      <section class="screen" id="screen-support">
+        <div class="scr-title">پشتیبانی و تماس با مدیر</div>
+        <div class="card">
+          <div style="font-size:13px;font-weight:800;margin-bottom:4px">پیام به مدیر برنامه</div>
+          <div class="muted-text" style="margin-bottom:9px;line-height:2">اگر مشکل فنی دارید، پیشنهادی دارید یا می‌خواهید <b>در برنامه تبلیغ کنید</b>، همین‌جا پیام بگذارید. پیام شما در صندوق پشتیبانیِ پنل مدیریت ذخیره می‌شود و مدیر پاسخ می‌دهد.</div>
+          <div class="field"><label>نوع پیام</label>
+            <select id="supType">
+              <option value="ad">درخواست تبلیغ در برنامه</option>
+              <option value="bug">گزارش مشکل یا خطا</option>
+              <option value="idea">پیشنهاد و انتقاد</option>
+            </select>
+          </div>
+          <div class="field"><label>نام شما</label><input type="text" id="supName" placeholder="نام و نام خانوادگی"></div>
+          <div class="field"><label>راه پاسخ‌گویی (ایمیل یا شماره تماس)</label><input type="text" id="supContact" placeholder="مثلاً ali@gmail.com یا ۰۹۱۲…"></div>
+          <div class="field"><label>متن پیام</label><textarea id="supText" placeholder="پیام خود را بنویسید…"></textarea></div>
+          <div class="rowbtns">
+            <button class="btn" id="btnSupSend" style="flex:1">ارسال پیام</button>
+            <a class="btn ghost sm" id="supMail" href="mailto:admin@persiancalendar.app?subject=%D9%BE%D8%B4%D8%AA%DB%8C%D8%A8%D8%A7%D9%86%DB%8C%20%D8%AA%D9%82%D9%88%DB%8C%D9%85%20%D9%81%D8%A7%D8%B1%D8%B3%DB%8C" style="text-decoration:none;display:flex;align-items:center">ارسال با ایمیل</a>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;font-weight:800;margin-bottom:6px">پیام‌های ارسال‌شده از این دستگاه</div>
+          <div id="supMine"></div>
+        </div>
+        <div class="note-method">در نسخه اندروید، پیام‌ها در حافظه برنامه ذخیره و از طریق اعلان به مدیر رسانده می‌شوند؛ گزینه «ارسال با ایمیل» هم برنامه ایمیل را با متن آماده باز می‌کند. آدرس ایمیل مدیر را پیش از انتشار در فایل تنظیمات قرار دهید.</div>
+      </section>
+
+      <button class="fab" id="fabAdd" title="ثبت رویداد جدید"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+
+    <div class="adzone" id="adZone">
+      <div class="adlabel"><span>تبلیغات — چرخش بنرهای اختصاصی شما از پنل مدیریت</span><span id="adIdx"></span></div>
+      <div class="adbanner" id="adBanner">◆ فضای تبلیغ AdMob</div>
+      <div class="addots" id="adDots"></div>
+    </div>
+
+    <!-- منوی ناوبری به بالای صفحه منتقل شد (نسخه ۱٫۴) -->
+
+    <div class="backdrop" id="backdrop"></div>
+    <div class="backdrop" id="cityBackdrop"></div>
+    <div class="sheet" id="cityPicker">
+      <h3>انتخاب شهر</h3>
+      <div class="field"><input type="text" id="citySearch" placeholder="جست‌وجوی نام شهر یا استان…"></div>
+      <div class="city-list" id="cityList"></div>
+      <div class="sheet-actions"><button class="btn secondary" id="btnCloseCity">بستن</button></div>
+    </div>
+    <div class="sheet" id="premiumSheet">
+      <h3>عضویت ویژه — پیش‌نمایش دمو</h3>
+      <div id="premiumGuest">
+        <div class="field"><label>نام</label><input type="text" id="regName" placeholder="نام شما"></div>
+        <div class="field"><label>شماره موبایل یا ایمیل</label><input type="text" id="regUser"></div>
+        <div class="field"><label>رمز عبور</label><input type="text" id="regPass" placeholder="حداقل ۴ کاراکتر"></div>
+        <button class="btn" id="btnRegister" style="width:100%">ثبت‌نام و فعال‌سازی دمو</button>
+        <div class="muted-text" style="text-align:center;margin:8px 0">— یا —</div>
+        <div class="field"><label>کد فعال‌سازی</label><input type="text" id="regCode" placeholder="PF-XXXX-XXXX-XXXX"></div>
+        <button class="btn ghost" id="btnCode" style="width:100%">فعال‌سازی با کد</button>
+        <p class="note-method">در نسخه اندروید: ثبت‌نام در Room با هش رمز (بدون سرور)؛ ارتقا با Google Play Billing یا کد از توسعه‌دهنده — پس از ارتقا همه تبلیغات حذف می‌شوند.</p>
+      </div>
+      <div id="premiumDone" style="display:none">
+        <div class="pr-row"><span class="nm">وضعیت</span><span class="tm">عضو ویژه ★</span></div>
+        <p class="note-method">بنر تبلیغ دمو از پایین صفحه حذف شد. در نسخه اندروید اینترستیشال هم غیرفعال می‌شود.</p>
+        <button class="btn secondary" id="btnLogoutPremium" style="width:100%">خروج از حساب (دمو)</button>
+      </div>
+      <div class="sheet-actions"><button class="btn secondary" id="btnClosePremium">بستن</button></div>
+    </div>
+    <div class="sheet admin" id="adminSheet">
+      <h3>پنل مدیریت تبلیغات</h3>
+      <div id="adminLogin">
+        <p class="note-method">این پنل مخصوص توسعه‌دهنده است و در نسخه اندروید با همان منطق (DataStore + قفل رمز) پیاده‌سازی شده. هر تغییر بلافاصله روی بنر و اینترستیشال همین دمو اعمال می‌شود.<br>رمز پیش‌فرض دمو: <b>۱۲۳۴</b> — پس از تغییر می‌توانید رمز شامل <b>حروف و اعداد</b> بگذارید.</p>
+        <div class="field"><label>رمز مدیریت</label><input type="text" id="adminPin" placeholder="رمز پنل (حروف یا عدد)"></div>
+        <button class="btn" id="btnAdminLogin" style="width:100%">ورود به پنل</button>
+      </div>
+      <div id="adminMain" style="display:none">
+        <div class="admin-sec">تبلیغات</div>
+        <div class="set-row"><div><div class="lbl">بنر تبلیغات</div><div class="desc">محدوده پایین صفحه (جای منوی قبلی)</div></div><input type="checkbox" class="sw" id="adBannerSw"></div>
+        <div class="admin-sec" style="margin-top:10px">بنرهای تصویری چرخشی (چندین تبلیغ — بدون محدودیت)</div>
+        <div class="muted-text" style="margin-bottom:4px">هر تعداد بنر بخواهید اضافه کنید؛ بنرهای روشن به‌صورت چرخشی در محدوده تبلیغات پایین (به سبک کارت) نمایش داده می‌شوند؛ اگر بنری نباشد فضای AdMob نشان داده می‌شود.</div>
+        <div id="bannerSlots"></div>
+        <input type="file" id="bannerFile" accept="image/*" style="display:none">
+        <button class="btn ghost sm" id="btnAddBanner" style="width:100%;margin:2px 0 8px">+ افزودن بنر جدید</button>
+        <div class="set-row"><div><div class="lbl">اینترستیشال</div><div class="desc">تبلیغ تمام‌صفحه</div></div><input type="checkbox" class="sw" id="adInterSw"></div>
+        <div class="set-row"><div><div class="lbl">تناوب نمایش</div><div class="desc">هر چند باز شدن جزئیات روز یک‌بار</div></div><select id="adEvery" style="width:90px"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>10</option></select></div>
+        <div class="set-row"><div><div class="lbl">حالت آزمایشی</div><div class="desc">شناسه‌های تست گوگل — پیش از انتشار خاموش کنید</div></div><input type="checkbox" class="sw" id="adTestSw"></div>
+        <div class="field"><label>شناسه بنر AdMob</label><input type="text" id="adBannerId"></div>
+        <div class="field"><label>شناسه اینترستیشال AdMob</label><input type="text" id="adInterId"></div>
+        <div class="admin-sec">آمار این دستگاه (دمو)</div>
+        <div class="stat-grid">
+          <div class="stat"><div class="v" id="stOpens">۰</div><div class="k">باز شدن روز</div></div>
+          <div class="stat"><div class="v" id="stInter">۰</div><div class="k">اینترستیشال</div></div>
+          <div class="stat"><div class="v" id="stUsers">۰</div><div class="k">کاربر ثبت‌نام</div></div>
+        </div>
+        <div class="stat" style="padding:10px;margin-bottom:8px"><div class="v" id="stSup">۰</div><div class="k">پیام پشتیبانی دریافت‌شده</div></div>
+        <div class="stat" style="padding:10px"><div class="v" id="stRev">۰</div><div class="k">درآمد تخمینی (تومان) — اینترستیشال × ۲٬۵۰۰</div></div>
+        <div class="admin-sec">عضویت ویژه</div>
+        <div class="field"><label>قیمت نمایشی</label><input type="text" id="adPrice"></div>
+        <div class="admin-sec">کاربران ثبت‌نام‌شده</div>
+        <div id="admUsers"></div>
+        <div class="admin-sec">اطلاعیه‌ها (زنگ کنار منوی سه‌نقطه)</div>
+        <div class="muted-text" style="margin-bottom:4px">خبر یا تبلیغی که اینجا ثبت کنید، با زنگ قرمز بالای برنامه به همه کاربران نشان داده می‌شود. لینک اختیاری است.</div>
+        <div id="annAdminList"></div>
+        <div class="duo" style="margin-top:6px">
+          <select id="annType" style="flex:none;width:104px"><option value="news">خبر</option><option value="ad">تبلیغ</option></select>
+          <input type="text" id="annTitle" placeholder="عنوان اطلاعیه">
+        </div>
+        <textarea id="annBody" placeholder="متن اطلاعیه…" style="width:100%;border:1px solid var(--outline);border-radius:12px;padding:9px 12px;font-family:inherit;font-size:12.5px;margin-top:6px;min-height:56px;background:var(--surface2);color:var(--text)"></textarea>
+        <input type="text" id="annLink" placeholder="لینک (اختیاری — دکمه مشاهده می‌سازد)" style="width:100%;border:1px solid var(--outline);border-radius:12px;padding:9px 12px;font-family:inherit;font-size:12.5px;margin-top:6px;background:var(--surface2);color:var(--text)">
+        <button class="btn sm" id="btnAddAnn" style="width:100%;margin-top:7px">+ افزودن اطلاعیه</button>
+        <div class="admin-sec">صندوق پشتیبانی</div>
+        <div class="muted-text" style="margin-bottom:4px">پیام‌هایی که کاربران از بخش پشتیبانی (تبلیغ / مشکل / پیشنهاد) ارسال کرده‌اند.</div>
+        <div id="admSup"></div>
+        <div class="admin-sec">امنیت</div>
+        <div class="duo"><input type="text" id="newPin" placeholder="رمز جدید (حروف + اعداد، حداقل ۶)"><button class="btn sm" id="btnNewPin">تغییر رمز</button></div>
+        <button class="btn secondary" id="btnAdminOut" style="width:100%;margin-top:10px">خروج از پنل</button>
+      </div>
+      <div class="sheet-actions"><button class="btn secondary" id="btnCloseAdmin">بستن</button></div>
+    </div>
+    <div class="inter" id="interAd">
+      <div class="inter-card">
+        <div class="muted-text" style="font-size:10px">تبلیغ بین‌صفحه‌ای (دمو)</div>
+        <div class="big">فضای تبلیغاتی AdMob</div>
+        <div class="inter-box">محل تبلیغ اینترستیشال — در نسخه اندروید آگهی واقعی گوگل اینجا نمایش داده می‌شود<br>هر <b id="interN">۳</b> باز شدن جزئیات روز · قابل تنظیم از پنل مدیریت</div>
+        <div class="count" id="interTimer"></div>
+        <button class="btn" id="interClose" disabled style="width:100%">…</button>
+      </div>
+    </div>
+    <div class="sheet" id="sheet">
+      <h3>رویداد جدید</h3>
+      <div class="field"><label>عنوان</label><input type="text" id="evTitle" placeholder="مثلاً: جلسه کاری"></div>
+      <div class="field"><label>تاریخ رویداد</label><input type="text" id="evDateLabel" readonly></div>
+      <div class="field"><label>ساعت یادآوری (اختیاری)</label><input type="time" id="evTime"></div>
+      <div class="field"><label>تکرار</label>
+        <select id="evRepeat">
+          <option value="none">بدون تکرار</option>
+          <option value="daily">روزانه</option>
+          <option value="weekly">هفتگی</option>
+          <option value="monthly">ماهانه</option>
+          <option value="yearly">سالانه</option>
+        </select>
+      </div>
+      <div class="field"><label>رنگ</label>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn" id="btnSaveEvent">ذخیره</button>
+        <button class="btn secondary" id="btnCancelEvent">انصراف</button>
+      </div>
+    </div>
+    <!-- ===== ویرایشگر یادآور (نسخه ۱٫۱۱) ===== -->
+    <div class="sheet" id="remSheet">
+      <h3 id="remSheetTitle">یادآور جدید</h3>
+      <div class="field"><label>عنوان</label><input type="text" id="remTitle" placeholder="لیوان آب، قرص فشار خون، پیاده‌روی…"></div>
+      <div class="field"><label>نوع یادآور</label>
+        <div class="rowbtns" id="remTypes">
+          <button class="typechip" data-t="0" style="color:#2A7BD4">آب</button>
+          <button class="typechip" data-t="1" style="color:#D64545">دارو</button>
+          <button class="typechip" data-t="2" style="color:#1E9E55">ورزش</button>
+          <button class="typechip" data-t="3" style="color:#7C5CD6">شخصی</button>
+        </div>
+      </div>
+      <div class="field"><label>ساعت‌های یادآوری (می‌توانید چند ساعت اضافه کنید)</label>
+        <div id="remTimeChips" style="margin-bottom:6px"></div>
+        <div class="rowbtns"><input type="time" id="remTimeInput" style="flex:1"><button class="btn sm" id="btnRemTimeAdd" style="flex:none">+ افزودن</button></div>
+      </div>
+      <div class="field"><label>تکرار</label>
+        <select id="remRepeat">
+          <option value="1">هر روز</option>
+          <option value="2">روزهای هفته</option>
+          <option value="0">یک‌باره (فقط تاریخ شروع)</option>
+        </select>
+      </div>
+      <div class="field" id="remDaysWrap" style="display:none"><label>روزهای تکرار</label>
+        <div class="rowbtns" id="remDays"></div>
+      </div>
+      <div class="field"><label>تاریخ شروع (شمسی)</label>
+        <div class="rowbtns" id="remStartRow"></div>
+      </div>
+      <div class="set-row" style="padding:6px 0">
+        <div><div class="lbl">تاریخ پایان</div><div class="desc">خالی = بی‌پایان</div></div>
+        <input type="checkbox" class="sw" id="remNoEnd" checked>
+      </div>
+      <div class="field" id="remEndWrap" style="display:none">
+        <div class="rowbtns" id="remEndRow"></div>
+      </div>
+      <div class="field" id="remTargetWrap" style="display:none"><label>هدف روزانه (لیوان)</label>
+        <div class="rowbtns" style="align-items:center">
+          <button class="btn ghost sm" id="btnTargetMinus" style="flex:none;width:44px">−</button>
+          <span id="remTargetVal" style="font-weight:800;font-size:16px;min-width:44px;text-align:center">۸</span>
+          <button class="btn ghost sm" id="btnTargetPlus" style="flex:none;width:44px">+</button>
+          <span class="muted-text">پیشنهاد: ۸ لیوان</span>
+        </div>
+      </div>
+      <div class="field"><label>یادداشت (اختیاری)</label><input type="text" id="remNote" placeholder="مثلا «بعد از غذا» یا «۲ لیوان بزرگ»"></div>
+      <div class="set-row"><div><div class="lbl">یادآور فعال است</div></div><input type="checkbox" class="sw" id="remEnabled" checked></div>
+      <div class="sheet-actions">
+        <button class="btn" id="btnRemSave">ذخیره یادآور</button>
+        <button class="btn secondary" id="btnRemCancel">انصراف</button>
+        <button class="btn ghost" id="btnRemDelete" style="display:none;color:#d64545">حذف</button>
+      </div>
+    </div>
+    <div class="heads" id="headsUp">
+      <div class="h-ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 3a8 8 0 1 0 7 11.6A9 9 0 1 1 14 3Z"/></svg></div>
+      <div class="n-body"><div class="h-title" id="huTitle">اذان</div><div class="h-sub" id="huSub"></div></div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="card-note">
+    <h2>اجرای نسخه اصلی اندرویدی در ۶ گام</h2>
+    <ol>
+      <li><b>Android Studio</b> (نسخه Ladybug یا جدیدتر با JDK 17) را نصب کنید.</li>
+      <li>سورس را از حالت ZIP خارج کنید و از منوی <b>File → Open</b> پوشه پروژه را باز کنید.</li>
+      <li>صبر کنید <b>Gradle Sync</b> تمام شود (بار اول چند دقیقه طول می‌کشد؛ اینترنت لازم است).</li>
+      <li>یک <b>Device Manager</b> (شبیه‌ساز) وصل کنید یا گوشی را با USB Debugging متصل کنید.</li>
+      <li>دکمه سبز <b>Run ▶</b> را بزنید تا APK ساخته و نصب شود.</li>
+      <li>قبل از انتشار، <b>شناسه‌های تست AdMob</b> را با شناسه واقعی خود جایگزین کنید (فایل ADMOB-SETUP-FA).</li>
+    </ol>
+  </div>
+
+</div>
+<script>
+/* ================= الجزء ۱: الگوریتم‌های تقویم (پرت از نسخه اعتبارسنجی‌شده Kotlin) ================= */
+function div(a,b){return Math.trunc(a/b)}
+function mod(a,b){return a-Math.trunc(a/b)*b}
+function jalCal(jy){
+  var breaks=[-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];
+  var bl=breaks.length,gy=jy+621,leapJ=-14,jp=breaks[0],jm,jump=0,leap,n,i;
+  for(i=1;i<bl;i+=1){jm=breaks[i];jump=jm-jp;if(jy<jm)break;leapJ=leapJ+div(jump,33)*8+div(mod(jump,33),4);jp=jm;}
+  n=jy-jp;
+  leapJ=leapJ+div(n,33)*8+div(mod(n,33)+3,4);
+  if(mod(jump,33)===4&&jump-n===4)leapJ+=1;
+  var leapG=div(gy,4)-div((div(gy,100)+1)*3,4)-150;
+  var march=20+leapJ-leapG;
+  if(jump-n<6)n=n-jump+div(jump+4,33)*33;
+  leap=mod(mod(n+1,33)-1,4);
+  if(leap===-1)leap=4;
+  return{leap:leap,gy:gy,march:march};
+}
+function g2d(gy,gm,gd){
+  var d=div((gy+div(gm-8,6)+100100)*1461,4)+div(153*mod(gm+9,12)+2,5)+gd-34840408;
+  d=d-div(div(gy+100100+div(gm-8,6),100)*3,4)+752;
+  return d;
+}
+function d2g(jdn){
+  var j=4*jdn+139361631;
+  j=j+div(div(4*jdn+183187720,146097)*3,4)*4-3908;
+  var i=div(mod(j,1461),4)*5+308;
+  var gd=div(mod(i,153),5)+1;
+  var gm=mod(div(i,153),12)+1;
+  var gy=div(j,1461)-100100+div(8-gm,6);
+  return{gy:gy,gm:gm,gd:gd};
+}
+function j2d(jy,jm,jd){
+  var r=jalCal(jy);
+  return g2d(r.gy,3,r.march)+(jm-1)*31-div(jm,7)*(jm-7)+jd-1;
+}
+function d2j(jdn){
+  var gy=d2g(jdn).gy,jy=gy-621,r=jalCal(jy),jdn1f=g2d(gy,3,r.march),jd,jm,k;
+  k=jdn-jdn1f;
+  if(k>=0){
+    if(k<=185){jm=1+div(k,31);jd=mod(k,31)+1;return{jy:jy,jm:jm,jd:jd};}
+    else{k-=186;}
+  }else{
+    jy-=1;k+=179;if(r.leap===1)k+=1;
+  }
+  jm=7+div(k,30);jd=mod(k,30)+1;
+  return{jy:jy,jm:jm,jd:jd};
+}
+function isJalaliLeap(jy){return jalCal(jy).leap===0}
+function jalaliMonthLen(jy,jm){if(jm<=6)return 31;if(jm<=11)return 30;return isJalaliLeap(jy)?30:29}
+/* هجری قمری — الگوریتم جدولی کویت */
+function hijriFromJDN(jd){
+  var l=jd-1948440+10632;
+  var n=Math.trunc((l-1)/10631);
+  l=l-10631*n+354;
+  var j=Math.trunc((10985-l)/5316)*Math.trunc((50*l)/17719)+Math.trunc(l/5670)*Math.trunc((43*l)/15238);
+  l=l-Math.trunc((30-j)/15)*Math.trunc((17719*j)/50)-Math.trunc(j/16)*Math.trunc((15238*j)/43)+29;
+  var hm=Math.trunc((24*l)/709);
+  var hd=l-Math.trunc((709*hm)/24);
+  var hy=30*n+j-30;
+  return{hy:hy,hm:hm,hd:hd};
+}
+/* اوقات شرعی — PrayTimes، روش ژئوفیزیک تهران */
+var dsin=function(d){return Math.sin(d*Math.PI/180)},dcos=function(d){return Math.cos(d*Math.PI/180)},
+dtan=function(d){return Math.tan(d*Math.PI/180)},darcsin=function(x){return Math.asin(x)*180/Math.PI},
+darccos=function(x){return Math.acos(x)*180/Math.PI},darctan2=function(y,x){return Math.atan2(y,x)*180/Math.PI},
+darccot=function(x){return Math.atan(1/x)*180/Math.PI},
+fixAngle=function(a){return fix(a,360)},fixHour=function(a){return fix(a,24)};
+function fix(a,b){a=a-b*Math.floor(a/b);return a<0?a+b:a;}
+function julian(y,m,d){
+  if(m<=2){y-=1;m+=12;}
+  var A=Math.floor(y/100),B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5;
+}
+function sunPosition(jd){
+  var D=jd-2451545.0;
+  var g=fixAngle(357.529+0.98560028*D);
+  var q=fixAngle(280.459+0.98564736*D);
+  var L=fixAngle(q+1.915*dsin(g)+0.020*dsin(2*g));
+  var e=23.439-0.00000036*D;
+  var RA=darctan2(dcos(e)*dsin(L),dcos(L))/15;
+  var eqt=q/15-fixHour(RA);
+  var decl=darcsin(dsin(e)*dcos(L));
+  return{eqt:eqt,decl:decl};
+}
+function prayerTimes(dateObj,lat,lng){
+  var tz=3.5;
+  var jd=julian(dateObj.getFullYear(),dateObj.getMonth()+1,dateObj.getDate())-lng/(15*24);
+  function midDay(t){return fixHour(12-sunPosition(jd+t).eqt);}
+  function angleTime(angle,t,ccw){
+    var decl=sunPosition(jd+t).decl;
+    var noon=midDay(t);
+    var v=(1/15)*darccos((-dsin(angle)-dsin(decl)*dsin(lat))/(dcos(decl)*dcos(lat)));
+    return noon+(ccw?-v:v);
+  }
+  function asrTime(factor,t){
+    var decl=sunPosition(jd+t).decl;
+    var angle=-darccot(factor+dtan(Math.abs(lat-decl)));
+    return angleTime(angle,t,false);
+  }
+  var t={fajr:5/24,sunrise:6/24,dhuhr:12/24,asr:13/24,maghrib:18/24,sunset:18/24,isha:18.5/24};
+  var res={},i;
+  for(i=0;i<3;i++){
+    res={
+      fajr:angleTime(17.7,t.fajr*24,true)/24,
+      sunrise:angleTime(0.833,t.sunrise*24,true)/24,
+      dhuhr:midDay(t.dhuhr*24)/24,
+      asr:asrTime(1,t.asr*24)/24,
+      maghrib:angleTime(4.5,t.maghrib*24,false)/24,
+      sunset:angleTime(0.833,t.sunset*24,false)/24,
+      isha:angleTime(14,t.isha*24,false)/24
+    };
+    t={fajr:res.fajr,sunrise:res.sunrise,dhuhr:res.dhuhr,asr:res.asr,maghrib:res.maghrib,sunset:res.sunset,isha:res.isha};
+  }
+  var adj=tz-lng/15,out={},k;
+  for(k in res)out[k]=res[k]*24+adj;
+  var night=out.fajr+24-out.maghrib;
+  out.midnight=fixHour(out.maghrib+night/2);
+  return out;
+}
+function qiblaBearing(lat,lng){
+  var kLat=21.4225*Math.PI/180,kLng=39.8262*Math.PI/180;
+  var p=lat*Math.PI/180,l=lng*Math.PI/180,dl=kLng-l;
+  var y=Math.sin(dl),x=Math.cos(p)*Math.tan(kLat)-Math.sin(p)*Math.cos(dl);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+</script>
+<script>
+/* ================= الجزء ۲: رابط کاربری ================= */
+var store={
+  get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+  set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+};
+var FA='۰۱۲۳۴۵۶۷۸۹';
+function toFa(s){return String(s).replace(/\d/g,function(d){return FA[d];});}
+function pad2(n){return (n<10?'0':'')+n;}
+var JM=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+var HM=['محرم','صفر','ربیع‌الاول','ربیع‌الثانی','جمادی‌الاول','جمادی‌الثانی','رجب','شعبان','رمضان','شوال','ذی‌القعده','ذی‌الحجه'];
+var GM=['ژانویه','فوریه','مارس','آوریل','مه','ژوئن','ژوئیه','اوت','سپتامبر','اکتبر','نوامبر','دسامبر'];
+var WDN=['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+var CITIES=[['تهران',35.6892,51.3890,'تهران'],['شهرری',35.5944,51.4428,'تهران'],['اسلامشهر',35.5511,51.2350,'تهران'],['شهریار',35.6589,51.0578,'تهران'],['ملارد',35.6669,50.9797,'تهران'],['رباط‌کریم',35.4831,51.0892,'تهران'],['پرند (شهر جدید)',35.4997,51.0833,'تهران'],['ورامین',35.3247,51.6464,'تهران'],['پیشوا',35.3356,51.7236,'تهران'],['قرچک',35.3481,51.5914,'تهران'],['پاکدشت',35.4706,51.6817,'تهران'],['پردیس',35.7392,51.8244,'تهران'],['دماوند',35.7178,52.0650,'تهران'],['فیروزکوه',35.7539,52.7753,'تهران'],['کرج',35.8355,50.9915,'البرز'],['فردیس',35.7178,50.9842,'البرز'],['ماهدشت',35.6964,51.0267,'البرز'],['اشتهارد',35.6659,50.4121,'البرز'],['نظرآباد',35.9539,50.6078,'البرز'],['هشتگرد',35.9606,50.6903,'البرز'],['قم',34.6416,50.8746,'قم'],['اراک',34.0917,49.6892,'مرکزی'],['ساوه',35.0213,50.3566,'مرکزی'],['خمین',33.6394,50.0803,'مرکزی'],['محلات',33.9122,50.4564,'مرکزی'],['دلیجان',33.9906,50.6853,'مرکزی'],['شازند',33.9203,49.3925,'مرکزی'],['تفرش',34.6925,50.0139,'مرکزی'],['کمیجان',34.7486,50.2764,'مرکزی'],['ساری',36.5633,53.0601,'مازندران'],['آمل',36.4696,52.3507,'مازندران'],['بابل',36.5513,52.6787,'مازندران'],['بابلسر',36.6992,52.6531,'مازندران'],['قائم‌شهر',36.4630,52.8600,'مازندران'],['نور',36.5664,52.0175,'مازندران'],['محمودآباد',36.6294,52.2592,'مازندران'],['فریدون‌کنار',36.6906,52.5231,'مازندران'],['پل سفید (سوادکوه)',36.6297,53.2139,'مازندران'],['نکا',36.7297,53.3061,'مازندران'],['بهشهر',36.6881,53.5539,'مازندران'],['تنکابن',36.8019,50.8722,'مازندران'],['چالوس',36.6554,51.4254,'مازندران'],['نوشهر',36.6503,51.4969,'مازندران'],['رامسر',36.7822,50.6617,'مازندران'],['رشت',37.2808,49.5832,'گیلان'],['بندر انزلی',37.4733,49.4628,'گیلان'],['لاهیجان',37.2075,50.0036,'گیلان'],['لنگرود',37.1935,50.1531,'گیلان'],['رودسر',37.2783,50.2919,'گیلان'],['املش',37.0964,50.1831,'گیلان'],['سیاهکل',37.1214,50.1358,'گیلان'],['رودبار',36.8283,49.9503,'گیلان'],['آستانه اشرفیه',37.2631,49.9408,'گیلان'],['فومن',37.2228,49.3106,'گیلان'],['صومعه‌سرا',37.3019,49.3253,'گیلان'],['ماسال',37.3719,48.9669,'گیلان'],['شفت',37.2792,49.4197,'گیلان'],['رضوانشهر',37.5853,49.1456,'گیلان'],['پره‌سر',37.6689,49.0228,'گیلان'],['تالش (هشتپر)',37.7292,48.9211,'گیلان'],['آستارا',38.4447,48.8706,'گیلان'],['اردبیل',38.2498,48.2933,'اردبیل'],['مشگین‌شهر',38.3945,47.6815,'اردبیل'],['نمین',38.4242,48.4839,'اردبیل'],['نیر',38.0153,48.0306,'اردبیل'],['خلخال',37.6188,48.5294,'اردبیل'],['کوثر (گیوی)',38.4556,47.9417,'اردبیل'],['گرمی (مغان)',39.1764,47.8386,'اردبیل'],['پارس‌آباد',39.6481,47.9108,'اردبیل'],['بیله‌سوار',39.3667,48.1167,'اردبیل'],['زنجان',36.6736,48.4787,'زنجان'],['خرمدره',36.9311,48.5047,'زنجان'],['آبهر',36.7547,48.8381,'زنجان'],['قیدار (خدابنده)',36.4161,48.1672,'زنجان'],['ماه‌نشان',36.7056,48.3733,'زنجان'],['سلطانیه',36.4392,48.7811,'زنجان'],['قزوین',36.2797,50.0049,'قزوین'],['تاکستان',36.4681,49.7003,'قزوین'],['آبیک',36.0625,50.5336,'قزوین'],['بویین‌زهرا',35.7642,50.0711,'قزوین'],['الوند',36.2686,50.0486,'قزوین'],['سمنان',35.5729,53.3971,'سمنان'],['شاهرود',36.4181,54.9763,'سمنان'],['دامغان',36.1678,54.3408,'سمنان'],['گرمسار',35.2225,52.3311,'سمنان'],['مهدی‌شهر',35.7111,53.2583,'سمنان'],['میامی',36.0986,54.3350,'سمنان'],['سرخه',35.2317,53.7794,'سمنان'],['بیارجمند',34.8919,54.9653,'سمنان'],['گرگان',36.8427,54.4441,'گلستان'],['گنبد کاووس',37.2499,55.1681,'گلستان'],['علی‌آباد کتول',36.9033,55.1117,'گلستان'],['آق‌قلا',37.0192,54.4547,'گلستان'],['بندر ترکمن',36.9611,53.9564,'گلستان'],['بندرگز',36.7611,53.9403,'گلستان'],['کردکوی',37.2922,54.1092,'گلستان'],['آزادشهر',37.0867,55.0911,'گلستان'],['رامیان',37.0175,55.1331,'گلستان'],['کلاله',37.3819,55.4925,'گلستان'],['مینودشت',37.5636,55.0986,'گلستان'],['مراوه‌تپه',37.8486,55.5433,'گلستان'],['گمیشان',37.5928,53.8489,'گلستان'],['بجنورد',37.4747,57.3290,'خراسان شمالی'],['شیروان',37.9256,57.6731,'خراسان شمالی'],['اسفراین',37.0758,57.5103,'خراسان شمالی'],['آشخانه (مانه و سملقان)',37.1211,56.8369,'خراسان شمالی'],['جاجرم',36.9456,56.2808,'خراسان شمالی'],['گرمه',37.0464,56.0653,'خراسان شمالی'],['فاروج',37.3894,58.2183,'خراسان شمالی'],['مشهد',36.2605,59.6168,'خراسان رضوی'],['نیشابور',36.2133,58.7958,'خراسان رضوی'],['سبزوار',36.2126,57.6819,'خراسان رضوی'],['تربت حیدریه',35.2756,59.2194,'خراسان رضوی'],['قوچان',37.1064,58.5103,'خراسان رضوی'],['چناران',36.6461,59.1219,'خراسان رضوی'],['درگز',37.4361,59.1064,'خراسان رضوی'],['سرخس',36.5461,61.1606,'خراسان رضوی'],['فریمان',35.3561,59.8736,'خراسان رضوی'],['تربت جام',35.2447,60.6233,'خراسان رضوی'],['خواف',34.5825,60.1219,'خراسان رضوی'],['کاشمر',35.2486,58.4669,'خراسان رضوی'],['بردسکن',35.2692,57.9697,'خراسان رضوی'],['خلیل‌آباد',35.2728,58.2756,'خراسان رضوی'],['گناباد',34.3533,58.6836,'خراسان رضوی'],['بجستان',34.6136,58.3456,'خراسان رضوی'],['جغتای',36.5869,57.1978,'خراسان رضوی'],['بیرجند',32.8663,59.2211,'خراسان جنوبی'],['قائن',33.7261,59.1711,'خراسان جنوبی'],['طبس',33.5947,56.9233,'خراسان جنوبی'],['فردوس',34.0131,58.2369,'خراسان جنوبی'],['سرایان',33.9281,58.6264,'خراسان جنوبی'],['بشرویه',33.8942,57.1117,'خراسان جنوبی'],['درمیان (اسدییه)',32.9400,59.9300,'خراسان جنوبی'],['نهبندان',31.5456,60.0361,'خراسان جنوبی'],['خوسف',32.5267,58.9222,'خراسان جنوبی'],['زیرکوه (حاجی‌آباد)',33.8272,58.3186,'خراسان جنوبی'],['کرمان',30.2839,57.0834,'کرمان'],['رفسنجان',30.4067,55.9939,'کرمان'],['سیرجان',29.4522,55.6826,'کرمان'],['جیرفت',28.6725,57.8020,'کرمان'],['بم',29.1061,58.3569,'کرمان'],['بردسیر',29.9028,56.5697,'کرمان'],['رابر',30.7356,56.9344,'کرمان'],['زرند',30.8117,57.3050,'کرمان'],['شهربابک',30.1197,55.1389,'کرمان'],['انار',30.8811,55.2653,'کرمان'],['بافت',29.2314,56.5928,'کرمان'],['کوهبنان',28.2453,58.4358,'کرمان'],['عنبرآباد',28.5272,57.3911,'کرمان'],['منوجان',27.5097,57.6819,'کرمان'],['کهنوج',27.9539,57.7064,'کرمان'],['قلعه‌گنج',27.9236,57.8389,'کرمان'],['فهرج',28.9039,58.7403,'کرمان'],['ارزوئیه',28.7622,56.8789,'کرمان'],['ریگان (محمدآباد)',28.6861,58.8597,'کرمان'],['خاتون‌آباد (کرمان)',30.2414,57.1511,'کرمان'],['یزد',31.8974,54.3569,'یزد'],['میبد',32.2406,54.0161,'یزد'],['اردکان',32.3111,54.0183,'یزد'],['اشکذر',32.5311,54.0131,'یزد'],['مهریز',31.5881,54.4186,'یزد'],['تفت',31.7108,53.9831,'یزد'],['ابرقو',31.1611,53.2906,'یزد'],['بافق',32.2969,55.4128,'یزد'],['خاتم (هرات)',31.4169,54.3217,'یزد'],['بهاباد',31.1444,54.3928,'یزد'],['اصفهان',32.6546,51.6680,'اصفهان'],['کاشان',33.9831,51.4364,'اصفهان'],['آران و بیدگل',34.0561,51.4778,'اصفهان'],['خمینی‌شهر',32.7003,51.5219,'اصفهان'],['نجف‌آباد',32.6343,51.3661,'اصفهان'],['تیران و کرون',32.7089,51.5342,'اصفهان'],['شاهین‌شهر و میمه',32.8592,51.5522,'اصفهان'],['مبارکه',32.3639,51.4436,'اصفهان'],['زرین‌شهر (لنجان)',32.3553,51.1506,'اصفهان'],['فولادشهر (لنجان)',32.5406,51.5014,'اصفهان'],['شهرضا',32.4647,51.8556,'اصفهان'],['سمیرم',31.7403,51.5653,'اصفهان'],['چادگان',32.7806,50.6222,'اصفهان'],['فریدن (دارآن)',32.8528,50.5339,'اصفهان'],['فریدون‌شهر',32.8061,50.1169,'اصفهان'],['بوئین و میاندشت',33.1414,50.4497,'اصفهان'],['خوانسار',33.2181,50.3181,'اصفهان'],['گلپایگان',33.5308,50.2878,'اصفهان'],['خور و بیابانک',33.8044,54.6556,'اصفهان'],['نائین',32.8522,52.8608,'اصفهان'],['اردستان',33.3761,51.9897,'اصفهان'],['دهاقان',32.4956,52.2303,'اصفهان'],['شیراز',29.5918,52.5837,'فارس'],['مرودشت',29.7442,52.8025,'فارس'],['زرقان',29.7686,52.7106,'فارس'],['کازرون',29.6183,51.6708,'فارس'],['فسا',28.9383,53.6450,'فارس'],['داراب',28.7519,54.5444,'فارس'],['جهرم',28.5009,53.5603,'فارس'],['لار',27.6658,54.3450,'فارس'],['خنج',27.9169,53.4494,'فارس'],['فراشبند',28.8464,52.5336,'فارس'],['فیروزآباد',28.8292,52.5661,'فارس'],['قیروکارزین',28.0039,52.9500,'فارس'],['مهر (مهرستان)',27.6133,54.4186,'فارس'],['اقلید',30.5269,52.6878,'فارس'],['آباده',31.1597,52.6506,'فارس'],['میمند (اذرشهر)',31.1464,52.3489,'فارس'],['بوانات (سورمق)',30.4667,52.9167,'فارس'],['صفاشهر (خرم‌بید)',30.6658,52.5283,'فارس'],['سعادت‌شهر (پاسارگاد)',30.2106,53.1772,'فارس'],['نیریز',29.1972,54.3253,'فارس'],['استهبان',29.1311,54.0581,'فارس'],['ارسنجان',29.2178,53.8250,'فارس'],['ممسنی (نورآباد)',30.1147,51.5186,'فارس'],['رویش‌شهر (کوهچنار)',30.4911,51.6064,'فارس'],['بوشهر',28.9234,50.8203,'بوشهر'],['برازجان (دشتستان)',29.2647,51.2139,'بوشهر'],['خورموج (دشتی)',28.7039,51.6589,'بوشهر'],['گناوه',29.5725,50.5153,'بوشهر'],['دیلم',30.2650,50.2144,'بوشهر'],['بندر دیر',28.6528,51.4106,'بوشهر'],['کنگان',27.5842,52.0658,'بوشهر'],['جم',27.8336,52.3264,'بوشهر'],['عسلویه',27.4819,52.6072,'بوشهر'],['اهرم (تنگستان)',29.1542,51.0356,'بوشهر'],['بندرعباس',27.1832,56.2666,'هرمزگان'],['میناب',27.0864,57.0861,'هرمزگان'],['قشم',26.7761,55.9556,'هرمزگان'],['بندر لنگه',26.5619,54.8806,'هرمزگان'],['بندر خمیر',26.9519,55.5364,'هرمزگان'],['بستک',27.1975,54.3647,'هرمزگان'],['رودان (دهبارز)',27.3906,57.2922,'هرمزگان'],['حاجی‌آباد',28.2861,55.9231,'هرمزگان'],['جاسک',25.6411,57.7736,'هرمزگان'],['بندر سیریک',26.5986,57.2047,'هرمزگان'],['پارسیان (اشکنان)',27.2522,54.4103,'هرمزگان'],['ابوموسی',25.8667,55.0333,'هرمزگان'],['اهواز',31.3183,48.6706,'خوزستان'],['آبادان',30.3392,48.3043,'خوزستان'],['خرمشهر',30.4397,48.1745,'خوزستان'],['دزفول',32.3813,48.4053,'خوزستان'],['اندیمشک',32.4606,48.6744,'خوزستان'],['شوشتر',32.0461,48.8572,'خوزستان'],['شوش',32.1950,48.2586,'خوزستان'],['گتوند',32.2528,48.8153,'خوزستان'],['مسجدسلیمان',31.9353,49.3039,'خوزستان'],['لالی',32.3347,49.0881,'خوزستان'],['باغملک',31.7164,49.8894,'خوزستان'],['ایذه',31.8347,49.9922,'خوزستان'],['رامهرمز',31.4406,49.6161,'خوزستان'],['رامشیر',30.9886,49.4117,'خوزستان'],['هویزه',31.4572,48.0053,'خوزستان'],['شادگان',30.6489,48.6614,'خوزستان'],['بندر ماهشهر',30.5587,49.2008,'خوزستان'],['هندیجان',30.2392,49.7161,'خوزستان'],['امیدیه',30.7872,49.7006,'خوزستان'],['بهبهان',30.5969,50.2419,'خوزستان'],['آغاجاری',30.7006,49.8322,'خوزستان'],['یاسوج',30.6682,51.5877,'کهگیلویه و بویراحمد'],['سی‌سخت',30.6803,51.5178,'کهگیلویه و بویراحمد'],['دهدشت',30.6961,50.8044,'کهگیلویه و بویراحمد'],['گچساران (دوگنبدان)',30.3389,50.8008,'کهگیلویه و بویراحمد'],['دیشموک',30.6631,51.2461,'کهگیلویه و بویراحمد'],['باشت',30.4639,50.6661,'کهگیلویه و بویراحمد'],['شهرکرد',32.3256,50.8644,'چهارمحال و بختیاری'],['بروجن',31.9656,51.2844,'چهارمحال و بختیاری'],['فارسان',32.2572,50.5633,'چهارمحال و بختیاری'],['لردگان',31.5083,50.8292,'چهارمحال و بختیاری'],['سامان',32.3883,50.7975,'چهارمحال و بختیاری'],['ناغن (کیار)',32.1661,50.7306,'چهارمحال و بختیاری'],['کوهرنگ',32.2206,50.4389,'چهارمحال و بختیاری'],['فلارد (مال‌خلیفه)',31.6150,50.0056,'چهارمحال و بختیاری'],['کرمانشاه',34.3142,47.0650,'کرمانشاه'],['اسلام‌آباد غرب',34.1139,46.5186,'کرمانشاه'],['سنقر',34.7819,47.6003,'کرمانشاه'],['کنگاور',34.5083,47.6511,'کرمانشاه'],['هرسین',34.2672,47.6031,'کرمانشاه'],['صحنه',34.4836,47.7189,'کرمانشاه'],['بیستون',34.4836,47.4353,'کرمانشاه'],['قصر شیرین',34.5861,45.5697,'کرمانشاه'],['سرپل ذهاب',34.4069,45.8611,'کرمانشاه'],['گیلانغرب',34.2947,45.9072,'کرمانشاه'],['جوانرود',34.7897,46.4931,'کرمانشاه'],['پاوه',35.0403,46.3544,'کرمانشاه'],['روانسر',34.7169,46.6511,'کرمانشاه'],['تازه‌آباد (ثلاث باباجانی)',34.7628,46.1225,'کرمانشاه'],['سنندج',35.3219,46.9862,'کردستان'],['سقز',36.2464,46.2656,'کردستان'],['مریوان',35.5269,46.1819,'کردستان'],['بانه',35.9953,45.8869,'کردستان'],['سروآباد',34.9969,46.6453,'کردستان'],['کامیاران',34.7844,46.9369,'کردستان'],['دهگلان',35.3239,46.6678,'کردستان'],['دیواندره',35.3992,47.0256,'کردستان'],['قروه',35.1078,47.7908,'کردستان'],['بیجار',35.8831,47.3722,'کردستان'],['بوئین‌سفلی (قروه)',35.2131,47.7183,'کردستان'],['همدان',34.7992,48.5146,'همدان'],['ملایر',34.2971,48.8219,'همدان'],['نهاوند',34.1883,48.3772,'همدان'],['تویسرکان',34.5608,48.4447,'همدان'],['اسدآباد',34.7772,48.1194,'همدان'],['فامنین',34.6853,48.4022,'همدان'],['کبودرآهنگ',35.2350,47.9831,'همدان'],['رزن',35.3883,49.0336,'همدان'],['درگزین',35.3389,48.9875,'همدان'],['بهار',34.8917,48.4378,'همدان'],['خرم‌آباد',33.4878,48.3558,'لرستان'],['بروجرد',33.8973,48.7519,'لرستان'],['دورود',33.4941,49.0700,'لرستان'],['ازنا',33.4561,49.4531,'لرستان'],['الیگودرز',33.4011,49.6969,'لرستان'],['کوهدشت',33.5322,47.6203,'لرستان'],['نورآباد (دلفان)',34.0511,47.9211,'لرستان'],['سلسله (فیروزآباد)',33.4956,48.7628,'لرستان'],['پلدختر',33.1561,47.7194,'لرستان'],['معمولان',33.2056,47.7306,'لرستان'],['ایلام',33.6374,46.4227,'ایلام'],['دهلران',32.9956,47.4719,'ایلام'],['مهران',33.6456,46.1258,'ایلام'],['دره‌شهر',33.5669,46.5606,'ایلام'],['آبدانان',32.7911,47.6936,'ایلام'],['ایوان',33.6164,46.2844,'ایلام'],['بدره',33.3322,47.5964,'ایلام'],['قلعه (ملکشاهی)',32.9806,47.5469,'ایلام'],['چوار',33.6983,46.5844,'ایلام'],['لومار (سیروان)',33.7328,46.7606,'ایلام'],['تبریز',38.0800,46.2919,'آذربایجان شرقی'],['اسکو',37.9194,46.1225,'آذربایجان شرقی'],['خسروشهر',37.7936,46.1756,'آذربایجان شرقی'],['آذرشهر',37.7583,45.9786,'آذربایجان شرقی'],['باسمنج',37.8308,46.1128,'آذربایجان شرقی'],['شبستر',38.1794,45.7069,'آذربایجان شرقی'],['شرفخانه',38.2214,45.6206,'آذربایجان شرقی'],['شندآباد',38.1875,45.6042,'آذربایجان شرقی'],['صوفیان',38.2203,45.8822,'آذربایجان شرقی'],['تیکمه‌داش',38.4342,47.1967,'آذربایجان شرقی'],['مرند',38.4329,45.7686,'آذربایجان شرقی'],['یامچی',38.3744,45.8139,'آذربایجان شرقی'],['جلفا',38.9444,45.6283,'آذربایجان شرقی'],['هادیشهر',38.9047,45.5653,'آذربایجان شرقی'],['مراغه',37.3891,46.2381,'آذربایجان شرقی'],['عجب‌شیر',37.4778,46.2422,'آذربایجان شرقی'],['بناب',37.3414,46.0672,'آذربایجان شرقی'],['ملکان',37.1528,46.1056,'آذربایجان شرقی'],['لیلان',37.1747,46.2561,'آذربایجان شرقی'],['اهر',38.4774,47.0697,'آذربایجان شرقی'],['کلیبر',38.8686,47.0394,'آذربایجان شرقی'],['ورزقان',38.5097,46.6544,'آذربایجان شرقی'],['هشترود',37.4783,47.0508,'آذربایجان شرقی'],['میانه',37.4167,47.7167,'آذربایجان شرقی'],['ترک',37.7167,47.6167,'آذربایجان شرقی'],['قره‌آغاج (چاراویماق)',37.3561,47.0522,'آذربایجان شرقی'],['سراب',37.9408,47.5367,'آذربایجان شرقی'],['شربیان',37.9900,47.5961,'آذربایجان شرقی'],['بستان‌آباد',37.8400,46.8342,'آذربایجان شرقی'],['خامنه',37.8794,46.6856,'آذربایجان شرقی'],['ارومیه',37.5527,45.0761,'آذربایجان غربی'],['سرو',37.6661,45.1872,'آذربایجان غربی'],['نقده',36.9483,45.3867,'آذربایجان غربی'],['پیرانشهر',36.7014,45.1417,'آذربایجان غربی'],['مهاباد',36.7672,45.7192,'آذربایجان غربی'],['میاندوآب',36.9686,46.1031,'آذربایجان غربی'],['شاهین‌دژ',36.4483,46.5658,'آذربایجان غربی'],['تکاب',36.4014,47.7742,'آذربایجان غربی'],['بوکان',36.5211,46.2089,'آذربایجان غربی'],['آجدانی (سیمینه)',36.6436,46.0525,'آذربایجان غربی'],['سردشت',36.1614,45.5494,'آذربایجان غربی'],['اشنویه',37.0333,45.2769,'آذربایجان غربی'],['نالوس',36.9889,45.1931,'آذربایجان غربی'],['خوی',38.5500,44.9521,'آذربایجان غربی'],['ایواوغلی',38.4269,45.0489,'آذربایجان غربی'],['قطور',38.4025,44.8364,'آذربایجان غربی'],['سیه‌چشمه (چالدران)',39.0619,44.7756,'آذربایجان غربی'],['قره‌ضیاءالدین',38.9325,44.7231,'آذربایجان غربی'],['سلماس',38.1972,44.7653,'آذربایجان غربی'],['تازه‌شهر',38.1644,44.6903,'آذربایجان غربی'],['ماکو',39.2919,44.5175,'آذربایجان غربی'],['بازرگان',39.2839,44.4683,'آذربایجان غربی'],['پلدشت',39.0497,44.8781,'آذربایجان غربی'],['شوط',39.0669,44.8431,'آذربایجان غربی'],['زاهدان',29.4963,60.8629,'سیستان و بلوچستان'],['زابل',31.1289,61.5337,'سیستان و بلوچستان'],['دوست‌محمد (هیرمند)',30.9789,61.5486,'سیستان و بلوچستان'],['محمدآباد (هامون)',31.0289,61.4447,'سیستان و بلوچستان'],['خاش',28.2169,61.2139,'سیستان و بلوچستان'],['ایرانشهر',27.2028,60.6828,'سیستان و بلوچستان'],['بزمان',27.2714,60.6142,'سیستان و بلوچستان'],['سرباز',26.4850,61.2350,'سیستان و بلوچستان'],['راسک',26.2356,61.4697,'سیستان و بلوچستان'],['فنوج',26.5675,60.0294,'سیستان و بلوچستان'],['نیک‌شهر',26.2286,60.2089,'سیستان و بلوچستان'],['قصرقند',26.1375,60.4367,'سیستان و بلوچستان'],['چابهار',25.2919,60.6430,'سیستان و بلوچستان'],['کنارک',25.3661,60.6347,'سیستان و بلوچستان'],['گلمورتی (دلگان)',27.5039,60.1764,'سیستان و بلوچستان'],['میرجاوه',29.0056,61.4342,'سیستان و بلوچستان'],['لادیز (مهرستان)',28.3961,61.5639,'سیستان و بلوچستان'],['سیب و سوران',27.1206,61.7356,'سیستان و بلوچستان']];
+/* مناسبت‌های رسمی (مطابق assets/holidays.json برنامه) */
+var OFFICIAL=[
+{y:1404,m:1,d:1,t:'جشن نوروز - آغاز سال نو',h:1},{y:1404,m:1,d:2,t:'عید نوروز',h:1},{y:1404,m:1,d:3,t:'عید نوروز',h:1},{y:1404,m:1,d:4,t:'عید نوروز',h:1},{y:1404,m:1,d:12,t:'روز جمهوری اسلامی',h:1},{y:1404,m:1,d:13,t:'سیزده‌بدر - روز طبیعت',h:1},{y:1404,m:3,d:14,t:'رحلت امام خمینی',h:1},{y:1404,m:3,d:15,t:'قیام ۱۵ خرداد',h:1},{y:1404,m:4,d:14,t:'تاسوعای حسینی',h:1},{y:1404,m:4,d:15,t:'عاشورای حسینی',h:1},{y:1404,m:5,d:23,t:'اربعین حسینی',h:1},{y:1404,m:5,d:31,t:'رحلت رسول خدا و شهادت امام حسن مجتبی',h:1},{y:1404,m:6,d:2,t:'شهادت امام رضا',h:1},{y:1404,m:6,d:13,t:'میلاد رسول خدا و امام جعفر صادق',h:1},{y:1404,m:7,d:4,t:'شهادت امام حسن عسکری',h:0},{y:1404,m:8,d:22,t:'شهادت حضرت فاطمه زهرا',h:1},{y:1404,m:11,d:10,t:'نیمه شعبان - میلاد امام زمان',h:1},{y:1404,m:11,d:22,t:'پیروزی انقلاب اسلامی',h:1},{y:1404,m:12,d:12,t:'ولادت امام علی',h:1},{y:1404,m:12,d:19,t:'شهادت امام علی',h:1},{y:1404,m:12,d:26,t:'مبعث رسول خدا',h:1},{y:1404,m:12,d:29,t:'عید سعید فطر',h:1},
+{y:1405,m:1,d:1,t:'جشن نوروز - آغاز سال نو',h:1},{y:1405,m:1,d:2,t:'عید نوروز',h:1},{y:1405,m:1,d:3,t:'عید نوروز',h:1},{y:1405,m:1,d:4,t:'عید نوروز',h:1},{y:1405,m:1,d:12,t:'روز جمهوری اسلامی',h:1},{y:1405,m:1,d:13,t:'سیزده‌بدر - روز طبیعت',h:1},{y:1405,m:1,d:24,t:'شهادت امام جعفر صادق',h:1},{y:1405,m:3,d:6,t:'عید سعید قربان',h:1},{y:1405,m:3,d:14,t:'عید سعید غدیر خم',h:1},{y:1405,m:3,d:14,t:'رحلت امام خمینی',h:1},{y:1405,m:3,d:15,t:'قیام ۱۵ خرداد',h:1},{y:1405,m:11,d:22,t:'پیروزی انقلاب اسلامی',h:1},{y:1405,m:12,d:29,t:'ملی شدن صنعت نفت ایران',h:1},
+{y:1406,m:1,d:1,t:'جشن نوروز - آغاز سال نو',h:1},{y:1406,m:1,d:2,t:'عید نوروز',h:1},{y:1406,m:1,d:3,t:'عید نوروز',h:1},{y:1406,m:1,d:4,t:'عید نوروز',h:1},{y:1406,m:1,d:12,t:'روز جمهوری اسلامی',h:1},{y:1406,m:1,d:13,t:'سیزده‌بدر - روز طبیعت',h:1},{y:1406,m:3,d:14,t:'رحلت امام خمینی',h:1},{y:1406,m:3,d:15,t:'قیام ۱۵ خرداد',h:1},{y:1406,m:11,d:22,t:'پیروزی انقلاب اسلامی',h:1},{y:1406,m:12,d:29,t:'ملی شدن صنعت نفت ایران',h:1}
+];
+/* مناسبت‌های ثابت ملی برای سال‌های خارج از فهرست رسمی */
+var FIXED=[[1,1,'عید نوروز',1],[1,2,'عید نوروز',1],[1,3,'عید نوروز',1],[1,4,'عید نوروز',1],[1,12,'روز جمهوری اسلامی',1],[1,13,'سیزده‌بدر - روز طبیعت',1],[3,14,'رحلت امام خمینی',1],[3,15,'قیام ۱۵ خرداد',1],[11,22,'پیروزی انقلاب اسلامی',1],[12,29,'ملی شدن صنعت نفت ایران',1]];
+/* مناسبت‌های قمری محاسباتی (الگوریتم کویت؛ برای سال‌های دارای داده رسمی فقط عنوان‌های تکراری حذف می‌شوند) */
+var LUNAR=[[9,1,'تاسوعای حسینی',1],[10,1,'عاشورای حسینی',1],[20,2,'اربعین حسینی',1],[28,2,'رحلت رسول خدا و شهادت امام حسن مجتبی',1],[99,2,'شهادت امام رضا',1],[8,3,'شهادت امام حسن عسکری',0],[12,3,'میلاد رسول خدا و امام جعفر صادق',1],[3,5,'شهادت حضرت فاطمه زهرا',1],[20,6,'میلاد حضرت فاطمه - روز زن',0],[13,7,'ولادت امام علی',0],[27,7,'مبعث رسول خدا',1],[15,8,'نیمه شعبان - میلاد امام زمان',1],[21,9,'شهادت امام علی',1],[1,10,'عید سعید فطر',1],[2,10,'تعطیل دوم عید سعید فطر',1],[25,10,'شهادت امام جعفر صادق',1],[10,12,'عید سعید قربان',1],[18,12,'عید سعید غدیر خم',1]];
+var EVC={green:['#1E9E55','#DCF3E3'],blue:['#2A7BD4','#DDE9FA'],amber:['#C98A1B','#F8ECD7'],red:['#D64545','#FADBDB'],purple:['#7C5CD6','#EAE3F9']};
+
+var _now=new Date();
+var TODAY_JDN=g2d(_now.getFullYear(),_now.getMonth()+1,_now.getDate());
+var tj=d2j(TODAY_JDN);
+var state={
+  viewJy:tj.jy,viewJm:tj.jm,selJdn:TODAY_JDN,
+  theme:store.get('pcw_theme','light'),
+  showOcc:store.get('pcw_occ',true),
+  city:store.get('pcw_city',0),
+  events:store.get('pcw_events',null),
+  user:store.get('pcw_user',null),
+  premium:store.get('pcw_premium',false),
+  adhan:store.get('pcw_adhan',{fajr:true,sunrise:false,dhuhr:true,asr:false,maghrib:true,midnight:false,sound:'mashhad'}),
+  adcfg:store.get('pcw_adcfg',{banner:true,inter:true,interEvery:3,test:true,bannerId:'ca-app-pub-3940256099942544/6300978111',interId:'ca-app-pub-3940256099942544/1033173712',price:'۹۸٬۰۰۰ تومان در ماه',img:null,link:''}),
+  adminPin:store.get('pcw_adminpin','1234'),
+  notifbar:store.get('pcw_notifbar',true),
+  evColor:'green'
+};
+/* نسخه ۱٫۵ — بنرهای تصویری نامحدود (مهاجرت از اسلات‌های ۳تایی نسخه قبل) */
+if(!Array.isArray(state.adcfg.banners))state.adcfg.banners=[];
+if(state.adcfg.img){state.adcfg.banners.push({id:1,img:state.adcfg.img,link:state.adcfg.link||'',on:true});delete state.adcfg.img;state.adcfg.bseq=1;store.set('pcw_adcfg',state.adcfg);}
+if(state.adcfg.banners.length&&(!state.adcfg.banners[0]||!state.adcfg.banners[0].id)){
+  state.adcfg.banners=state.adcfg.banners.filter(function(b){return b&&b.img;}).map(function(b,i){return {id:i+1,img:b.img,link:b.link||'',on:true};});
+  state.adcfg.bseq=state.adcfg.banners.length;store.set('pcw_adcfg',state.adcfg);
+}
+if(!state.events||!state.events.length){
+  var d1=d2j(TODAY_JDN+1),d2=d2j(TODAY_JDN+2),d3=d2j(TODAY_JDN+5);
+  state.events=[
+    {id:1,jy:d1.jy,jm:d1.jm,jd:d1.jd,title:'تماس با خانواده',time:'18:30',repeat:'weekly',color:'blue'},
+    {id:2,jy:d2.jy,jm:d2.jm,jd:d2.jd,title:'جلسه هفتگی تیم',time:'10:30',repeat:'weekly',color:'green'},
+    {id:3,jy:d3.jy,jm:d3.jm,jd:d3.jd,title:'پرداخت قبض اینترنت',time:'21:00',repeat:'monthly',color:'amber'}
+  ];
+  store.set('pcw_events',state.events);
+}
+
+/* ---------- موتور یادآور عمومی — داده‌های اولیه (نسخه ۱٫۱۱) ---------- */
+var REM_TYPES=['آب','دارو','ورزش','شخصی'];
+var REM_COLORS=['#2A7BD4','#D64545','#1E9E55','#7C5CD6'];
+var WEEK_DAYS=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+var DAY_SHORT=['ش','ی','د','س','چ','پ','ج'];
+var REM_MAX_ID=store.get('pcw_remax',0);
+state.rems=store.get('pcw_rems',null);
+state.doses=store.get('pcw_doses',{});
+if(!state.rems){
+  state.rems=[
+    {id:1,title:'لیوان آب',type:0,repeat:1,days:[0,1,2,3,4,5,6],times:[600,720,840,960],start:0,end:0,target:8,note:'',on:true},
+    {id:2,title:'قرص فشار خون',type:1,repeat:1,days:[0,1,2,3,4,5,6],times:[1260],start:0,end:0,target:0,note:'بعد از شام',on:true},
+    {id:3,title:'پیاده‌روی',type:2,repeat:2,days:[0,2,4],times:[1080],start:0,end:0,target:0,note:'',on:true},
+    {id:4,title:'مطالعه شبانه',type:3,repeat:1,days:[0,1,2,3,4,5,6],times:[1320],start:0,end:0,target:0,note:'۲۰ صفحه',on:true}
+  ];
+  REM_MAX_ID=4;
+  store.set('pcw_rems',state.rems);
+  store.set('pcw_remax',REM_MAX_ID);
+}
+
+/* ---------- مناسبت‌ها با اولویت داده رسمی و حذف تکراری عنوان ---------- */
+var occCache={};
+function occasionsFor(jdn){
+  if(occCache[jdn])return occCache[jdn];
+  var j=d2j(jdn),out=[],seen={},i,o;
+  for(i=0;i<OFFICIAL.length;i++){
+    o=OFFICIAL[i];
+    if(o.y===j.jy&&o.m===j.jm&&o.d===j.jd){out.push({title:o.t,holiday:!!o.h});seen[o.t]=1;}
+  }
+  var officialTitles={};
+  for(i=0;i<OFFICIAL.length;i++)if(OFFICIAL[i].y===j.jy)officialTitles[OFFICIAL[i].t]=1;
+  for(i=0;i<FIXED.length;i++){
+    o=FIXED[i];
+    if(o[0]===j.jm&&o[1]===j.jd&&!officialTitles[o[2]]&&!seen[o[2]]){out.push({title:o[2],holiday:!!o[3]});seen[o[2]]=1;}
+  }
+  var hj=hijriFromJDN(jdn);
+  for(i=0;i<LUNAR.length;i++){
+    o=LUNAR[i];
+    var hit=false;
+    if(o[0]===99)hit=(hj.hm===2&&hijriFromJDN(jdn+1).hm===3);
+    else hit=(hj.hm===o[1]&&hj.hd===o[0]);
+    if(hit&&!officialTitles[o[2]]&&!seen[o[2]]){out.push({title:o[2],holiday:!!o[3]});seen[o[2]]=1;}
+  }
+  occCache[jdn]=out;
+  return out;
+}
+function isHoliday(jdn){var o=occasionsFor(jdn);for(var i=0;i<o.length;i++)if(o[i].holiday)return true;return false;}
+function fmtH(h){h=fixHour(h+0.5/60);var hh=Math.floor(h),mm=Math.floor((h-hh)*60);return toFa(pad2(hh)+':'+pad2(mm));}
+function wdOf(jdn){return (jdn+1)%7;} /* ۰=یکشنبه ... ۶=شنبه */
+function gridPos(jdn){return (wdOf(jdn)+1)%7;} /* ستون از شنبه */
+
+/* ---------- رندر تقویم ---------- */
+/* دکمه بازگشت به امروز (نسخه ۱.۶) — فقط وقتی کاربر در ماه/روز دیگری است نمایان می‌شود */
+function updateTodayBtn(){
+  var t=d2j(TODAY_JDN),b=el('btnToday');
+  var away=(state.viewJy!==t.jy||state.viewJm!==t.jm||state.selJdn!==TODAY_JDN);
+  b.style.display=away?'':'none';
+  b.classList.toggle('today-attn',away);
+  b.textContent=away?'↺ برو به امروز':'امروز';
+}
+function renderCalendar(){
+  var jy=state.viewJy,jm=state.viewJm;
+  el('calTitle').textContent=JM[jm-1]+' '+toFa(jy);
+  var firstJdn=j2d(jy,jm,1);
+  el('calSub').textContent=WDN[wdOf(firstJdn)]+'، '+toFa(1)+' '+JM[jm-1]+' — '+toFa(jalaliMonthLen(jy,jm))+' روز';
+  var grid=el('calGrid');grid.innerHTML='';
+  var firstPos=gridPos(firstJdn),len=jalaliMonthLen(jy,jm),i,jdn,cell,parts,cls;
+  for(i=0;i<42;i++){
+    jdn=firstJdn-firstPos+i;
+    parts=d2j(jdn);
+    cell=document.createElement('div');
+    cls='cell';
+    if(parts.jm!==jm||parts.jy!==jy)cls+=' dim';
+    if(wdOf(jdn)===5||isHoliday(jdn))cls+=' hday';
+    if(jdn===TODAY_JDN)cls+=' today';
+    if(jdn===state.selJdn)cls+=' sel';
+    cell.className=cls;
+    cell.dataset.jdn=jdn;
+    cell.innerHTML='<span class="d">'+toFa(parts.jd)+'</span><span class="h">'+toFa(hijriFromJDN(jdn).hd)+'</span>';
+    grid.appendChild(cell);
+  }
+  renderDayDetail();
+  renderMonthOcc();
+  renderPrayer();
+  updateTodayBtn();
+}
+function renderDayDetail(){
+  var jdn=state.selJdn,j=d2j(jdn),h=hijriFromJDN(jdn),g=d2g(jdn);
+  var occ=occasionsFor(jdn);
+  var html='<div class="dd-head"><div class="dd-date">'+WDN[wdOf(jdn)]+' '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy)+'</div></div>';
+  html+='<div class="dd-conv">هجری قمری: '+toFa(h.hd)+' '+HM[h.hm-1]+' '+toFa(h.hy)+' &nbsp;·&nbsp; میلادی: '+toFa(g.gd)+' '+GM[g.gm-1]+' '+toFa(g.gy)+'</div>';
+  if(state.showOcc&&occ.length){
+    html+='<div class="chips">';
+    for(var i=0;i<occ.length;i++)html+='<span class="chip '+(occ[i].holiday?'hol':'occ')+'">'+occ[i].title+'</span>';
+    html+='</div>';
+  }
+  var evs=eventsOn(jdn);
+  if(evs.length){
+    html+='<div class="dd-events">';
+    for(i=0;i<evs.length;i++){
+      html+='<div class="dd-ev"><span class="dot" style="background:'+EVC[evs[i].color][0]+'"></span><span class="t">'+esc(evs[i].title)+'</span><span class="tm">'+(evs[i].time?toFa(evs[i].time):'')+'</span></div>';
+    }
+    html+='</div>';
+  }
+  if(!occ.length&&!evs.length)html+='<div class="empty">مناسبت یا رویدادی برای این روز ثبت نشده است</div>';
+  el('dayDetail').innerHTML=html;
+}
+function renderMonthOcc(){
+  var block=el('occBlock');
+  if(!state.showOcc){block.style.display='none';return;}
+  block.style.display='';
+  var jy=state.viewJy,jm=state.viewJm;
+  el('occTitle').textContent='مناسبت‌های '+JM[jm-1]+' '+toFa(jy);
+  var firstJdn=j2d(jy,jm,1),len=jalaliMonthLen(jy,jm),rows='';
+  for(var k=0;k<len;k++){
+    var jdn=firstJdn+k,occ=occasionsFor(jdn);
+    for(var i=0;i<occ.length;i++){
+      rows+='<div class="occ-row'+(occ[i].holiday?' hol':'')+'"><span class="dt">'+toFa(k+1)+' '+JM[jm-1]+'</span><span class="tt">'+occ[i].title+(occ[i].holiday?'':' <span class="muted" style="font-size:10px">(غیرتعطیل)</span>')+'</span></div>';
+    }
+  }
+  el('monthOcc').innerHTML=rows||'<div class="empty">مناسبتی در این ماه نیست</div>';
+}
+/* ---------- رویدادها ---------- */
+function evStartJdn(ev){return j2d(ev.jy,ev.jm,ev.jd);}
+function occursOn(ev,jdn){
+  var st=evStartJdn(ev);
+  if(jdn<st)return false;
+  var j=d2j(jdn),s=d2j(st);
+  switch(ev.repeat){
+    case 'daily':return true;
+    case 'weekly':return wdOf(jdn)===wdOf(st);
+    case 'monthly':return j.jd===s.jd;
+    case 'yearly':return j.jm===s.jm&&j.jd===s.jd;
+    default:return jdn===st;
+  }
+}
+function eventsOn(jdn){return state.events.filter(function(e){return occursOn(e,jdn);}).sort(function(a,b){return (a.time||'99').localeCompare(b.time||'99');});}
+function renderEvents(){
+  var list=el('eventsList'),html='',count=0;
+  var reps={none:'بدون تکرار',daily:'روزانه',weekly:'هفتگی',monthly:'ماهانه',yearly:'سالانه'};
+  var sorted=state.events.slice().sort(function(a,b){return evStartJdn(a)-evStartJdn(b)|| (a.time||'99').localeCompare(b.time||'99');});
+  for(var i=0;i<sorted.length&&count<25;i++){
+    var ev=sorted[i],jdn=evStartJdn(ev),j=d2j(jdn),h=hijriFromJDN(jdn);
+    if(jdn<TODAY_JDN-30&&ev.repeat==='none')continue;
+    count++;
+    var tag=jdn===TODAY_JDN?'امروز':(jdn===TODAY_JDN+1?'فردا':WDN[wdOf(jdn)]);
+    html+='<div class="ev-item"><span class="dot" style="background:'+EVC[ev.color][0]+'"></span><div class="meta"><div class="tt">'+esc(ev.title)+'</div><div class="sub">'+tag+' · '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy)+' · قمری '+toFa(h.hd)+' '+HM[h.hm-1]+(ev.time?' · ⏰ '+toFa(ev.time):'')+' · '+reps[ev.repeat]+'</div></div><button class="del" data-id="'+ev.id+'" title="حذف">🗑</button></div>';
+  }
+  list.innerHTML=html||'<div class="empty">رویدادی ثبت نشده است<br>با دکمه + رویداد جدید بسازید</div>';
+  var dels=list.querySelectorAll('.del');
+  for(i=0;i<dels.length;i++)dels[i].addEventListener('click',function(){
+    var id=+this.dataset.id;
+    state.events=state.events.filter(function(e){return e.id!==id;});
+    store.set('pcw_events',state.events);
+    toast('رویداد حذف شد');
+    renderEvents();renderCalendar();
+  });
+}
+/* ---------- اوقات شرعی ---------- */
+function prayerMinutes(v){var h=fixHour(v+0.5/60);return Math.floor(h)*60+Math.round((h-Math.floor(h))*60);}
+function nextPrayerInfo(t){
+  var n=new Date(),now=n.getHours()*60+n.getMinutes(),best=null,bd=1e18;
+  for(var i=0;i<PRAYERS.length;i++){
+    var v=t[PRAYERS[i][0]];if(v==null)continue;
+    var d=prayerMinutes(v)-now;
+    if(d>0&&d<bd){bd=d;best={k:PRAYERS[i][0],name:PRAYERS[i][1],diff:d,today:true};}
+  }
+  if(!best){var d2=prayerMinutes(t.fajr)+1440-now;best={k:'fajr',name:'اذان صبح (فردا)',diff:d2,today:false};}
+  return best;
+}
+function fmtDiff(m){var h=Math.floor(m/60),mm=m%60;return h>0?(toFa(h)+' ساعت و '+toFa(mm)+' دقیقه'):(toFa(mm)+' دقیقه');}
+/* ---------- اوقات شرعی (نسخه ۱.۱۰ — نوار افقی مطابق عکس، پایین صفحه اصلی تقویم پیش از مناسبت‌ها) ---------- */
+function fmtHShort(v){var h=fixHour(v+0.5/60);var hh=Math.floor(h),mm=Math.floor((h-hh)*60);return toFa(hh)+':'+toFa(pad2(mm));}
+var ptMonthOpen=false;
+function renderPrayer(){
+  var c=CITIES[state.city],j=d2j(state.selJdn),g=d2g(state.selJdn);
+  el('prayerDate').textContent='برای '+WDN[wdOf(state.selJdn)]+' '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy)+' (میلادی: '+toFa(g.gd)+' '+GM[g.gm-1]+')';
+  var t=prayerTimes(new Date(g.gy,g.gm-1,g.gd),c[1],c[2]);
+  /* نوار افقی ۸ ستونه — دقیقاً مطابق عکس: صبح، طلوع، ظهر، عصر، غروب، مغرب، عشا، نیمه‌شب */
+  /* شمارش معکوس و هایلایت فقط برای روز امروز است — برای روزهای دیگر تاریخ نمایش داده می‌شود */
+  var nb=(state.selJdn===TODAY_JDN)?nextPrayerInfo(t):null,cols='';
+  for(var i=0;i<PRAYERS.length;i++){
+    var nx=(nb&&PRAYERS[i][0]===nb.k);
+    cols+='<div class="pt-col'+(nx?' next':'')+'"'+(nx?' title="نزدیک‌ترین وقت شرعی"':'')+'><div class="pt-name">'+PT_SHORT[i][1]+'</div><div class="pt-time">'+fmtHShort(t[PRAYERS[i][0]])+'</div></div>';
+  }
+  el('ptStrip').innerHTML=cols;
+  el('ptSub').innerHTML='<span class="pt-count">'+c[0]+' ('+c[3]+')</span> — '+(nb
+    ?'نزدیک‌ترین وقت: <b>'+nb.name+'</b> · مانده '+fmtDiff(nb.diff)
+    :'اوقات '+WDN[wdOf(state.selJdn)]+' '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy));
+  /* نوار «نزدیک‌ترین وقت شرعی» همیشه بر اساس امروز محاسبه می‌شود */
+  var nbH=nb;
+  if(!nbH){var _n=new Date();nbH=nextPrayerInfo(prayerTimes(new Date(_n.getFullYear(),_n.getMonth(),_n.getDate()),c[1],c[2]));}
+  var hero='<div style="flex:1"><div class="hk">نزدیک‌ترین وقت شرعی — '+c[0]+'</div><div class="hv">'+nbH.name+'</div></div><div style="text-align:left;flex:none"><div class="hk">مانده تا شروع</div><div class="hv">'+fmtDiff(nbH.diff)+'</div></div>';
+  el('prayerHero').innerHTML=hero;
+  var q=Math.round(qiblaBearing(c[1],c[2])),dirs=['شمال','شمال‌شرق','شرق','جنوب‌شرق','جنوب','جنوب‌غربی','غرب','شمال‌غربی'];
+  el('qiblaInfo').innerHTML='<span class="deg">'+toFa(q)+'°</span><span>جهت قبله از '+c[0]+' — حدود '+dirs[Math.round(q/45)%8]+' (زاویه از شمال جغرافیایی، ساعتگرد)</span>';
+  if(ptMonthOpen)renderPrayerMonth();
+}
+/* جدول ماهانه — با فلش رو به پایین کارت باز می‌شود (مانند عکس) */
+function renderPrayerMonth(){
+  var c=CITIES[state.city],j0=d2j(state.selJdn);
+  var jy=j0.jy,jm=j0.jm,len=jalaliMonthLen(jy,jm),firstJdn=j2d(jy,jm,1);
+  el('ptMonthTitle').textContent='اوقات شرعی '+c[0]+' — '+JM[jm-1]+' '+toFa(jy);
+  var h='<table class="pt-mtable"><tr><th>روز</th>';
+  for(var i=0;i<PT_SHORT.length;i++)h+='<th>'+PT_SHORT[i][1]+'</th>';
+  h+='</tr>';
+  for(var k=0;k<len;k++){
+    var jdn=firstJdn+k,dd=d2j(jdn),gg=d2g(jdn);
+    var tt=prayerTimes(new Date(gg.gy,gg.gm-1,gg.gd),c[1],c[2]);
+    h+='<tr'+(jdn===TODAY_JDN?' class="today"':'')+'><td>'+toFa(dd.jd)+'</td>';
+    for(i=0;i<PRAYERS.length;i++)h+='<td>'+fmtHShort(tt[PRAYERS[i][0]])+'</td>';
+    h+='</tr>';
+  }
+  el('ptMonth').innerHTML=h+'</table>';
+}
+/* ---------- تنظیمات ---------- */
+function renderSettings(){
+  el('swTheme').checked=state.theme==='dark';
+  el('swOcc').checked=state.showOcc;
+  el('swNotif').checked=state.notifbar;
+  updateCityLabels();
+}
+function applyTheme(){
+  el('phone').setAttribute('data-theme',state.theme);
+  renderPrayer();
+}
+/* ---------- شیت رویداد ---------- */
+function openSheet(){
+  var j=d2j(state.selJdn);
+  el('evDateLabel').value=WDN[wdOf(state.selJdn)]+' '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy);
+  el('evTitle').value='';el('evTime').value='';el('evRepeat').value='none';
+  renderSwatches();
+  el('sheet').classList.add('open');el('backdrop').classList.add('open');
+  setTimeout(function(){el('evTitle').focus();},260);
+}
+function closeSheet(){el('sheet').classList.remove('open');el('backdrop').classList.remove('open');}
+function renderSwatches(){
+  var w=el('swatches');w.innerHTML='';
+  Object.keys(EVC).forEach(function(k){
+    var s=document.createElement('div');
+    s.className='swatch'+(state.evColor===k?' on':'');
+    s.style.background=EVC[k][0];s.dataset.k=k;
+    s.addEventListener('click',function(){state.evColor=this.dataset.k;renderSwatches();});
+    w.appendChild(s);
+  });
+}
+var _idc=Date.now()%100000;
+/* ---------- ابزار ---------- */
+function el(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+var toastTimer=null;
+function toast(msg){
+  var t=el('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show');},2200);
+}
+function goMonth(delta){
+  var m=state.viewJm+delta,y=state.viewJy;
+  if(m>12){m=1;y++;}if(m<1){m=12;y--;}
+  state.viewJy=y;state.viewJm=m;
+  var sel=d2j(state.selJdn);
+  if(sel.jy!==y||sel.jm!==m)state.selJdn=j2d(y,m,1);
+  renderCalendar();
+}
+/* ---------- اتصال رویدادها ---------- */
+el('prevM').addEventListener('click',function(){goMonth(-1);});
+el('nextM').addEventListener('click',function(){goMonth(1);});
+el('btnToday').addEventListener('click',function(){
+  var t=d2j(TODAY_JDN);
+  state.viewJy=t.jy;state.viewJm=t.jm;state.selJdn=TODAY_JDN;
+  renderCalendar();toast('به تاریخ امروز برگشتید — '+WDN[wdOf(TODAY_JDN)]+' '+toFa(t.jd)+' '+JM[t.jm-1]);
+});
+el('calGrid').addEventListener('click',function(e){
+  var c=e.target.closest('.cell');
+  if(!c)return;
+  state.selJdn=+c.dataset.jdn;
+  var j=d2j(state.selJdn);
+  if(j.jy!==state.viewJy||j.jm!==state.viewJm){state.viewJy=j.jy;state.viewJm=j.jm;}
+  renderCalendar();
+  maybeInterstitial();
+});
+var navItems=document.querySelectorAll('.navitem');
+for(var ni=0;ni<navItems.length;ni++)navItems[ni].addEventListener('click',function(){switchTab(this.dataset.tab);});
+/* ---------- منوی سه‌نقطه سمت چپ (نسخه ۱٫۵) ---------- */
+el('btnKebab').addEventListener('click',function(e){e.stopPropagation();el('menuPop').classList.toggle('open');});
+el('menuPop').addEventListener('click',function(e){
+  var b=e.target.closest('.mi');if(!b)return;
+  el('menuPop').classList.remove('open');
+  if(b.dataset.act==='admin'){openAdmin();return;}
+  switchTab(b.dataset.tab);
+});
+document.addEventListener('click',function(e){
+  var mp=el('menuPop');
+  if(mp.classList.contains('open')&&!mp.contains(e.target)&&!el('btnKebab').contains(e.target))mp.classList.remove('open');
+  var ap=el('annPop');
+  if(ap.classList.contains('open')&&!ap.contains(e.target)&&!el('btnBell').contains(e.target))ap.classList.remove('open');
+  var pm=el('ptMenu');
+  if(pm.classList.contains('open')&&!pm.contains(e.target)&&!el('ptKebab').contains(e.target))pm.classList.remove('open');
+});
+
+/* ---------- زنگ اطلاعیه (نسخه ۱.۶) — خبر و تبلیغ از پنل مدیریت ---------- */
+var ANN_TYPE={news:'خبر',ad:'تبلیغ'};
+function annAll(){return store.get('pcw_ann',null);}
+(function seedAnn(){
+  if(annAll()!==null)return;
+  var now=Date.now();
+  store.set('pcw_ann',[
+    {id:now-1,type:'news',on:true,at:now,title:'نسخه ۱٫۶ منتشر شد',
+     body:'اوقات شرعی مطابق طرح جدید (نوار ۸ وقت با پخش اذان)، دکمه بازگشت به امروز و اطلاعیه‌ها اضافه شد. جدول ماهانه اوقات شرعی را با فلش پایین کارت ببینید.'},
+    {id:now,type:'ad',on:true,at:now,title:'فرصت تبلیغ در تقویم فارسی',
+     body:'برنامه شما می‌تواند جلوی هزاران کاربر نمایش داده شود. برای درخواست تبلیغ از منوی سه‌نقطه → پشتیبانی پیام بگذارید.'}
+  ]);
+  store.set('pcw_ann_seen',0);
+})();
+function annActive(){return annAll().filter(function(a){return a&&a.on!==false;});}
+function annUnseen(){var seen=store.get('pcw_ann_seen',0),n=0;annActive().forEach(function(a){if((a.at||0)>seen)n++;});return n;}
+function updateBellDot(){el('bellDot').classList.toggle('on',annUnseen()>0);}
+function renderAnnPop(){
+  var list=annActive(),html='';
+  for(var i=list.length-1;i>=0;i--){
+    var a=list[i],d=new Date(a.at||Date.now());
+    html+='<div class="ann-item"><span class="chip '+a.type+'">'+ANN_TYPE[a.type]+'</span>'
+      +'<div class="a-t">'+esc(a.title)+'</div><div class="a-b">'+esc(a.body)+'</div>'
+      +(a.link?'<a class="a-link" href="'+esc(a.link)+'" target="_blank" rel="noopener">مشاهده</a>':'')
+      +'<div class="a-d">'+toFa(d.getFullYear())+'/'+toFa(pad2(d.getMonth()+1))+'/'+toFa(pad2(d.getDate()))+'</div></div>';
+  }
+  el('annList').innerHTML=html||'<div class="empty">اطلاعیه‌ای فعال نیست</div>';
+}
+el('btnBell').addEventListener('click',function(e){
+  e.stopPropagation();
+  var p=el('annPop');
+  p.classList.toggle('open');
+  el('menuPop').classList.remove('open');
+  if(p.classList.contains('open')){
+    renderAnnPop();
+    store.set('pcw_ann_seen',Date.now());
+    updateBellDot();
+  }
+});
+
+/* ---------- کنترل‌های کارت اوقات شرعی (نسخه ۱.۶) ---------- */
+el('btnPlayAdhan').addEventListener('click',function(){
+  var c=CITIES[state.city]||CITIES[0];
+  var b=this;b.classList.add('on');
+  setTimeout(function(){b.classList.remove('on');},3200);
+  playAdhanSample(state.adhan.sound==='none'?'mashhad':state.adhan.sound);
+  toast('پخش اذان — '+c[0]);
+});
+el('ptKebab').addEventListener('click',function(e){e.stopPropagation();el('ptMenu').classList.toggle('open');});
+el('ptBack').addEventListener('click',function(){switchTab('prayer');});
+el('ptMiCity').addEventListener('click',function(){el('ptMenu').classList.remove('open');openCityPicker('prayer');});
+el('ptMiMonth').addEventListener('click',function(){el('ptMenu').classList.remove('open');el('ptChevron').click();});
+el('ptMiShare').addEventListener('click',function(){
+  el('ptMenu').classList.remove('open');
+  var c=CITIES[state.city]||CITIES[0],g=d2g(state.selJdn);
+  var t=prayerTimes(new Date(g.gy,g.gm-1,g.gd),c[1],c[2]);
+  var txt='اوقات شرعی '+c[0]+' — ';
+  for(var i=0;i<PT_SHORT.length;i++)txt+=PT_SHORT[i][1]+' '+fmtHShort(t[PRAYERS[i][0]])+'  ';
+  if(navigator.share){navigator.share({title:'اوقات شرعی',text:txt}).catch(function(){});}
+  else{toast('امکان اشتراک‌گذاری در این مرورگر نیست — متن در کنسول کپی شد');try{console.log(txt);}catch(e){}}
+});
+el('ptChevron').addEventListener('click',function(){
+  ptMonthOpen=!ptMonthOpen;
+  this.classList.toggle('open',ptMonthOpen);
+  el('ptMonthWrap').style.display=ptMonthOpen?'':'none';
+  if(ptMonthOpen){renderPrayerMonth();toast('جدول ماهانه اوقات شرعی — '+JM[d2j(state.selJdn).jm-1]);}
+});
+function switchTab(tab){
+  document.body.setAttribute('data-tab',tab);
+  document.querySelectorAll('.mi[data-tab]').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.id==='screen-'+tab);});
+  el('appTitle').textContent={calendar:'تقویم فارسی',events:'رویدادها',reminders:'یادآورها',prayer:'اوقات شرعی',qibla:'قبله‌نما',settings:'تنظیمات',support:'پشتیبانی'}[tab]||'تقویم فارسی';
+  if(tab==='events')renderEvents();
+  if(tab==='reminders')renderReminders();
+  if(tab==='prayer')renderPrayer();
+  if(tab==='qibla')renderQibla();
+  if(tab==='support')renderSupMine();
+}
+el('fabAdd').addEventListener('click',openSheet);
+el('btnCancelEvent').addEventListener('click',closeSheet);
+el('backdrop').addEventListener('click',function(){closeSheet();closeRemEditor();});
+el('btnSaveEvent').addEventListener('click',function(){
+  var title=el('evTitle').value.trim();
+  if(!title){toast('عنوان رویداد را وارد کنید');return;}
+  var j=d2j(state.selJdn);
+  state.events.push({id:++_idc,jy:j.jy,jm:j.jm,jd:j.jd,title:title,time:el('evTime').value||'',repeat:el('evRepeat').value,color:state.evColor});
+  store.set('pcw_events',state.events);
+  closeSheet();
+  toast('رویداد ذخیره شد'+(el('evTime').value?' · یادآوری '+toFa(el('evTime').value):''));
+  renderCalendar();
+  if(document.body.getAttribute('data-tab')==='events')renderEvents();
+});
+el('swTheme').addEventListener('change',function(){
+  state.theme=this.checked?'dark':'light';
+  store.set('pcw_theme',state.theme);
+  applyTheme();
+});
+el('swOcc').addEventListener('change',function(){
+  state.showOcc=this.checked;
+  store.set('pcw_occ',state.showOcc);
+  renderCalendar();
+});
+/* ============================================================
+   موتور یادآور عمومی — نسخه ۱٫۱۱ (آب / دارو / ورزش / شخصی)
+   منطق مو‌به‌موی نسخه اندروید: ReminderEngine + Room + اکشن‌های اعلان
+   ============================================================ */
+var tjKey=d2j(TODAY_JDN), TODAY_KEY=tjKey.jy*10000+tjKey.jm*100+tjKey.jd;
+var remFilter=-1, remEditing=null, remTarget=8, remNotifTarget=null;
+function remWeekIdx(jdn){return (wdOf(jdn)+1)%7;} /* شنبه=۰ … جمعه=۶ — همسان باReminderEngine.jalaliWeekIndex */
+function fmtMin(m){var h=Math.floor(m/60)%24,mm=m%60;return toFa(pad2(h)+':'+pad2(mm));}
+function todayMinute(){var n=new Date();return n.getHours()*60+n.getMinutes();}
+function doseK(id,m){return id+'_'+m;}
+function isDone(id,m){var a=state.doses[TODAY_KEY]||[];return a.indexOf(doseK(id,m))>=0;}
+function setDone(id,m,on){
+  var a=state.doses[TODAY_KEY]||[],k=doseK(id,m);
+  if(on){if(a.indexOf(k)<0)a.push(k);}
+  else a=a.filter(function(x){return x!==k;});
+  state.doses[TODAY_KEY]=a;store.set('pcw_doses',state.doses);
+}
+function remOccursToday(r){
+  if(!r.on)return false;
+  if(r.start>0&&r.start>TODAY_KEY)return false;
+  if(r.end>0&&r.end<TODAY_KEY)return false;
+  if(r.repeat===0)return r.start===TODAY_KEY;
+  if(r.repeat===2)return (r.days||[]).indexOf(remWeekIdx(TODAY_JDN))>=0;
+  return true;
+}
+function remRepeatLabel(r){
+  if(r.repeat===0)return 'یک‌باره';
+  if(r.repeat===2){
+    var d=(r.days||[]).slice().sort(function(a,b){return a-b;});
+    return d.length?d.map(function(i){return WEEK_DAYS[i];}).join(' و '):'هفتگی — روزی انتخاب نشده';
+  }
+  return 'هر روز';
+}
+function remSlotsToday(){
+  var out=[];
+  state.rems.forEach(function(r){
+    if(!remOccursToday(r))return;
+    (r.times||[]).slice().sort(function(a,b){return a-b;}).forEach(function(m){out.push({r:r,m:m});});
+  });
+  out.sort(function(a,b){return a.m-b.m;});
+  return out;
+}
+/* ---------- رندر صفحه یادآورها ---------- */
+function renderReminders(){
+  /* اعلان شبیه‌سازی‌شده (باز می‌ماند تا کاربر اکشن بزند) */
+  /* آب */
+  var water=state.rems.filter(function(r){return r.on&&r.type===0;});
+  if(water.length){
+    var target=0;water.forEach(function(r){target+=(r.target>0?r.target:8);});
+    var drunk=0;(state.doses[TODAY_KEY]||[]).forEach(function(k){
+      var id=+k.split('_')[0];
+      if(water.some(function(r){return r.id===id;}))drunk++;
+    });
+    el('remWater').style.display='';
+    el('waterStat').textContent=toFa(drunk)+' از '+toFa(target)+' لیوان';
+    el('waterFill').style.width=Math.min(100,drunk*100/target)+'%';
+  } else el('remWater').style.display='none';
+  /* برنامه امروز */
+  var slots=remSlotsToday(),nowM=todayMinute(),nextK=null,html='';
+  for(var i=0;i<slots.length;i++){
+    if(slots[i].m>=nowM&&!isDone(slots[i].r.id,slots[i].m)){nextK=i;break;}
+  }
+  slots.forEach(function(s,i){
+    var done=isDone(s.r.id,s.m);
+    html+='<div class="today-row'+(done?' done':'')+'" data-i="'+i+'">'
+      +'<span class="t-dot" style="background:'+(done?'#1E9E55':(i===nextK?'var(--primary)':REM_COLORS[s.r.type]))+'"></span>'
+      +'<span class="t-time">'+fmtMin(s.m)+'</span>'
+      +'<span class="t-name">'+esc(s.r.title)+'</span>'
+      +(i===nextK&&!done?'<span class="t-next">بعدی</span>':'')
+      +'</div>';
+  });
+  el('remToday').innerHTML=html||'<div class="empty">امروز نوبتی برای یادآورهای فعال نیست</div>';
+  /* فیلترها */
+  var fh='<button class="typechip'+(remFilter===-1?' on':'')+'" data-f="-1">همه</button>';
+  REM_TYPES.forEach(function(t,i){
+    fh+='<button class="typechip'+(remFilter===i?' on':'')+'" data-f="'+i+'" style="color:'+REM_COLORS[i]+'">'+t+'</button>';
+  });
+  el('remFilters').innerHTML=fh;
+  /* فهرست */
+  var list=state.rems.filter(function(r){return remFilter===-1||r.type===remFilter;});
+  var lh='';
+  list.forEach(function(r){
+    var times=(r.times||[]).slice().sort(function(a,b){return a-b;}).map(fmtMin).join('، ');
+    lh+='<div class="rem-item">'
+      +'<div class="r-top"><span class="r-dot" style="background:'+REM_COLORS[r.type]+'"></span>'
+      +'<span class="r-title">'+esc(r.title)+'</span>'
+      +'<label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">'+(r.on?'فعال':'خاموش')
+      +'<input type="checkbox" class="sw" data-sw="'+r.id+'"'+(r.on?' checked':'')+'></label>'
+      +'</div>'
+      +'<div class="r-sub">'+remRepeatLabel(r)+(times?' · '+times:'')
+      +(r.type===0&&r.target>0?' · هدف '+toFa(r.target)+' لیوان':'')
+      +(r.note?' · '+esc(r.note):'')+'</div>'
+      +'<div class="r-acts">'
+      +'<span style="font-size:10px;color:'+REM_COLORS[r.type]+';font-weight:800">'+REM_TYPES[r.type]+'</span>'
+      +'<span style="flex:1"></span>'
+      +'<button class="rem-icbtn" data-test="'+r.id+'" title="آزمایش اعلان"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg></button>'
+      +'<button class="rem-icbtn" data-edit="'+r.id+'" title="ویرایش"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="M13.5 6.5l3 3"/></svg></button>'
+      +'<button class="rem-icbtn del" data-del="'+r.id+'" title="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></svg></button>'
+      +'</div></div>';
+  });
+  el('remList').innerHTML=lh||'<div class="empty">یادآوری در این نوع ثبت نشده — با دکمه پایین بسازید</div>';
+}
+/* ---------- ویرایشگر یادآور ---------- */
+function fillDateRow(rowId,selD,selM,selY){
+  var el0=el(rowId);el0.innerHTML='';
+  var sd=document.createElement('select');sd.style.flex='1';
+  for(var d=1;d<=31;d++){var o=document.createElement('option');o.value=d;o.textContent=toFa(d);if(d===selD)o.selected=true;sd.appendChild(o);}
+  var sm=document.createElement('select');sm.style.flex='2';
+  JM.forEach(function(m,i){var o=document.createElement('option');o.value=i+1;o.textContent=m;if(i+1===selM)o.selected=true;sm.appendChild(o);});
+  var sy=document.createElement('select');sy.style.flex='1';
+  var y0=tjKey.jy-3;
+  for(var y=y0;y<=tjKey.jy+3;y++){var o2=document.createElement('option');o2.value=y;o2.textContent=toFa(y);if(y===selY)o2.selected=true;sy.appendChild(o2);}
+  el0.appendChild(sd);el0.appendChild(sm);el0.appendChild(sy);
+}
+function openRemEditor(r){
+  remEditing=r||null;
+  el('remSheetTitle').textContent=r?'ویرایش یادآور':'یادآور جدید';
+  el('remTitle').value=r?r.title:'';
+  el('remNote').value=r?(r.note||''):'';
+  el('remEnabled').checked=r?!!r.on:true;
+  el('remRepeat').value=r?String(r.repeat):'1';
+  remTarget=r?(r.target>0?r.target:8):8;
+  el('remTargetVal').textContent=toFa(remTarget);
+  el('remTargetWrap').style.display=(r&&r.type===0)?'':'none';
+  var times=r?(r.times||[]).slice():[600,720,840,960];
+  renderTimeChips(times);
+  var days=r?(r.days||[]):[0,2,4];
+  var dh='';DAY_SHORT.forEach(function(d,i){dh+='<button class="daychip'+(days.indexOf(i)>=0?' on':'')+'" data-d="'+i+'">'+d+'</button>';});
+  el('remDays').innerHTML=dh;
+  el('remDaysWrap').style.display=el('remRepeat').value==='2'?'':'none';
+  var start=r&&r.start>0?{d:r.start%100,m:Math.floor(r.start/100)%100,y:Math.floor(r.start/10000)}:{d:tjKey.jd,m:tjKey.jm,y:tjKey.jy};
+  fillDateRow('remStartRow',start.d,start.m,start.y);
+  var hasEnd=r&&r.end>0;
+  el('remNoEnd').checked=!hasEnd;
+  el('remEndWrap').style.display=hasEnd?'':'none';
+  if(hasEnd)fillDateRow('remEndRow',r.end%100,Math.floor(r.end/100)%100,Math.floor(r.end/10000));
+  var chips=document.querySelectorAll('#remTypes .typechip');
+  for(var i2=0;i2<chips.length;i2++)chips[i2].classList.toggle('on',r?+chips[i2].dataset.t===r.type:chips[i2].dataset.t==='3');
+  el('btnRemDelete').style.display=r?'':'none';
+  el('remTitle').classList.remove('err');
+  el('remTitle').placeholder=REM_TITLE_PH[readEditorType()]||'';
+  el('remSheet').classList.add('open');el('backdrop').classList.add('open');
+  el('remSheet').scrollTop=0;
+}
+var REM_TITLE_PH={0:'مثلا: نوشیدن آب — ۸ لیوان در روز',1:'مثلا: قرص فشار خون — بعد از غذا',2:'مثلا: پیاده‌روی ۳۰ دقیقه‌ای',3:'مثلا: مطالعه کتاب، تماس با دوست…'};
+function closeRemEditor(){el('remSheet').classList.remove('open');el('backdrop').classList.remove('open');}
+function renderTimeChips(times){
+  window._remTimes=times;
+  var h='';
+  times.slice().sort(function(a,b){return a-b;}).forEach(function(m){
+    h+='<span class="tchip" data-tm="'+m+'">'+fmtMin(m)+'<b title="حذف">×</b></span>';
+  });
+  el('remTimeChips').innerHTML=h||'<span class="muted-text">ساعتی اضافه نشده</span>';
+}
+function readEditorType(){var c=document.querySelector('#remTypes .typechip.on');return c?+c.dataset.t:3;}
+function readEditorDays(){var out=[];document.querySelectorAll('#remDays .daychip.on').forEach(function(b){out.push(+b.dataset.d);});return out;}
+/* ---------- اعلان شبیه‌سازی‌شده با دو اکشن ---------- */
+function remNotifShow(r,m){
+  remNotifTarget={r:r,m:m};
+  el('rnTitle').textContent='یادآور '+REM_TYPES[r.type]+' — '+r.title;
+  el('rnSub').textContent='نوبت ساعت '+fmtMin(m)+' رسیده است'+(r.note?' ('+r.note+')':'')+' — اعلان واقعی در اندروید با دو دکمه همین پایین می‌آید.';
+  el('remNotif').classList.add('open');
+}
+el('rnDone').addEventListener('click',function(){
+  if(remNotifTarget){setDone(remNotifTarget.r.id,remNotifTarget.m,true);toast('انجام شد و در «برنامه امروز» ثبت شد');}
+  el('remNotif').classList.remove('open');renderReminders();
+});
+el('rnSnooze').addEventListener('click',function(){
+  el('remNotif').classList.remove('open');
+  toast('یادآوری ۱۰ دقیقه دیگر تکرار می‌شود (snooze)');
+});
+/* ---------- اتصال رویدادهای یادآور ---------- */
+el('btnRemAdd').addEventListener('click',function(){openRemEditor(null);});
+el('btnRemCancel').addEventListener('click',closeRemEditor);
+el('remTitle').addEventListener('input',function(){this.classList.remove('err');});
+el('remRepeat').addEventListener('change',function(){el('remDaysWrap').style.display=this.value==='2'?'':'none';});
+el('remNoEnd').addEventListener('change',function(){el('remEndWrap').style.display=this.checked?'none':'';});
+document.querySelectorAll('#remTypes .typechip').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('#remTypes .typechip').forEach(function(x){x.classList.remove('on');});
+    this.classList.add('on');
+    el('remTargetWrap').style.display=this.dataset.t==='0'?'':'none';
+    el('remTitle').placeholder=REM_TITLE_PH[+this.dataset.t]||el('remTitle').placeholder;
+  });
+});
+el('btnRemTimeAdd').addEventListener('click',function(){
+  var v=el('remTimeInput').value;
+  if(!v){toast('ساعت را انتخاب کنید');return;}
+  var p=v.split(':'),m=+p[0]*60+ +p[1];
+  if(window._remTimes.indexOf(m)>=0){toast('این ساعت قبلا اضافه شده');return;}
+  window._remTimes.push(m);renderTimeChips(window._remTimes);toast('ساعت '+fmtMin(m)+' اضافه شد');
+});
+el('remTimeChips').addEventListener('click',function(e){
+  var c=e.target.closest('.tchip');if(!c)return;
+  window._remTimes=window._remTimes.filter(function(m){return m!==+c.dataset.tm;});
+  renderTimeChips(window._remTimes);
+});
+el('remDays').addEventListener('click',function(e){
+  var c=e.target.closest('.daychip');if(!c)return;
+  c.classList.toggle('on');
+});
+el('btnTargetMinus').addEventListener('click',function(){if(remTarget>1){remTarget--;el('remTargetVal').textContent=toFa(remTarget);}});
+el('btnTargetPlus').addEventListener('click',function(){if(remTarget<20){remTarget++;el('remTargetVal').textContent=toFa(remTarget);}});
+el('btnGlass').addEventListener('click',function(){
+  var water=state.rems.filter(function(r){return r.on&&r.type===0;});
+  if(!water.length){toast('اول یک یادآور آب بسازید');return;}
+  var r=water[0],m=todayMinute(),tryN=0;
+  while(isDone(r.id,m)&&tryN<6){m=(m+1)%1440;tryN++;}
+  setDone(r.id,m,true);renderReminders();
+  toast('یک لیوان ثبت شد — '+el('waterStat').textContent);
+});
+function fieldErr(id,msg){
+  var e=el(id);if(!e)return;
+  e.classList.remove('err');void e.offsetWidth;e.classList.add('err');
+  e.scrollIntoView({behavior:'smooth',block:'center'});
+  if(e.tagName==='INPUT'||e.tagName==='SELECT'){try{e.focus({preventScroll:true});}catch(_){e.focus();}}
+  toast(msg);
+  setTimeout(function(){e.classList.remove('err');},3000);
+}
+el('btnRemSave').addEventListener('click',function(){
+  var title=el('remTitle').value.trim();
+  if(!title){fieldErr('remTitle','عنوان یادآور را در بالای فرم وارد کنید');return;}
+  var times=(window._remTimes||[]).filter(function(m){return m>=0&&m<1440;});
+  if(!times.length){fieldErr('remTimeInput','حداقل یک ساعت یادآوری اضافه کنید');return;}
+  var repeat=+el('remRepeat').value;
+  var days=readEditorDays();
+  if(repeat===2&&!days.length){fieldErr('remDaysWrap','برای تکرار هفتگی، حداقل یک روز انتخاب کنید');return;}
+  var sr=el('remStartRow').children;
+  var start=(+sr[2].value)*10000+(+sr[1].value)*100+(+sr[0].value);
+  var end=0;
+  if(!el('remNoEnd').checked){
+    var er=el('remEndRow').children;
+    end=(+er[2].value)*10000+(+er[1].value)*100+(+er[0].value);
+    if(end<start){fieldErr('remEndRow','تاریخ پایان قبل از شروع است');return;}
+  }
+  var obj={
+    id:remEditing?remEditing.id:++REM_MAX_ID,
+    title:title,type:readEditorType(),repeat:repeat,days:days,times:times,
+    start:start,end:end,target:(readEditorType()===0?remTarget:0),
+    note:el('remNote').value.trim(),on:el('remEnabled').checked
+  };
+  if(remEditing)state.rems=state.rems.map(function(r){return r.id===obj.id?obj:r;});
+  else state.rems.push(obj);
+  store.set('pcw_rems',state.rems);store.set('pcw_remax',REM_MAX_ID);
+  closeRemEditor();renderReminders();
+  toast('یادآور ذخیره شد — در اندروید آلارم دقیق نوبت بعدی بسته می‌شود');
+});
+el('btnRemDelete').addEventListener('click',function(){
+  if(!remEditing)return;
+  state.rems=state.rems.filter(function(r){return r.id!==remEditing.id;});
+  store.set('pcw_rems',state.rems);
+  closeRemEditor();renderReminders();
+  toast('یادآور حذف شد — اعلان‌های بعدی لغو می‌شود');
+});
+el('remToday').addEventListener('click',function(e){
+  var c=e.target.closest('.today-row');if(!c)return;
+  var s=remSlotsToday()[+c.dataset.i];if(!s)return;
+  setDone(s.r.id,s.m,!isDone(s.r.id,s.m));
+  renderReminders();
+});
+el('remFilters').addEventListener('click',function(e){
+  var c=e.target.closest('.typechip');if(!c)return;
+  remFilter=+c.dataset.f;renderReminders();
+});
+el('remList').addEventListener('click',function(e){
+  var sw=e.target.closest('input[data-sw]');
+  if(sw){
+    var r=state.rems.find(function(x){return x.id===+sw.dataset.sw;});
+    if(r){r.on=sw.checked;store.set('pcw_rems',state.rems);
+      toast(r.on?'یادآور فعال شد — آلارم نوبت بعدی بسته می‌شود':'یادآور خاموش شد — آلارم‌ها لغو می‌شوند');}
+    renderReminders();return;
+  }
+  var tst=e.target.closest('[data-test]');
+  if(tst){
+    var r2=state.rems.find(function(x){return x.id===+tst.dataset.test;});
+    if(r2){
+      var nowM=todayMinute(),times=(r2.times||[]).slice().sort(function(a,b){return a-b;});
+      var m=times.find(function(t){return t>=nowM;});
+      if(m===undefined)m=times[0]||600;
+      remNotifShow(r2,m);
+    }
+    return;
+  }
+  var ed=e.target.closest('[data-edit]');
+  if(ed){openRemEditor(state.rems.find(function(x){return x.id===+ed.dataset.edit;})||null);return;}
+  var dl=e.target.closest('[data-del]');
+  if(dl){
+    var r3=state.rems.find(function(x){return x.id===+dl.dataset.del;});
+    if(r3&&confirm('«'+r3.title+'» حذف شود؟ اعلان‌های بعدی هم لغو می‌شوند.')){
+      state.rems=state.rems.filter(function(x){return x.id!==r3.id;});
+      store.set('pcw_rems',state.rems);renderReminders();
+      toast('یادآور حذف شد');
+    }
+  }
+});
+/* ---------- انتخاب شهر با جست‌وجو (#396 شهر) ---------- */
+var pickerCtx='prayer';
+function cityLabel(i){var c=CITIES[i]||CITIES[0];return c[0]+(c[3]?' ('+c[3]+')':'');}
+function updateCityLabels(){
+  el('defCityBtn').textContent=cityLabel(state.city);
+  syncCitySelects();
+}
+/* ---------- استان/شهرستان آبشاری + مکان‌یاب (نسخه ۱.۲) ---------- */
+var PROVS=[],PROV_CITIES={};
+(function(){
+  for(var i=0;i<CITIES.length;i++){
+    var p=CITIES[i][3]||'سایر';
+    if(!PROV_CITIES[p]){PROV_CITIES[p]=[];PROVS.push(p);}
+    PROV_CITIES[p].push(i);
+  }
+})();
+function fillCityOptions(prov){
+  var sc=el('selCity');
+  sc.innerHTML=PROV_CITIES[prov].map(function(i){return '<option value="'+i+'">'+CITIES[i][0]+'</option>';}).join('');
+  if(PROV_CITIES[prov].indexOf(state.city)>=0)sc.value=String(state.city);
+}
+function syncCitySelects(){
+  var c=CITIES[state.city]||CITIES[0],prov=c[3]||PROVS[0];
+  el('selProv').innerHTML=PROVS.map(function(p){return '<option>'+p+'</option>';}).join('');
+  el('selProv').value=PROVS.indexOf(prov)>=0?prov:PROVS[0];
+  fillCityOptions(el('selProv').value);
+}
+el('selProv').addEventListener('change',function(){
+  fillCityOptions(this.value);
+  var sc=el('selCity');
+  if(sc.options.length){state.city=+sc.value;store.set('pcw_city',state.city);renderPrayer();}
+});
+el('selCity').addEventListener('change',function(){
+  state.city=+this.value;store.set('pcw_city',state.city);
+  renderPrayer();toast('شهر: '+CITIES[state.city][0]);
+});
+function distKm(a,b,c,d){var R=6371,r=Math.PI/180,dl=(c-a)*r,dn=(d-b)*r;var x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x));}
+el('btnLocate').addEventListener('click',function(){
+  if(!navigator.geolocation){toast('مرورگر شما مکان‌یابی را پشتیبانی نمی‌کند');return;}
+  toast('در حال یافتن موقعیت شما…');
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat=pos.coords.latitude,lng=pos.coords.longitude,best=0,bd=1e18;
+    for(var i=0;i<CITIES.length;i++){
+      var dd=distKm(lat,lng,CITIES[i][1],CITIES[i][2]);
+      if(dd<bd){bd=dd;best=i;}
+    }
+    state.city=best;store.set('pcw_city',best);
+    updateCityLabels();renderPrayer();
+    toast('نزدیک‌ترین شهر: '+CITIES[best][0]+' — '+toFa(Math.round(distKm(lat,lng,CITIES[best][1],CITIES[best][2])))+' کیلومتر');
+  },function(){toast('دسترسی به موقعیت داده نشد — شهر را دستی انتخاب کنید');},{enableHighAccuracy:false,timeout:8000,maximumAge:60000});
+});
+el('btnSearchCity').addEventListener('click',function(){openCityPicker('prayer');});
+function openCityPicker(ctx){
+  pickerCtx=ctx;
+  el('citySearch').value='';
+  renderCityList('');
+  el('cityPicker').classList.add('open');
+  el('cityBackdrop').classList.add('open');
+}
+function closeCityPicker(){el('cityPicker').classList.remove('open');el('cityBackdrop').classList.remove('open');}
+function renderCityList(q){
+  q=(q||'').trim();
+  var list=el('cityList'),html='',n=0;
+  for(var i=0;i<CITIES.length;i++){
+    var c=CITIES[i];
+    if(q&&c[0].indexOf(q)<0&&(c[3]||'').indexOf(q)<0)continue;
+    n++;
+    html+='<button class="city-item'+(i===state.city?' on':'')+'" data-i="'+i+'"><span>'+c[0]+'</span><span class="prov">'+(c[3]||'')+'</span></button>';
+  }
+  list.innerHTML=html||'<div class="empty" style="padding:16px">شهری یافت نشد</div>';
+  var items=list.querySelectorAll('.city-item');
+  for(var k=0;k<items.length;k++)items[k].addEventListener('click',function(){
+    state.city=+this.dataset.i;store.set('pcw_city',state.city);
+    updateCityLabels();renderPrayer();closeCityPicker();
+    toast('شهر: '+CITIES[state.city][0]);
+  });
+}
+el('defCityBtn').addEventListener('click',function(){openCityPicker('settings');});
+el('citySearch').addEventListener('input',function(){renderCityList(this.value);});
+el('btnCloseCity').addEventListener('click',closeCityPicker);
+el('cityBackdrop').addEventListener('click',closeCityPicker);
+
+/* ---------- اذان‌های دلخواه (نسخه ۱.۲ + ۸ وقت نسخه ۱.۶) ---------- */
+var PRAYERS=[['fajr','اذان صبح'],['sunrise','طلوع آفتاب'],['dhuhr','اذان ظهر'],['asr','اذان عصر'],['sunset','غروب آفتاب'],['maghrib','اذان مغرب'],['isha','اذان عشاء'],['midnight','نیمه‌شب شرعی']];
+/* برچسب‌های کوتاه فهرست عمودی اوقات شرعی — دقیقاً مطابق عکس ارسالی */
+var PT_SHORT=[['fajr','صبح'],['sunrise','طلوع'],['dhuhr','ظهر'],['asr','عصر'],['sunset','غروب'],['maghrib','مغرب'],['isha','عشا'],['midnight','نیمه‌شب']];
+var SOUND_LABEL={mashhad:'اذان مشهد',hajjaghar:'اذان حاج‌اصغر',najaf:'اذان نجف اشراف',none:'بدون صدا'};
+var ADHAN_SEQ={
+  mashhad:[[262,0],[330,.4],[392,.8],[523,1.2],[392,1.8],[523,2.2],[660,2.6]],
+  hajjaghar:[[294,0],[294,.45],[349,.9],[294,1.35],[262,1.8],[349,2.25],[294,2.7]],
+  najaf:[[220,0],[262,.45],[294,.9],[349,1.35],[294,1.9],[262,2.35],[247,2.8]]
+};
+var actx=null;
+function playAdhanSample(k){
+  if(k==='none'){toast('این حالت فقط اعلان است و صدایی ندارد');return;}
+  try{
+    if(actx)actx.close();
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    var seq=ADHAN_SEQ[k]||ADHAN_SEQ.mashhad,now=actx.currentTime;
+    for(var i=0;i<seq.length;i++){
+      (function(step){
+        var o=actx.createOscillator(),o2=actx.createOscillator(),g=actx.createGain();
+        o.type='sine';o2.type='triangle';o.frequency.value=step[0];o2.frequency.value=step[0]*2;
+        var t0=now+step[1],t1=t0+.75;
+        g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.15,t0+.06);g.gain.exponentialRampToValueAtTime(.001,t1);
+        o.connect(g);o2.connect(g);g.connect(actx.destination);
+        o.start(t0);o2.start(t0);o.stop(t1);o2.stop(t1);
+      })(seq[i]);
+    }
+    toast('نمونه '+SOUND_LABEL[k]);
+  }catch(e){toast('پخش صدا ممکن نشد');}
+}
+function renderAdhan(){
+  var w=el('adhanRows');w.innerHTML='';
+  PRAYERS.forEach(function(p){
+    var on=!!state.adhan[p[0]];
+    var d=document.createElement('div');d.className='adh-row';
+    var nm=document.createElement('span');nm.className='nm';
+    nm.innerHTML=p[1]+(on?' <span class="on-dot"></span>':'');
+    var sw=document.createElement('input');sw.type='checkbox';sw.className='sw';sw.checked=on;
+    sw.addEventListener('change',function(){
+      state.adhan[p[0]]=this.checked;store.set('pcw_adhan',state.adhan);
+      renderAdhan();renderPrayer();
+    });
+    d.appendChild(nm);d.appendChild(sw);w.appendChild(d);
+  });
+  var act=PRAYERS.filter(function(p){return state.adhan[p[0]];}).map(function(p){return p[1];});
+  el('adhanSummary').textContent=act.length?('فعال: '+act.join('، ')+' — '+SOUND_LABEL[state.adhan.sound]):('همه خاموش — '+SOUND_LABEL[state.adhan.sound]);
+  el('selSound').value=state.adhan.sound;
+}
+el('selSound').addEventListener('change',function(){
+  state.adhan.sound=this.value;store.set('pcw_adhan',state.adhan);
+  renderAdhan();
+});
+/* ---------- عضویت ویژه (پیش‌نمایش دمو) ---------- */
+function updatePremiumUI(){
+  el('premiumLbl').textContent=state.premium?'عضویت ویژه فعال ★':'عضویت ویژه';
+  el('premiumDesc').textContent=state.premium
+    ?('حساب: '+(state.user?state.user.name:'')+' — تبلیغات حذف شد')
+    :'ثبت‌نام کاربر جدید و حذف تبلیغات';
+  el('premiumBtn').textContent=state.premium?'مشاهده':'شروع';
+  el('premiumGuest').style.display=state.premium?'none':'';
+  el('premiumDone').style.display=state.premium?'':'none';
+  renderAdSlot();
+}
+/* محدوده تبلیغات پایین (نسخه ۱٫۴): بنرهای چرخشی یا فضای AdMob */
+var adIdx=0;
+function activeBanners(){return state.adcfg.banners.filter(function(b){return b&&b.img&&b.on!==false;});}
+function renderAdSlot(){
+  var zone=el('adZone'),bn=el('adBanner');
+  if(state.premium||!state.adcfg.banner){zone.style.display='none';return;}
+  zone.style.display='';
+  var arr=activeBanners();
+  if(arr.length){
+    var i=adIdx%arr.length,b=arr[i];
+    bn.classList.add('imgmode');
+    bn.innerHTML='<img src="'+b.img+'" alt="بنر تبلیغ اختصاصی">';
+    el('adIdx').textContent='بنر '+toFa(i+1)+' از '+toFa(arr.length);
+    var dots='';for(var k=0;k<arr.length;k++)dots+='<i'+(k===i?' class="on"':'')+'></i>';
+    el('adDots').innerHTML=dots;
+  }else{
+    bn.classList.remove('imgmode');
+    bn.innerHTML='◆ فضای تبلیغ AdMob — با عضویت ویژه حذف می‌شود <button id="adRemove">حذف تبلیغ</button>';
+    el('adIdx').textContent='';el('adDots').innerHTML='';
+  }
+}
+setInterval(function(){
+  if(document.hidden)return;
+  var n=activeBanners().length;
+  if(state.premium||!state.adcfg.banner||n<2)return;
+  adIdx=(adIdx+1)%n;renderAdSlot();
+},6000);
+el('adBanner').addEventListener('click',function(e){
+  var t=e.target;
+  if(t&&t.id==='adRemove'){switchTab('settings');openPremium();return;}
+  if(t&&t.tagName==='IMG'&&t.alt==='بنر تبلیغ اختصاصی'){
+    var b=activeBanners()[adIdx%activeBanners().length];
+    if(b&&b.link)window.open(b.link,'_blank');
+    else toast('بنر تبلیغ شما — لینک را در پنل مدیریت تنظیم کنید');
+  }
+});
+function openPremium(){
+  updatePremiumUI();
+  el('premiumSheet').classList.add('open');
+  el('backdrop').classList.add('open');
+}
+function closePremium(){el('premiumSheet').classList.remove('open');el('backdrop').classList.remove('open');}
+el('premiumBtn').addEventListener('click',openPremium);
+el('btnClosePremium').addEventListener('click',closePremium);
+/* ---------- اینترستیشال + پنل مدیریت تبلیغات (نسخه ۱.۲) ---------- */
+el('btnRegister').addEventListener('click',function(){
+  var n=el('regName').value.trim(),u=el('regUser').value.trim(),p=el('regPass').value;
+  if(n.length<2){toast('نام باید حداقل ۲ حرف باشد');return;}
+  if(u.length<4){toast('شماره/ایمیل باید حداقل ۴ کاراکتر باشد');return;}
+  if(p.length<4){toast('رمز باید حداقل ۴ کاراکتر باشد');return;}
+  state.user={name:n,username:u.toLowerCase()};
+  state.premium=true;
+  store.set('pcw_user',state.user);store.set('pcw_premium',true);
+  var us=store.get('pcw_users',[]);us.push({name:n,username:u.toLowerCase(),at:new Date().toLocaleDateString('fa-IR')});store.set('pcw_users',us);
+  updatePremiumUI();
+  toast('خوش آمدید '+n+'! تبلیغات حذف شد (دمو)');
+});
+el('btnCode').addEventListener('click',function(){
+  var code=el('regCode').value.trim().toUpperCase().replace(/ /g,'');
+  if(!/^PF(-?[A-F0-9]{4}){3}$/.test(code)){toast('قالب کد صحیح نیست (PF-XXXX-XXXX-XXXX)');return;}
+  state.premium=true;
+  if(!state.user)state.user={name:'کاربر ویژه',username:'guest'};
+  store.set('pcw_user',state.user);store.set('pcw_premium',true);
+  updatePremiumUI();
+  toast('عضویت ویژه فعال شد (دمو)');
+});
+el('btnLogoutPremium').addEventListener('click',function(){
+  state.user=null;state.premium=false;
+  store.set('pcw_premium',false);store.set('pcw_user',null);
+  updatePremiumUI();toast('از حساب خارج شدید (دمو)');
+});
+el('btnClear').addEventListener('click',function(){
+  try{['pcw_events','pcw_rems','pcw_doses','pcw_remax','pcw_theme','pcw_occ','pcw_city','pcw_user','pcw_premium','pcw_adhan','pcw_adcfg','pcw_adminpin','pcw_users','pcw_adstats','pcw_notifbar','pcw_support','pcw_ann','pcw_ann_seen'].forEach(function(k){localStorage.removeItem(k);});}catch(e){}
+  toast('داده‌های نمایشی پاک شد — صفحه رفرش می‌شود');
+  setTimeout(function(){location.reload();},900);
+});
+
+/* ---------- اینترستیشال + پنل مدیریت تبلیغات (نسخه ۱.۲) ---------- */
+var ADSTAT=store.get('pcw_adstats',{opens:0,inter:0});
+var adminAuthed=false;
+function maybeInterstitial(){
+  ADSTAT.opens++;store.set('pcw_adstats',ADSTAT);
+  if(state.premium||!state.adcfg.inter)return;
+  if(ADSTAT.opens%state.adcfg.interEvery!==0)return;
+  showInterstitial();
+}
+function showInterstitial(){
+  el('interN').textContent=toFa(state.adcfg.interEvery);
+  el('interAd').classList.add('open');
+  ADSTAT.inter++;store.set('pcw_adstats',ADSTAT);
+  var btn=el('interClose');btn.disabled=true;btn.textContent='…';
+  var t=3;
+  el('interTimer').textContent='بستن تا '+toFa(t)+' ثانیه';
+  var iv=setInterval(function(){
+    t--;
+    if(t>0)el('interTimer').textContent='بستن تا '+toFa(t)+' ثانیه';
+    else{clearInterval(iv);btn.disabled=false;btn.textContent='بستن تبلیغ';}
+  },1000);
+}
+el('interClose').addEventListener('click',function(){el('interAd').classList.remove('open');});
+function toEn(s){return String(s).replace(/[۰-۹]/g,function(d){return FA.indexOf(d);});}
+function openAdmin(){
+  if(adminAuthed){el('adminLogin').style.display='none';el('adminMain').style.display='';renderAdmin();}
+  else{el('adminLogin').style.display='';el('adminMain').style.display='none';el('adminPin').value='';}
+  el('adminSheet').classList.add('open');el('backdrop').classList.add('open');
+}
+function closeAdmin(){el('adminSheet').classList.remove('open');el('backdrop').classList.remove('open');}
+el('adminBtn').addEventListener('click',openAdmin);
+el('btnCloseAdmin').addEventListener('click',closeAdmin);
+el('btnAdminLogin').addEventListener('click',function(){
+  if(toEn(el('adminPin').value.trim())===String(state.adminPin)){
+    adminAuthed=true;
+    el('adminLogin').style.display='none';el('adminMain').style.display='';
+    renderAdmin();toast('خوش آمدید — پنل مدیریت');
+  }else toast('رمز اشتباه است');
+});
+el('adminPin').addEventListener('keydown',function(e){if(e.key==='Enter')el('btnAdminLogin').click();});
+function renderAdmin(){
+  el('adBannerSw').checked=state.adcfg.banner;
+  el('adInterSw').checked=state.adcfg.inter;
+  el('adEvery').value=String(state.adcfg.interEvery);
+  el('adTestSw').checked=state.adcfg.test;
+  el('adBannerId').value=state.adcfg.bannerId;
+  el('adInterId').value=state.adcfg.interId;
+  el('adPrice').value=state.adcfg.price;
+  renderBannerList();renderSupInbox();renderAnnAdmin();
+  el('stOpens').textContent=toFa(ADSTAT.opens);
+  el('stInter').textContent=toFa(ADSTAT.inter);
+  var us=store.get('pcw_users',[]);
+  el('stUsers').textContent=toFa(us.length);
+  el('stSup').textContent=toFa(store.get('pcw_support',[]).length);
+  el('stRev').textContent=toFa(String(ADSTAT.inter*2500).replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
+  el('admUsers').innerHTML=us.length?us.map(function(u){return '<div class="u-row"><span>'+esc(u.name)+' <span class="muted-text">('+esc(u.username)+')</span></span><span class="muted-text">'+esc(u.at||'')+'</span></div>';}).join(''):'<div class="empty">هنوز کاربری ثبت‌نام نکرده است</div>';
+}
+function saveAdcfg(){store.set('pcw_adcfg',state.adcfg);updatePremiumUI();}
+el('adBannerSw').addEventListener('change',function(){state.adcfg.banner=this.checked;saveAdcfg();toast('بنر تبلیغ: '+(this.checked?'فعال':'خاموش'));});
+el('adInterSw').addEventListener('change',function(){state.adcfg.inter=this.checked;saveAdcfg();toast('اینترستیشال: '+(this.checked?'فعال':'خاموش'));});
+el('adEvery').addEventListener('change',function(){state.adcfg.interEvery=+this.value||3;saveAdcfg();toast('هر '+toFa(state.adcfg.interEvery)+' باز شدن یک‌بار');});
+el('adTestSw').addEventListener('change',function(){state.adcfg.test=this.checked;saveAdcfg();});
+el('adBannerId').addEventListener('change',function(){state.adcfg.bannerId=this.value.trim();saveAdcfg();});
+el('adInterId').addEventListener('change',function(){state.adcfg.interId=this.value.trim();saveAdcfg();});
+el('adPrice').addEventListener('change',function(){state.adcfg.price=this.value.trim();saveAdcfg();});
+/* بنرهای تصویری نامحدود — افزودن/حذف/فعال‌سازی/ترتیب/لینک (نسخه ۱٫۵) */
+function renderBannerList(){
+  var w=el('bannerSlots');w.innerHTML='';
+  var arr=state.adcfg.banners;
+  if(!arr.length){w.innerHTML='<div class="empty">هنوز بنری اضافه نشده — با دکمه «افزودن بنر جدید» اولین تبلیغ خود را بسازید</div>';return;}
+  arr.forEach(function(b,idx){
+    var box=document.createElement('div');box.className='ban-item';
+    var head=document.createElement('div');head.className='ban-head';
+    var lbl=document.createElement('div');lbl.innerHTML='<div class="lbl">بنر '+toFa(idx+1)+'</div><div class="desc">'+(b.on!==false?'روشن — در چرخش نمایش':'خاموش — نمایش داده نمی‌شود')+'</div>';
+    var btns=document.createElement('div');btns.className='ban-btns';
+    var sw=document.createElement('input');sw.type='checkbox';sw.className='sw';sw.checked=b.on!==false;sw.title='روشن/خاموش';
+    var up=document.createElement('button');up.className='mini';up.title='انتقال به بالا';up.textContent='↑';
+    var dn=document.createElement('button');dn.className='mini';dn.title='انتقال به پایین';dn.textContent='↓';
+    var del=document.createElement('button');del.className='mini warn';del.title='حذف';del.textContent='×';
+    btns.appendChild(sw);btns.appendChild(up);btns.appendChild(dn);btns.appendChild(del);
+    head.appendChild(lbl);head.appendChild(btns);
+    box.appendChild(head);
+    var im=document.createElement('img');im.src=b.img;box.appendChild(im);
+    var lin=document.createElement('input');lin.type='text';lin.value=b.link||'';lin.placeholder='لینک این بنر (اختیاری — با لمس باز می‌شود)';lin.style.marginTop='4px';
+    lin.addEventListener('change',function(){b.link=this.value.trim();saveAdcfg();toast('لینک بنر '+toFa(idx+1)+' ذخیره شد');});
+    box.appendChild(lin);
+    sw.addEventListener('change',function(){b.on=this.checked;saveAdcfg();renderBannerList();renderAdSlot();});
+    up.addEventListener('click',function(){if(idx<=0)return;var a=state.adcfg.banners;a.splice(idx,1);a.splice(idx-1,0,b);saveAdcfg();renderBannerList();renderAdSlot();});
+    dn.addEventListener('click',function(){if(idx>=arr.length-1)return;var a=state.adcfg.banners;a.splice(idx,1);a.splice(idx+1,0,b);saveAdcfg();renderBannerList();renderAdSlot();});
+    del.addEventListener('click',function(){state.adcfg.banners.splice(idx,1);saveAdcfg();renderBannerList();renderAdSlot();toast('بنر حذف شد');});
+    w.appendChild(box);
+  });
+}
+el('btnAddBanner').addEventListener('click',function(){el('bannerFile').click();});
+el('bannerFile').addEventListener('change',function(){
+  var f=this.files&&this.files[0];this.value='';
+  if(!f)return;
+  if(!/^image\//.test(f.type)){toast('فقط فایل تصویری قابل قبول است');return;}
+  var fr=new FileReader();
+  fr.onload=function(){
+    var im=new Image();
+    im.onload=function(){
+      var w=im.width,h=im.height,mw=900;
+      if(w>mw){h=Math.round(h*mw/w);w=mw;}
+      var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(im,0,0,w,h);
+      var url=cv.toDataURL('image/jpeg',.8);
+      if(url.length>1200000){toast('تصویر خیلی بزرگ است — عکس کوچک‌تری انتخاب کنید');return;}
+      state.adcfg.bseq=(state.adcfg.bseq||0)+1;
+      state.adcfg.banners.push({id:state.adcfg.bseq,img:url,link:'',on:true});
+      saveAdcfg();renderBannerList();renderAdSlot();
+      toast('بنر جدید ذخیره شد ✓ — پایین صفحه چرخانده می‌شود');
+    };
+    im.onerror=function(){toast('تصویر باز نشد');};
+    im.src=fr.result;
+  };
+  fr.readAsDataURL(f);
+});
+el('btnNewPin').addEventListener('click',function(){
+  var p=el('newPin').value.trim();
+  if(p.length<6){toast('رمز باید حداقل ۶ کاراکتر باشد');return;}
+  if(p.length>24){toast('رمز حداکثر ۲۴ کاراکتر باشد');return;}
+  var hasLetter=/[A-Za-z\u0600-\u06FF]/.test(p),hasDigit=/\d/.test(p);
+  if(!hasLetter||!hasDigit){toast('رمز باید هم حرف و هم عدد داشته باشد — مثلاً abc1234');return;}
+  state.adminPin=p;store.set('pcw_adminpin',p);
+  el('newPin').value='';toast('رمز پنل تغییر کرد — دفعه بعد با همان وارد شوید');
+});
+el('btnAdminOut').addEventListener('click',function(){adminAuthed=false;closeAdmin();toast('از پنل خارج شدید');});
+
+/* ---------- قبله‌نما با GPS (نسخه ۱٫۴) ---------- */
+var qib={lat:null,lng:null,name:'—',gps:false,heading:null};
+var QDIRS=['شمال','شمال‌شرق','شرق','جنوب‌شرق','جنوب','جنوب‌غرب','غرب','شمال‌غرب'];
+function qibFromCity(){
+  var c=CITIES[state.city]||CITIES[0];
+  qib.lat=c[1];qib.lng=c[2];qib.name=c[0];qib.gps=false;
+  renderQibla();
+}
+function fmtKmFa(v){return toFa(String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g,'٬'))+' کیلومتر';}
+function renderQibla(){
+  var gN=el('gNeedle'),gD=el('gDial');
+  if(!gN||!gD||qib.lat==null)return;
+  var q=qiblaBearing(qib.lat,qib.lng);
+  gN.setAttribute('transform','rotate('+q.toFixed(1)+',120,120)');
+  gD.setAttribute('transform','rotate('+(qib.heading!=null?(-qib.heading).toFixed(1):'0')+',120,120)');
+  el('qDeg').textContent=toFa(Math.round(q))+'°';
+  el('qSub').textContent=qib.heading!=null
+    ?('گوشی را صاف رو به قبله نگه دارید — سرِ قرمز به سمت '+QDIRS[Math.round(q/45)%8])
+    :('از '+qib.name+' حدوداً به سمت '+QDIRS[Math.round(q/45)%8]+' — زاویه از شمال جغرافیایی (ساعتگرد)');
+  el('qAz').textContent=toFa(Math.round(q))+'°';
+  el('qDist').textContent=fmtKmFa(distKm(qib.lat,qib.lng,21.4225,39.8262));
+  el('qPos').textContent=(qib.name.length>16?qib.name.slice(0,15)+'…':qib.name)+(qib.gps?' (GPS)':'');
+  el('qSensor').textContent=qib.heading!=null?'فعال ✓':'غیرفعال (وب)';
+}
+el('btnQiblaGps').addEventListener('click',function(){
+  if(!navigator.geolocation){toast('مرورگر شما مکان‌یابی را پشتیبانی نمی‌کند');return;}
+  toast('در حال یافتن موقعیت شما با GPS…');
+  navigator.geolocation.getCurrentPosition(function(pos){
+    qib.lat=pos.coords.latitude;qib.lng=pos.coords.longitude;qib.gps=true;
+    var best=0,bd=1e18;
+    for(var i=0;i<CITIES.length;i++){
+      var dd=distKm(qib.lat,qib.lng,CITIES[i][1],CITIES[i][2]);
+      if(dd<bd){bd=dd;best=i;}
+    }
+    qib.name=CITIES[best][0];
+    renderQibla();
+    toast('موقعیت یافت شد — نزدیک‌ترین شهر: '+CITIES[best][0]+' ('+toFa(Math.round(bd))+' کیلومتر)');
+  },function(){toast('دسترسی به موقعیت داده نشد — «شهر اوقات شرعی» را امتحان کنید');},{enableHighAccuracy:true,timeout:9000,maximumAge:30000});
+});
+el('btnQiblaCity').addEventListener('click',function(){
+  qibFromCity();
+  toast('محاسبه قبله بر اساس: '+(CITIES[state.city]||CITIES[0])[0]);
+});
+window.addEventListener('deviceorientation',function(e){
+  var h=null;
+  if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;
+  else if(e.alpha!=null)h=360-e.alpha;
+  if(h!=null&&isFinite(h)){qib.heading=((h%360)+360)%360;renderQibla();}
+});
+
+/* ---------- نسخه ۱.۳: اعلان همیشگی + اعلان اذان ---------- */
+function tickNotif(){
+  var n=new Date(),j=d2j(TODAY_JDN);
+  var act=PRAYERS.filter(function(p){return state.adhan[p[0]];});
+  el('notifTitle').textContent='تقویم فارسی · '+WDN[wdOf(TODAY_JDN)]+' '+toFa(j.jd)+' '+JM[j.jm-1]+' '+toFa(j.jy);
+  el('notifSub').textContent=toFa(pad2(n.getHours()))+':'+toFa(pad2(n.getMinutes()))+' — همیشه در دسترس · '+(act.length?toFa(act.length)+' اذان فعال':'اذان‌ها خاموش');
+  el('notifBar').style.display=state.notifbar?'flex':'none';
+}
+el('swNotif').addEventListener('change',function(){
+  state.notifbar=this.checked;store.set('pcw_notifbar',this.checked);tickNotif();
+  toast('اعلان همیشگی: '+(this.checked?'فعال':'خاموش'));
+});
+el('notifBtnEvents').addEventListener('click',function(){switchTab('events');});
+el('notifBtnRemind').addEventListener('click',function(){switchTab('reminders');});
+function showHeadsUp(title,sub){
+  var h=el('headsUp');
+  el('huTitle').textContent=title;el('huSub').textContent=sub;
+  h.classList.add('show');
+  clearTimeout(h._t);h._t=setTimeout(function(){h.classList.remove('show');},6000);
+}
+function hhmmEn(h){h=fixHour(h+0.5/60);var hh=Math.floor(h),mm=Math.floor((h-hh)*60);return pad2(hh)+':'+pad2(mm);}
+var firedPrayers={};
+function checkPrayerNow(){
+  try{
+    var c=CITIES[state.city];if(!c)return;
+    var g=d2g(TODAY_JDN);
+    var t=prayerTimes(new Date(g.gy,g.gm-1,g.gd),c[1],c[2]);
+    var n=new Date(),now=pad2(n.getHours())+':'+pad2(n.getMinutes());
+    PRAYERS.forEach(function(p){
+      if(!state.adhan[p[0]])return;
+      var v=t[p[0]];if(v==null)return;
+      var key=TODAY_JDN+'_'+p[0];
+      if(hhmmEn(v)===now&&!firedPrayers[key]){
+        firedPrayers[key]=1;
+        showHeadsUp(p[1]+' — '+c[0],'تقویم فارسی · '+SOUND_LABEL[state.adhan.sound]);
+        if(state.adhan.sound!=='none')playAdhanSample(state.adhan.sound);
+      }
+    });
+  }catch(e){}
+}
+el('btnTestAdhan').addEventListener('click',function(){
+  var c=CITIES[state.city]||CITIES[0];
+  showHeadsUp('نمونه اعلان اذان — '+c[0],'تقویم فارسی · '+SOUND_LABEL[state.adhan.sound]);
+  playAdhanSample(state.adhan.sound);
+});
+
+/* ---------- پشتیبانی و ارسال پیام به مدیر (نسخه ۱٫۵) ---------- */
+var SUP_TYPE={ad:'درخواست تبلیغ',bug:'گزارش مشکل',idea:'پیشنهاد'};
+function supportAll(){return store.get('pcw_support',[]);}
+function renderSupMine(){
+  var msgs=supportAll(),html='';
+  for(var i=msgs.length-1;i>=0;i--){
+    var m=msgs[i];
+    html+='<div class="ev-item"><div class="meta"><div class="tt"><span class="sup-chip">'+esc(SUP_TYPE[m.type]||m.type)+'</span>'+esc(m.name)+'</div><div class="sub">'+esc(m.text)+'<br><span class="muted-text">'+esc(m.at||'')+' · پاسخ از طریق: '+esc(m.contact)+'</span></div></div></div>';
+  }
+  el('supMine').innerHTML=html||'<div class="empty">هنوز پیامی ارسال نکرده‌اید</div>';
+}
+el('btnSupSend').addEventListener('click',function(){
+  var t=el('supType').value,n=el('supName').value.trim(),c=el('supContact').value.trim(),x=el('supText').value.trim();
+  if(n.length<2){toast('نام خود را وارد کنید');return;}
+  if(c.length<4){toast('ایمیل یا شماره تماس برای پاسخ‌گویی لازم است');return;}
+  if(x.length<10){toast('متن پیام باید حداقل ۱۰ حرف باشد');return;}
+  var n2=new Date();
+  var msgs=supportAll();
+  msgs.push({id:Date.now(),type:t,name:n,contact:c,text:x,at:toFa(n2.getFullYear())+'/'+toFa(pad2(n2.getMonth()+1))+'/'+toFa(pad2(n2.getDate()))+' '+toFa(pad2(n2.getHours()))+':'+toFa(pad2(n2.getMinutes()))});
+  store.set('pcw_support',msgs);
+  el('supText').value='';
+  renderSupMine();
+  toast('پیام شما ثبت شد ✓ — در صندوق پشتیبانی مدیر قرار گرفت');
+});
+function renderSupInbox(){
+  var msgs=supportAll(),html='';
+  for(var i=msgs.length-1;i>=0;i--){
+    var m=msgs[i];
+    html+='<div class="ban-item"><div class="ban-head"><div class="lbl" style="font-size:12.5px"><span class="sup-chip">'+esc(SUP_TYPE[m.type]||m.type)+'</span>'+esc(m.name)+' <span class="muted-text">('+esc(m.contact)+')</span><div class="desc">'+esc(m.at||'')+'</div></div><div class="ban-btns"><button class="mini warn" data-sid="'+m.id+'" title="حذف پیام">×</button></div></div><div class="muted-text" style="margin-top:6px;line-height:2">'+esc(m.text)+'</div></div>';
+  }
+  var w=el('admSup');
+  w.innerHTML=html||'<div class="empty">صندوق پشتیبانی خالی است</div>';
+  var dels=w.querySelectorAll('.mini');
+  for(var k=0;k<dels.length;k++)dels[k].addEventListener('click',function(){
+    var id=+this.dataset.sid;
+    store.set('pcw_support',supportAll().filter(function(m){return m.id!==id;}));
+    renderAdmin();toast('پیام حذف شد');
+  });
+}
+/* ---------- مدیریت اطلاعیه‌ها (نسخه ۱.۶) ---------- */
+function renderAnnAdmin(){
+  var arr=annAll(),w=el('annAdminList'),html='';
+  for(var i=arr.length-1;i>=0;i--){
+    var a=arr[i],d=new Date(a.at||Date.now());
+    html+='<div class="ann-row"><div class="ban-head"><div class="lbl" style="font-size:12px"><span class="chip '+(a.type==='ad'?'ad':'news')+'" style="font-size:9.5px;padding:2px 7px">'+ANN_TYPE[a.type]+'</span> '+esc(a.title)+'<div class="desc">'+(a.on!==false?'نمایش به کاربران':'خاموش')+' · '+toFa(d.getFullYear())+'/'+toFa(pad2(d.getMonth()+1))+'/'+toFa(pad2(d.getDate()))+'</div></div><div class="ban-btns"><input type="checkbox" class="sw" data-aid="'+a.id+'" '+(a.on!==false?'checked':'')+' title="روشن/خاموش"><button class="mini warn" data-adel="'+a.id+'" title="حذف">×</button></div></div><div class="muted-text" style="line-height:1.8">'+esc(a.body)+'</div>'+(a.link?'<div class="muted-text" style="font-size:10px;margin-top:3px">لینک: '+esc(a.link)+'</div>':'')+'</div>';
+  }
+  w.innerHTML=html||'<div class="empty">هنوز اطلاعیه‌ای نساخته‌اید — فرم پایین را پر کنید</div>';
+  var togs=w.querySelectorAll('input[type=checkbox]');
+  for(var k=0;k<togs.length;k++)togs[k].addEventListener('change',function(){
+    var id=+this.dataset.aid,arr=annAll();
+    for(var i=0;i<arr.length;i++)if(arr[i].id===id)arr[i].on=this.checked;
+    store.set('pcw_ann',arr);updateBellDot();renderAnnAdmin();renderAnnPop();
+    toast('اطلاعیه '+(this.checked?'روشن':'خاموش')+' شد');
+  });
+  var dels=w.querySelectorAll('[data-adel]');
+  for(k=0;k<dels.length;k++)dels[k].addEventListener('click',function(){
+    var id=+this.dataset.adel;
+    store.set('pcw_ann',annAll().filter(function(a){return a.id!==id;}));
+    updateBellDot();renderAnnAdmin();renderAnnPop();toast('اطلاعیه حذف شد');
+  });
+}
+el('btnAddAnn').addEventListener('click',function(){
+  var tp=el('annType').value,ti=el('annTitle').value.trim(),bd=el('annBody').value.trim(),lk=el('annLink').value.trim();
+  if(ti.length<3){toast('عنوان اطلاعیه را وارد کنید');return;}
+  if(bd.length<5){toast('متن اطلاعیه را وارد کنید');return;}
+  var arr=annAll();
+  arr.push({id:Date.now(),type:tp,on:true,at:Date.now(),title:ti,body:bd,link:lk});
+  store.set('pcw_ann',arr);
+  el('annTitle').value='';el('annBody').value='';el('annLink').value='';
+  updateBellDot();renderAnnAdmin();renderAnnPop();
+  toast('اطلاعیه ثبت شد ✓ — زنگ بالای برنامه قرمز شد');
+});
+
+/* ساعت وضعیت */
+function tickClock(){
+  var n=new Date();
+  el('sbTime').textContent=toFa(n.getHours()%12||12)+':'+toFa(pad2(n.getMinutes()));
+  tickNotif();checkPrayerNow();
+}
+tickClock();setInterval(tickClock,15000);
+/* تیک‌های صفحه قطب‌نما + موقعیت اولیه قبله */
+(function(){
+  var g=el('gTicks'),h='';
+  for(var i=0;i<24;i++){
+    var a=i*15*Math.PI/180,r1=104,r2=i%6===0?93:99;
+    var x1=120+r1*Math.sin(a),y1=120-r1*Math.cos(a),x2=120+r2*Math.sin(a),y2=120-r2*Math.cos(a);
+    h+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="var(--outline2)" stroke-width="'+(i%6===0?2.2:1)+'"/>';
+  }
+  g.innerHTML=h;
+})();
+qibFromCity();
+/* شروع */
+applyTheme();renderSettings();updateCityLabels();updatePremiumUI();renderAdhan();renderCalendar();renderEvents();tickNotif();renderSupMine();updateBellDot();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+== Font: Vazirmatn ==
+Vazirmatn font files (res/font/vazirmatn_*.ttf)
+Copyright (c) 2015 The Vazirmatn Project Authors (https://github.com/rastikerdar/vazirmatn)
+Licensed under the SIL Open Font License, Version 1.1.
+The license text is available at https://openfontlicense.org
+Fonts, including their modified versions, can be freely used, bundled,
+and redistributed in any project (commercial or non-commercial).
+
+== Calendar algorithm ==
+Jalali calendar conversion is based on the widely used jalaali-js algorithm
+(Kazimierz M. Borkowski's Persian calendar arithmetic), reimplemented in Kotlin.
+
+== Prayer times ==
+Prayer time calculation is based on the standard PrayTimes algorithm
+(https://praytimes.org) with the official Tehran Institute of Geophysics
+parameters (Fajr 17.7, Isha 14, Maghrib 4.5 degrees).
+
+== Icons ==
+Launcher icons in this project were generated specifically for it and are
+free to use by the project owner.
