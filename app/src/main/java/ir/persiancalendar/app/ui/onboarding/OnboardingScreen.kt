@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -66,9 +67,13 @@ import java.time.LocalTime
  *  ۱) گام اول: تنظیم افق — انتخاب شهر (با جست‌وجو) یا مکان‌یاب GPS
  *  ۲) گام دوم: تنظیم تاریخ و زمان — نمایش تاریخ شمسی/میلادی/قمری و ساعت
  *  ۳) گام سوم: اذان‌ها — انتخاب کدام اوقات اعلان اذان داده شود (صبح، ظهر، عصر، مغرب، عشا)
- *  ۴) گام چهارم: اعلان‌ها — چک‌لیست کامل مجوزها (نسخه ۱.۱۱.۱۱):
+ *  ۴) گام چهارم: اعلان‌ها — چک‌لیست کامل مجوزها (نسخه ۱.۱۱.۱۱، اجباری از نسخه ۱.۱۱.۱۲):
  *     مجوز اعلان اندروید ۱۳+ + آلارم دقیق اندروید ۱۲+ + استثنا از بهینه‌سازی باتری
  *     با وضعیت زنده (بعد از برگشت از تنظیمات خودکار به‌روز می‌شود)
+ *     نسخه ۱.۱۱.۱۲ (درخواست کاربر): هیچ راه فراری نیست — دکمه‌های
+ *     «رد کردن همه گام‌ها» و «فعلاً نه — بعداً تنظیم می‌کنم» حذف شدند و
+ *     دکمه «مرحله بعد» تا فعال‌شدن مجوز اعلان (اندروید ۱۳+) قفل است.
+ *     هنگام رسیدن به گام چهارم هم دیالوگ مجوز خودکار یک بار باز می‌شود.
  *  ۵) گام پنجم: حساب کاربری — معرفی عضویت ویژه (اختیاری؛ می‌توان بعداً ثبت‌نام کرد)
  *
  * نتیجه در DataStore ذخیره می‌شود (onboardingDone=true) و MainScreen جایگزین می‌شود.
@@ -129,6 +134,20 @@ fun OnboardingScreen(settings: AppSettings) {
     ) { granted ->
         notifState = granted || notifGranted(context)
         if (granted) Toast.makeText(context, "اعلان‌ها فعال شد ✓", Toast.LENGTH_SHORT).show()
+        else Toast.makeText(
+            context,
+            "بدون مجوز اعلان، یادآورها و اذان کار نمی‌کنند — لطفاً فعال کنید",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    // نسخه ۱.۱۱.۱۲: با رسیدن به گام چهارم، دیالوگ مجوز اعلان خودکار یک بار باز می‌شود
+    var autoAskedNotif by remember { mutableStateOf(false) }
+    LaunchedEffect(step) {
+        if (step == 3 && !autoAskedNotif && Build.VERSION.SDK_INT >= 33 && !notifGranted(context)) {
+            autoAskedNotif = true
+            notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     // مکان‌یاب گام اول — با لانچر استاندارد مجوز موقعیت (نسخه ۱.۱۱.۴)
@@ -454,9 +473,6 @@ fun OnboardingScreen(settings: AppSettings) {
                         }
                     }
                 }
-                TextButton(onClick = { step = 4 }) {
-                    Text("فعلاً نه — بعداً تنظیم می‌کنم")
-                }
             }
 
             // ---------------- گام ۵: حساب کاربری ----------------
@@ -484,6 +500,8 @@ fun OnboardingScreen(settings: AppSettings) {
         Spacer(Modifier.weight(1f))
 
         // ---------- دکمه‌های پایین ----------
+        // نسخه ۱.۱۱.۱۲: در گام چهارم، «مرحله بعد» تا فعال‌شدن مجوز اعلان قفل است
+        // (اندروید ۱۲ به پایین همیشه مجاز است و قفل معنا ندارد) — بدون هیچ دکمه رد کردن.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -494,7 +512,11 @@ fun OnboardingScreen(settings: AppSettings) {
                 }
             }
             if (step < 4) {
-                Button(onClick = { step++ }, modifier = Modifier.weight(1f)) {
+                Button(
+                    onClick = { step++ },
+                    enabled = step != 3 || notifOk,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text("مرحله بعد")
                 }
             } else {
@@ -503,20 +525,14 @@ fun OnboardingScreen(settings: AppSettings) {
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        if (step < 4) {
-            TextButton(
-                onClick = {
-                    // نسخه ۱.۱۱.۱۱: حتی هنگام رد کردن گام‌ها، مجوز اعلان یک بار پرسیده می‌شود
-                    if (Build.VERSION.SDK_INT >= 33 && !notifGranted(context)) {
-                        notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                    persistAndFinish()
-                },
+        if (step == 3 && !notifOk) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "برای ادامه، اعلان‌ها را فعال کنید — بدون آن، یادآورها، اذان و اعلان تاریخ نمی‌رسند.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text("رد کردن همه گام‌ها و شروع برنامه")
-            }
+            )
         }
     }
 

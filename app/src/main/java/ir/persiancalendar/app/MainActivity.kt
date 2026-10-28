@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -51,7 +52,16 @@ class MainActivity : ComponentActivity() {
      */
     private val notifPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* نتیجه فقط برای فعال‌شدن مجوز مهم است؛ UI نیازی به آن ندارد */ }
+    ) { granted ->
+        // نسخه ۱.۱۱.۱۲: در صورت رد شدن، کاربر با پیام روشن راهنمایی می‌شود
+        // (برای کاربران ارتقایی که راه‌اندازی اولیه را قبلاً کامل کرده‌اند)
+        if (!granted) Toast.makeText(
+            this,
+            "اعلان‌ها فعال نیست — یادآورها، اذان و اعلان تاریخ نمی‌رسند؛ " +
+                "از تنظیمات ← اعلان‌ها فعالش کنید",
+            Toast.LENGTH_LONG
+        ).show()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

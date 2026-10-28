@@ -187,6 +187,16 @@ object AlarmScheduler {
 
 /**
  * دریافت هشدار یادآوری رویداد → نمایش اعلان و زمان‌بندی وقوع بعدی.
+ *
+ * نسخه ۱.۱۱.۱۲ (گزارش کاربر: «نوفیکیش‌های رویداد واسم نمیاد») — باگ جدی:
+ * قبلاً نمایش اعلان به شرط «وجود وقوع بعدی» گره خورده بود:
+ *     if (trigger != null || event.repeatType != 0) notifyEvent(...)
+ * اما هنگام شلیک آلارم، وقوعِ فعلی همین الان گذشته است؛ برای رویداد
+ * «بدون تکرار» (repeatType=0) تابع nextEventTrigger همیشه null برمی‌گرداند
+ * و در نتیجه اعلان رویدادهای یک‌باره هرگز نشان داده نمی‌شد (رویدادهای
+ * تکرارشونده به‌خاطر وقوع بعدی، اعلان می‌گرفتند). اکنون چون آلارم دقیقاً
+ * سرِ وقتِ یادآوری شلیک شده و رویداد هم از دیتابیس خوانده شده، اعلان
+ * همیشه و بدون شرط نمایش داده می‌شود و سپس زنجیره به وقوع بعدی وصل می‌شود.
  */
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -198,17 +208,15 @@ class ReminderReceiver : BroadcastReceiver() {
                 val dao = AppContainer.eventDao(context)
                 val event = dao.getById(eventId)
                 if (event != null) {
-                    val trigger = AlarmScheduler.nextEventTrigger(event)
-                    // نمایش اعلان فقط اگر یادآوری در آینده‌ی نزدیک بود
-                    if (trigger != null || event.repeatType != 0) {
-                        NotificationHelper.notifyEvent(
-                            context,
-                            NotificationHelper.NOTIF_ID_EVENT_BASE + eventId.toInt(),
-                            "یادآوری رویداد",
-                            event.title
-                        )
-                    }
-                    // وقوع بعدی برای رویدادهای تکرارشونده
+                    // متن اعلان: عنوان رویداد + یادداشت (در صورت وجود)
+                    val text = if (event.note.isNotBlank()) "${event.title} — ${event.note}" else event.title
+                    NotificationHelper.notifyEvent(
+                        context,
+                        NotificationHelper.NOTIF_ID_EVENT_BASE + eventId.toInt(),
+                        "یادآوری رویداد",
+                        text
+                    )
+                    // وقوع بعدی برای رویدادهای تکرارشونده (برای یک‌باره لغو می‌شود)
                     AlarmScheduler.scheduleEventReminder(context, event)
                 }
             } finally {
