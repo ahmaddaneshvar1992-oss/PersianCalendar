@@ -1,8 +1,10 @@
 package ir.persiancalendar.app.ui.calendar
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -184,7 +186,12 @@ fun CalendarScreen(
                 events = events,
                 holidayRepo = holidayRepo,
                 persianDigits = persianDigits,
+                // نسخه ۱.۱۱.۳ (گزارش کاربر): لمس ساده روز فقط انتخاب می‌کند و هیچ صفحه‌ای باز نمی‌شود؛
+                // جزئیات روز فقط با نگه‌داشتن انگشت روی روز باز می‌شود
                 onDayClick = {
+                    selectedJalali = it
+                },
+                onDayLongClick = {
                     selectedJalali = it
                     onOpenDay(it)
                 }
@@ -197,8 +204,8 @@ fun CalendarScreen(
                 events = events,
                 holidayRepo = holidayRepo,
                 persianDigits = persianDigits,
-                onDayClick = { selectedJalali = it; onOpenDay(it) },
                 onDaySelect = { selectedJalali = it },
+                onDayLongClick = { selectedJalali = it; onOpenDay(it) },
                 selected = selectedJalali
             )
         }
@@ -258,7 +265,8 @@ private fun MonthGrid(
     events: List<EventEntity>,
     holidayRepo: HolidayRepository,
     persianDigits: Boolean,
-    onDayClick: (JalaliDate) -> Unit
+    onDayClick: (JalaliDate) -> Unit,
+    onDayLongClick: (JalaliDate) -> Unit
 ) {
     val monthLen = CalendarConverter.jalaliMonthLength(jy, jm)
     val firstG = CalendarConverter.jalaliToGregorian(jy, jm, 1)
@@ -312,7 +320,8 @@ private fun MonthGrid(
                                         .distinct()
                                         .take(3),
                                     persianDigits = persianDigits,
-                                    onClick = { onDayClick(j) }
+                                    onClick = { onDayClick(j) },
+                                    onLongClick = { onDayLongClick(j) }
                                 )
                             } else {
                                 Spacer(Modifier.aspectRatio(1f))
@@ -325,6 +334,7 @@ private fun MonthGrid(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DayCell(
     jalali: JalaliDate,
@@ -333,7 +343,8 @@ private fun DayCell(
     isHoliday: Boolean,
     eventColors: List<androidx.compose.ui.graphics.Color>,
     persianDigits: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     val numText = if (persianDigits) PersianText.toPersianDigits(jalali.day.toString())
     else jalali.day.toString()
@@ -354,7 +365,10 @@ private fun DayCell(
                 color = androidx.compose.ui.graphics.Color.Transparent,
                 shape = RoundedCornerShape(12.dp)
             )
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(2.dp),
         verticalArrangement = Arrangement.Center
     ) {
@@ -384,6 +398,7 @@ private fun DayCell(
 
 // ---------------- نمایش هفتگی ----------------
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WeekStrip(
     anchor: JalaliDate,
@@ -392,8 +407,8 @@ private fun WeekStrip(
     events: List<EventEntity>,
     holidayRepo: HolidayRepository,
     persianDigits: Boolean,
-    onDayClick: (JalaliDate) -> Unit,
     onDaySelect: (JalaliDate) -> Unit,
+    onDayLongClick: (JalaliDate) -> Unit,
     selected: JalaliDate
 ) {
     val anchorG = CalendarConverter.jalaliToGregorian(anchor.year, anchor.month, anchor.day)
@@ -415,7 +430,10 @@ private fun WeekStrip(
                             if (isSel) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.surface
                         )
-                        .clickable { onDaySelect(j) }
+                        .combinedClickable(
+                            onClick = { onDaySelect(j) },
+                            onLongClick = { onDayLongClick(j) }
+                        )
                         .padding(vertical = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -449,10 +467,10 @@ private fun WeekStrip(
             val occasions = holidayRepo.occasionsFor(j, g)
             val dayEvents = events.filter { eventOccursOn(it, g) }
             if (occasions.isNotEmpty() || dayEvents.isNotEmpty()) {
+                // نسخه ۱.۱۱.۳: خلاصه روزها فقط نمایشی است — لمس آن هیچ صفحه‌ای باز نمی‌کند
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onDayClick(j) }
                         .padding(vertical = 6.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

@@ -1,6 +1,7 @@
 package ir.persiancalendar.app.ui
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -175,6 +176,22 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
     // به‌روزرسانی اطلاعیه‌ها پس از بستن پنل مدیریت / شیت اطلاعیه (نسخه ۱.۶)
     LaunchedEffect(adminVisible, annSheetVisible, supportVisible) {
         refreshAnnouncements()
+    }
+
+    // ---------- نسخه ۱.۱۱.۳ (گزارش کاربر): دکمه برگشت گوشی ----------
+    // در تنظیمات، سایر تب‌ها و صفحه‌های تمام‌صفحه، دکمه برگشت به جای خروج از برنامه
+    // به صفحه اصلی تقویم برمی‌گردد؛ فقط روی خود صفحه اصلی تقویم، برگشت برنامه را می‌بندد
+    BackHandler(
+        enabled = selectedTab != 0 || dayDetail != null ||
+                accountVisible || adminVisible || supportVisible
+    ) {
+        when {
+            dayDetail != null -> dayDetail = null
+            accountVisible -> accountVisible = false
+            adminVisible -> adminVisible = false
+            supportVisible -> supportVisible = false
+            else -> selectedTab = 0
+        }
     }
 
     // اینترستیشال هنگام باز کردن جزئیات روز — تناوب قابل تنظیم از پنل مدیریت (نسخه ۱.۲)
