@@ -139,6 +139,8 @@ fun MainScreen(
     var accountVisible by remember { mutableStateOf(false) }
     // پنل مدیریت تبلیغات (نسخه ۱.۲)
     var adminVisible by remember { mutableStateOf(false) }
+    // نسخهٔ ۱.۱۱.۲۱: کلید بازسازی بنرها پس از sync خوراک راه‌دور یا تغییر پنل مدیریت
+    var adsVersion by remember { mutableStateOf(0) }
     // صفحه پشتیبانی (نسخه ۱.۵)
     var supportVisible by remember { mutableStateOf(false) }
     // زنگ اطلاعیه (نسخه ۱.۶) — خبر و تبلیغ از پنل مدیریت
@@ -198,15 +200,20 @@ fun MainScreen(
 
     // بررسی خوراک اطلاعیه‌های همگانی مدیر — در هر باز شدن برنامه (نسخه ۱.۱۱.۱۶)
     LaunchedEffect(Unit) {
-        val freshCount = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
+        val (freshAnn, freshAds) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val a = ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
+            val b = ir.persiancalendar.app.data.support.MainAdFeed.sync(context)
+            a to b
         }
-        if (freshCount > 0) refreshAnnouncements()
+        if (freshAnn > 0) refreshAnnouncements()
+        if (freshAds > 0) adsVersion++
     }
 
     // به‌روزرسانی اطلاعیه‌ها پس از بستن پنل مدیریت / شیت اطلاعیه (نسخه ۱.۶)
     LaunchedEffect(adminVisible, annSheetVisible, supportVisible) {
         refreshAnnouncements()
+        // نسخهٔ ۱.۱۱.۲۱: بنرها هم بعد از بستن پنل مدیریت دوباره خوانده می‌شوند
+        adsVersion++
     }
 
     // ---------- نسخه ۱.۱۱.۳ (گزارش کاربر): دکمه برگشت گوشی ----------
@@ -425,7 +432,8 @@ fun MainScreen(
                         persianDigits = settings.persianDigits,
                         showHijri = settings.showHijri,
                         onOpenDay = { dayDetail = it },
-                        onOpenPrayer = { selectedTab = 1 }
+                        onOpenPrayer = { selectedTab = 1 },
+                        adsRefresh = adsVersion
                     )
 
                     1 -> PrayerScreen(

@@ -65,9 +65,10 @@ val AdColorNames: List<String> = listOf(
  * اگر هیچ بنری فعال نباشد، این بخش کلاً نمایش داده نمی‌شود — صفحه بدون تبلیغ است.
  */
 @Composable
-fun MainAdsSection(modifier: Modifier = Modifier) {
+fun MainAdsSection(modifier: Modifier = Modifier, refreshKey: Int = 0) {
     val context = LocalContext.current
-    val ads = remember { MainAdBox.active(context) }
+    // نسخهٔ ۱.۱۱.۲۱: refreshKey — پس از sync خوراک راه‌دور بنرها، فهرست دوباره خوانده می‌شود
+    val ads = remember(refreshKey) { MainAdBox.active(context) }
     if (ads.isEmpty()) return
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -171,10 +172,13 @@ fun AdImage(source: String, modifier: Modifier = Modifier) {
     val bitmap by produceState<ImageBitmap?>(initialValue = null, source) {
         value = withContext(Dispatchers.IO) {
             runCatching {
-                val bytes = if (source.startsWith("http")) {
-                    java.net.URL(source).readBytes()
-                } else {
-                    java.io.File(source).readBytes()
+                val bytes = when {
+                    // نسخهٔ ۱.۱۱.۲۱: عکس جاسازی‌شده در خوراک راه‌دور (بنر گالری مدیر)
+                    source.startsWith("data:") -> android.util.Base64.decode(
+                        source.substringAfter("base64,"), android.util.Base64.DEFAULT
+                    )
+                    source.startsWith("http") -> java.net.URL(source).readBytes()
+                    else -> java.io.File(source).readBytes()
                 }
                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
             }.getOrNull()

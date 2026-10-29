@@ -69,7 +69,8 @@ fun CalendarScreen(
     persianDigits: Boolean,
     showHijri: Boolean,
     onOpenDay: (JalaliDate) -> Unit,
-    onOpenPrayer: () -> Unit = {}
+    onOpenPrayer: () -> Unit = {},
+    adsRefresh: Int = 0 // نسخهٔ ۱.۱۱.۲۱: بازسازی بنرها پس از sync خوراک راه‌دور/پنل مدیریت
 ) {
     val todayG = LocalDate.now()
     val todayJ = CalendarConverter.gregorianToJalali(todayG.year, todayG.monthValue, todayG.dayOfMonth)
@@ -230,7 +231,7 @@ fun CalendarScreen(
         // ---------- بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶ (درخواست کاربر) ----------
         // هر چند بنر که مدیر در «پنل مدیریت ← تبلیغات صفحه اصلی» ساخته باشد، همین‌جا
         // به‌ترتیب از بالا به پایین نمایش داده می‌شود؛ اگر بنری نباشد این بخش کلاً حذف است.
-        MainAdsSection()
+        MainAdsSection(refreshKey = adsRefresh)
 
         Spacer(Modifier.height(10.dp))
 

@@ -90,6 +90,9 @@ fun AdminScreen(onBack: () -> Unit) {
     var ghToken by remember { mutableStateOf(settings.githubToken) }
     var pubStatus by remember { mutableStateOf("") }
     var pubBusy by remember { mutableStateOf(false) }
+    // انتشار همگانی بنرهای صفحه اصلی — نسخهٔ ۱.۱۱.۲۱ (درخواست کاربر)
+    var adPubStatus by remember { mutableStateOf("") }
+    var adPubBusy by remember { mutableStateOf(false) }
     // بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶
     var ads by remember { mutableStateOf<List<MainAd>>(emptyList()) }
     var adTitle by remember { mutableStateOf("") }
@@ -740,6 +743,59 @@ fun AdminScreen(onBack: () -> Unit) {
                         Spacer(Modifier.height(6.dp))
                         Text(
                             pubStatus,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+                    // ---------- انتشار بنرهای صفحه اصلی — نسخهٔ ۱.۱۱.۲۱ (درخواست کاربر) ----------
+                    Text("بنرهای تبلیغات صفحه اصلی", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "بنرهایی که در بخش «تبلیغات صفحه اصلی» می‌سازید تا این نسخه فقط روی همین دستگاه دیده می‌شدند. " +
+                            "با این دکمه همهٔ بنرهای فعال برای همهٔ کاربران منتشر می‌شود؛ بعد از هر تغییر (افزودن، حذف، روشن/خاموش، ترتیب) " +
+                            "دوباره همین دکمه را بزنید تا به همه برسد. عکس گالری تا ۲۰۰ کیلوبایت داخل خوراک جاسازی می‌شود و عکس URL مستقیم منتشر می‌شود.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                val n = ir.persiancalendar.app.data.support.MainAdFeed.checkFeed()
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    adPubStatus = "خوراک فعلی کاربران: $n بنر"
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("بررسی خوراک بنرهای کاربران") }
+                    Spacer(Modifier.height(6.dp))
+                    Button(
+                        onClick = {
+                            adPubBusy = true
+                            scope.launch(Dispatchers.IO) {
+                                repo.setGithubToken(ghToken)
+                                val msg = ir.persiancalendar.app.data.support.MainAdFeed.publish(
+                                    context, ghToken, MainAdBox.active(context)
+                                )
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    adPubBusy = false
+                                    adPubStatus = msg
+                                    Toast.makeText(context, msg.take(60), Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        enabled = !adPubBusy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (adPubBusy) "در حال انتشار بنرها…" else "انتشار بنرها برای کاربران")
+                    }
+                    if (adPubStatus.isNotBlank()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            adPubStatus,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
