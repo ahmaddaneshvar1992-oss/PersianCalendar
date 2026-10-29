@@ -88,6 +88,15 @@ fun AdminScreen(onBack: () -> Unit) {
     var annImageUrl by remember { mutableStateOf("") }
     // انتشار همگانی اطلاعیه برای کاربران — نسخه ۱.۱۱.۱۶ (درخواست کاربر)
     var ghToken by remember { mutableStateOf(settings.githubToken) }
+    // نسخهٔ ۱.۱۱.۲۳ (گزارش کاربر: «توکن ذخیره می‌کنم ولی بعد از برگشت دوباره باید بگذارم»):
+    // collectAsState با مقدار اولیهٔ خالی شروع می‌شود و فیلد در فریم اول خالی قفل
+    // می‌شد؛ حالا وقتی تنظیمات واقعی از DataStore رسید، توکن ذخیره‌شده در فیلد
+    // می‌نشیند — بدون بازنویسی چیزی که کاربر در حال تایپ آن است.
+    LaunchedEffect(settings.githubToken) {
+        if (settings.githubToken.isNotBlank() && ghToken.isBlank()) {
+            ghToken = settings.githubToken
+        }
+    }
     var pubStatus by remember { mutableStateOf("") }
     var pubBusy by remember { mutableStateOf(false) }
     // انتشار همگانی بنرهای صفحه اصلی — نسخهٔ ۱.۱۱.۲۱ (درخواست کاربر)
@@ -704,9 +713,19 @@ fun AdminScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
-                                    repo.setGithubToken(ghToken)
+                                    // نسخهٔ ۱.۱۱.۲۳: نتیجهٔ واقعی ذخیره گزارش می‌شود، نه پیام همیشگی
+                                    runCatching { repo.setGithubToken(ghToken) }
+                                        .onSuccess {
+                                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "توکن ذخیره شد — بعد از خروج هم می‌ماند", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        .onFailure { e ->
+                                            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "خطا در ذخیرهٔ توکن: ${e.message}", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
                                 }
-                                Toast.makeText(context, "توکن ذخیره شد", Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier.weight(1f)
                         ) { Text("ذخیره توکن") }
