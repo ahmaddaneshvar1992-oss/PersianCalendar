@@ -508,12 +508,19 @@ fun MainScreen(
                             // ---------- عکس اطلاعیه — نسخه ۱.۱۱.۷ (درخواست کاربر) ----------
                             if (a.image.isNotBlank()) {
                                 Spacer(Modifier.height(8.dp))
+                                // نسخهٔ ۱.۱۱.۲۰: لمس بنر اطلاعیه هم لینک را باز می‌کند
                                 AdImage(
                                     source = a.image,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(170.dp)
                                         .clip(RoundedCornerShape(12.dp))
+                                        .then(
+                                            if (a.link.isNotBlank()) Modifier.clickable {
+                                                ir.persiancalendar.app.ui.components.LinkOpener
+                                                    .openOrToast(context, a.link)
+                                            } else Modifier
+                                        )
                                 )
                             }
                             Spacer(Modifier.height(3.dp))
@@ -526,14 +533,9 @@ fun MainScreen(
                                 Spacer(Modifier.height(6.dp))
                                 androidx.compose.material3.TextButton(
                                     onClick = {
-                                        runCatching {
-                                            context.startActivity(
-                                                android.content.Intent(
-                                                    android.content.Intent.ACTION_VIEW,
-                                                    android.net.Uri.parse(a.link)
-                                                )
-                                            )
-                                        }
+                                        // نسخهٔ ۱.۱۱.۲۰: باز کردن امن لینک (بدون https هم کار می‌کند)
+                                        ir.persiancalendar.app.ui.components.LinkOpener
+                                            .openOrToast(context, a.link)
                                     }
                                 ) { Text("مشاهده") }
                             }

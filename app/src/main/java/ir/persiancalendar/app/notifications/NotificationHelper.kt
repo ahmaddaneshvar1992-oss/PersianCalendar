@@ -276,8 +276,23 @@ object NotificationHelper {
      * «میخوام وقتی اطلاعیه میدم نوفیکیشنم برای کاربران نمایش داده بشه»)
      * لمس اعلان، برنامه را روی پنل اطلاعیه‌ها باز می‌کند.
      */
-    fun notifyAnnouncement(context: Context, title: String, body: String) {
+    fun notifyAnnouncement(context: Context, title: String, body: String, link: String = "") {
         val fullText = if (body.isNotBlank()) "$title\n$body" else title
+        // نسخهٔ ۱.۱۱.۲۰: لمس اعلان اطلاعیهٔ لینک‌دار، مستقیم لینک را در مرورگر باز می‌کند
+        val contentPi = if (link.isNotBlank()) {
+            val uri = runCatching {
+                android.net.Uri.parse(
+                    ir.persiancalendar.app.ui.components.LinkOpener.normalize(link)
+                )
+            }.getOrNull()
+            if (uri != null && uri.scheme != null) {
+                PendingIntent.getActivity(
+                    context, 9200,
+                    Intent(Intent.ACTION_VIEW, uri),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            } else openAnnouncementsIntent(context)
+        } else openAnnouncementsIntent(context)
         val notification = NotificationCompat.Builder(context, CHANNEL_ANNOUNCE)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("اطلاعیه بادخزان")
@@ -286,7 +301,7 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
-            .setContentIntent(openAnnouncementsIntent(context))
+            .setContentIntent(contentPi)
             .build()
         runCatching {
             NotificationManagerCompat.from(context).notify(NOTIF_ID_ANNOUNCE, notification)

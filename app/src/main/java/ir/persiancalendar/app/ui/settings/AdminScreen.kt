@@ -360,7 +360,7 @@ fun AdminScreen(onBack: () -> Unit) {
                                     title = adTitle,
                                     body = adBody,
                                     cta = adCta,
-                                    link = adLink,
+                                    link = ir.persiancalendar.app.ui.components.LinkOpener.normalize(adLink),
                                     image = finalImage,
                                     colorIndex = adColorIndex
                                 )
@@ -638,7 +638,7 @@ fun AdminScreen(onBack: () -> Unit) {
                                     type = annType,
                                     title = annTitle,
                                     body = annBody,
-                                    link = annLink,
+                                    link = ir.persiancalendar.app.ui.components.LinkOpener.normalize(annLink),
                                     image = annPickedImage.ifBlank { annImageUrl.trim() }
                                 )
                                 val fresh = AnnouncementBox.load(context)

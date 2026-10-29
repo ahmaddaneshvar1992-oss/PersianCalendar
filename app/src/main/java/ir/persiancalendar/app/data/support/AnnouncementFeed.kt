@@ -102,7 +102,8 @@ object AnnouncementFeed {
                 context,
                 title = if (candidates.size == 1) newest.title
                 else "${newest.title} (+${candidates.size - 1} اطلاعیهٔ دیگر)",
-                body = newest.body
+                body = newest.body,
+                link = newest.link
             )
             setLastNotifiedAt(context, newest.at)
         }

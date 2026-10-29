@@ -91,14 +91,8 @@ private fun MainAdCard(ad: MainAd) {
             .clip(RoundedCornerShape(18.dp))
             .clickable {
                 if (ad.link.isNotBlank()) {
-                    runCatching {
-                        context.startActivity(
-                            android.content.Intent(
-                                android.content.Intent.ACTION_VIEW,
-                                android.net.Uri.parse(ad.link)
-                            )
-                        )
-                    }
+                    // نسخهٔ ۱.۱۱.۲۰: باز کردن امن لینک (لینک بدون https هم کار می‌کند)
+                    ir.persiancalendar.app.ui.components.LinkOpener.openOrToast(context, ad.link)
                 }
             }
     ) {
