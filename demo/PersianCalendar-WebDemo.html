@@ -45,7 +45,7 @@ body{font-family:'Vazirmatn',Tahoma,'Segoe UI',sans-serif;background:radial-grad
 .btn.sm{padding:6px 11px;font-size:12px;border-radius:10px}
 /* شبکه ماه */
 .weekrow,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.weekrow span{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:4px 0}
+.weekrow span{text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:4px 0}
 .weekrow span.fri{color:var(--holiday)}
 .grid{margin-bottom:12px}
 .cell{aspect-ratio:1/1.04;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:11px;cursor:pointer;position:relative;transition:background .12s}
@@ -319,7 +319,7 @@ textarea:focus{border-color:var(--primary)}
     <div class="appbar">
       <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
       <h1 id="appTitle">بادخزان</h1>
-      <span class="ver-chip">نسخه ۱٫۱۱٫۱۶ — دمو</span>
+      <span class="ver-chip">نسخه ۱٫۱۱٫۱۷ — دمو</span>
       <button class="bell" id="btnBell" title="اطلاعیه‌ها (خبر و تبلیغ)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg><span class="bell-dot" id="bellDot"></span></button>
       <button class="kebab" id="btnKebab" title="منوی برنامه"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
     </div>
@@ -365,7 +365,7 @@ textarea:focus{border-color:var(--primary)}
           <button class="iconbtn" id="nextM" title="ماه بعد">‹</button>
           <button class="btn ghost sm" id="btnToday">امروز</button>
         </div>
-        <div class="weekrow"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span class="fri">ج</span></div>
+        <div class="weekrow"><span>شنبه</span><span>یکشنبه</span><span>دوشنبه</span><span>سه‌شنبه</span><span>چهارشنبه</span><span>پنجشنبه</span><span class="fri">جمعه</span></div>
         <div class="grid" id="calGrid"></div>
         <div class="card" id="dayDetail"></div>
         <!-- کارت اوقات شرعی — نوار افقی ۸ وقت، مو‌به‌مو مطابق عکس؛ نسخه ۱.۱۰: پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه؛ نسخه ۱.۱۱.۱۰: نام شهر کنار عنوان + پنل «روزهای ماه» مثل تقویم -->

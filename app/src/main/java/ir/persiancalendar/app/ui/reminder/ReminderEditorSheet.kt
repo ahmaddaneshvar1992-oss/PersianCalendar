@@ -210,8 +210,9 @@ fun ReminderEditorSheet(
                 Spacer(Modifier.height(10.dp))
                 Text("روزهای تکرار", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PersianText.weekDaysShort.forEachIndexed { i, d ->
+                // نسخه ۱.۱۱۷ — نام کامل روزها (شنبه، یکشنبه، …) با چینش چندردیفی
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PersianText.weekDays.forEachIndexed { i, d ->
                         FilterChip(
                             selected = i in days,
                             onClick = {

@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import ir.persiancalendar.app.core.calendar.PersianText
+import ir.persiancalendar.app.core.location.LocationHelper
 import ir.persiancalendar.app.core.prayer.Cities
 import ir.persiancalendar.app.core.prayer.PrayerMethod
 import ir.persiancalendar.app.core.prayer.PrayerTimesCalculator
@@ -50,6 +51,7 @@ import ir.persiancalendar.app.notifications.AlarmScheduler
 import ir.persiancalendar.app.ui.components.CityPickerDialog
 import ir.persiancalendar.app.ui.components.SectionCard
 import ir.persiancalendar.app.ui.components.SimpleDropdown
+import ir.persiancalendar.app.ui.components.rememberGpsServiceEnabler
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -76,21 +78,36 @@ fun PrayerScreen(
     // دیالوگ انتخاب شهر با جست‌وجو
     var cityPickerVisible by remember { mutableStateOf(false) }
 
+    val applyLocatedCity: (Double, Double) -> Unit = { la, lo ->
+        val (idx, near) = Cities.nearest(la, lo)
+        lat = null; lng = null; useLocation = false
+        scope.launch { AppContainer.settingsRepo(context).setCityIndex(idx) }
+        onSettingsChange()
+        Toast.makeText(
+            context,
+            "نزدیک‌ترین شهر: ${near.name} — ${near.province}",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    // روشن‌کردن خودکار سرویس موقعیت (GPS) — نسخه ۱.۱۱۷ (درخواست کاربر):
+    // با لمس دکمهٔ مکان‌یاب، اگر سرویس موقعیت خاموش باشد دیالوگ سیستمی
+    // یک‌لمسی فعال‌سازی باز می‌شود و بعد از تأیید، مکان‌یاب خودکار ادامه می‌یابد.
+    val enableLocationService = rememberGpsServiceEnabler(
+        onServiceReady = { locateNearestCity(context, applyLocatedCity) },
+        onFailed = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+    )
+
+    fun startGpsFlow() {
+        if (LocationHelper.isServiceEnabled(context)) locateNearestCity(context, applyLocatedCity)
+        else enableLocationService()
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
         if (grants.values.all { it }) {
-            locateNearestCity(context) { la, lo ->
-                val (idx, near) = Cities.nearest(la, lo)
-                lat = null; lng = null; useLocation = false
-                scope.launch { AppContainer.settingsRepo(context).setCityIndex(idx) }
-                onSettingsChange()
-                android.widget.Toast.makeText(
-                    context,
-                    "نزدیک‌ترین شهر: ${near.name} — ${near.province}",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            }
+            startGpsFlow()
         }
     }
 
@@ -174,17 +191,7 @@ fun PrayerScreen(
                         val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                         if (granted) {
-                            locateNearestCity(context) { la, lo ->
-                                val (idx, near) = Cities.nearest(la, lo)
-                                lat = null; lng = null; useLocation = false
-                                scope.launch { AppContainer.settingsRepo(context).setCityIndex(idx) }
-                                onSettingsChange()
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "نزدیک‌ترین شهر: ${near.name} — ${near.province}",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                            }
+                            startGpsFlow()
                         } else {
                             permissionLauncher.launch(
                                 arrayOf(

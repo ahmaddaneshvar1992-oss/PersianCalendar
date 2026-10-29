@@ -57,6 +57,7 @@ import ir.persiancalendar.app.notifications.AlarmScheduler
 import ir.persiancalendar.app.ui.components.CityPickerDialog
 import ir.persiancalendar.app.ui.components.JalaliDatePickerDialog
 import ir.persiancalendar.app.ui.components.SectionCard
+import ir.persiancalendar.app.ui.components.rememberGpsServiceEnabler
 import ir.persiancalendar.app.ui.reminder.isIgnoringBattery
 import ir.persiancalendar.app.ui.reminder.requestIgnoreBattery
 import kotlinx.coroutines.launch
@@ -174,10 +175,26 @@ fun OnboardingScreen(settings: AppSettings) {
         cityIndex = idx
         gpsStatus = "نزدیک‌ترین شهر به موقعیت شما: $name"
     }
+
+    // روشن‌کردن خودکار سرویس موقعیت (GPS) — نسخه ۱.۱۱۷ (درخواست کاربر مطابق عکس):
+    // دیگر لازم نیست کاربر خودش به تنظیمات برود؛ دیالوگ سیستمی یک‌لمسی
+    // «فعال‌سازی موقعیت» باز می‌شود و بعد از تأیید، مکان‌یاب خودکار ادامه می‌یابد؛
+    // روی گوشی‌های بدون پلی‌سرویس مستقیم صفحهٔ تنظیمات موقعیت باز می‌شود و
+    // بعد از روشن‌کردن کلید و بازگشت، جست‌وجو خودکار ادامه می‌یابد.
+    val enableLocationService = rememberGpsServiceEnabler(
+        onServiceReady = { findGps(context, gpsStatusSet) },
+        onFailed = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+    )
+
+    fun startGpsFlow() {
+        if (LocationHelper.isServiceEnabled(context)) findGps(context, gpsStatusSet)
+        else enableLocationService()
+    }
+
     val locLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
-        if (grants.values.any { it }) findGps(context, gpsStatusSet)
+        if (grants.values.any { it }) startGpsFlow()
         else Toast.makeText(context, "دسترسی به موقعیت داده نشد", Toast.LENGTH_SHORT).show()
     }
 
@@ -267,7 +284,7 @@ fun OnboardingScreen(settings: AppSettings) {
                                             ContextCompat.checkSelfPermission(
                                                 context, Manifest.permission.ACCESS_COARSE_LOCATION
                                             ) == PackageManager.PERMISSION_GRANTED
-                                    if (ok) findGps(context, gpsStatusSet)
+                                    if (ok) startGpsFlow()
                                     else locLauncher.launch(
                                         arrayOf(
                                             Manifest.permission.ACCESS_FINE_LOCATION,

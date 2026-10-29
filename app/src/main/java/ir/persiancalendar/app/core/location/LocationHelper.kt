@@ -1,7 +1,9 @@
 package ir.persiancalendar.app.core.location
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -183,5 +185,128 @@ object LocationHelper {
             }
         )
         cont.invokeOnCancellation { cancel() }
+    }
+
+    // ====================================================================
+    // نسخه ۱.۱۱.۱۷ — روشن‌کردن خودکار سرویس موقعیت (درخواست کاربر مطابق عکس)
+    //
+    // قبلاً اگر سرویس موقعیت گوشی خاموش بود فقط پیام «از تنظیمات اندروید
+    // روشنش کنید» می‌آمد و کاربر باید مسیر تنظیمات را خودش پیدا می‌کرد.
+    // اکنون با لمس دکمهٔ GPS، دیالوگ سیستمی یک‌لمسی «فعال‌سازی موقعیت»
+    // (پلی‌سرویس گوگل) باز می‌شود و با یک تأیید سرویس روشن می‌شود؛ روی
+    // گوشی‌های بدون پلی‌سرویس مستقیم صفحهٔ تنظیمات موقعیت باز می‌شود و
+    // به‌محض بازگشت کاربر، جست‌وجوی موقعیت خودکار ادامه می‌یابد.
+    // ====================================================================
+
+    /** آیا سرویس موقعیت گوشی (GPS یا شبکه) روشن است؟ */
+    fun isServiceEnabled(context: Context): Boolean {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return false
+        val gps = runCatching { lm.isProviderEnabled(LocationManager.GPS_PROVIDER) }
+            .getOrDefault(false)
+        val net = runCatching { lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) }
+            .getOrDefault(false)
+        return gps || net
+    }
+
+    /**
+     * تلاش برای بازکردن دیالوگ سیستمی یک‌لمسی «فعال‌سازی سرویس موقعیت».
+     *
+     * با پلی‌سرویس گوگل، درخواست تنظیمات موقعیت (HIGH_ACCURACY) چک می‌شود؛
+     * اگر سرویس خاموش باشد نتیجه ResolvableApiException است که همان دیالوگ
+     * معروف «فعال کردن موقعیت؟» با دکمهٔ تأیید را در اختیار می‌گذارد.
+     * برای افزودن وابستگی گوگل به برنامه از بازتاب (Reflection) استفاده شده،
+     * پس روی گوشی‌های بدون پلی‌سرویس هم بدون خطا کار می‌کند.
+     *
+     * نتیجه از طریق callback برمی‌گردد:
+     *  — sender != null : تماس‌دهنده آن را با StartIntentSenderForResult اجرا
+     *    کند؛ نتیجهٔ RESULT_OK یعنی سرویس روشن شده و می‌توان موقعیت را گرفت.
+     *  — sender == null  : پلی‌سرویس موجود نیست (یا خطا)؛ تماس‌دهنده صفحهٔ
+     *    تنظیمات موقعیت (ACTION_LOCATION_SOURCE_SETTINGS) را باز کند.
+     */
+    fun tryEnableService(activity: Activity, onResolution: (IntentSender?) -> Unit) {
+        val main = Handler(Looper.getMainLooper())
+        try {
+            val loader = activity.classLoader
+            val servicesCls = Class.forName(
+                "com.google.android.gms.location.LocationServices", false, loader
+            )
+            val clientCls = Class.forName(
+                "com.google.android.gms.location.SettingsClient", false, loader
+            )
+            val taskCls = Class.forName("com.google.android.gms.tasks.Task", false, loader)
+            val onSuccessCls = Class.forName(
+                "com.google.android.gms.tasks.OnSuccessListener", false, loader
+            )
+            val onFailureCls = Class.forName(
+                "com.google.android.gms.tasks.OnFailureListener", false, loader
+            )
+            val locReqCls = Class.forName(
+                "com.google.android.gms.location.LocationRequest", false, loader
+            )
+            val reqBuilderCls = Class.forName(
+                "com.google.android.gms.location.LocationRequest\$Builder", false, loader
+            )
+            val lsReqCls = Class.forName(
+                "com.google.android.gms.location.LocationSettingsRequest", false, loader
+            )
+            val lsBuilderCls = Class.forName(
+                "com.google.android.gms.location.LocationSettingsRequest\$Builder", false, loader
+            )
+
+            val client = servicesCls
+                .getMethod("getSettingsClient", Context::class.java)
+                .invoke(null, activity)
+
+            // LocationRequest — روش جدید (پلی‌سرویس ۲۱+) با Builder، روش قدیمی با create()
+            val locRequest: Any = try {
+                val b = reqBuilderCls
+                    .getConstructor(Int::class.javaPrimitiveType, Long::class.javaPrimitiveType)
+                    .newInstance(100 /* Priority.PRIORITY_HIGH_ACCURACY */, 0L)
+                reqBuilderCls.getMethod("build").invoke(b)
+            } catch (_: Throwable) {
+                locReqCls.getMethod("create").invoke(null)
+            }
+
+            // LocationSettingsRequest.Builder().addLocationRequest(lr).setAlwaysShow(true).build()
+            val lsBuilder = lsBuilderCls.getDeclaredConstructor()
+                .also { it.isAccessible = true }
+                .newInstance()
+            lsBuilderCls.getMethod("addLocationRequest", locReqCls).invoke(lsBuilder, locRequest)
+            lsBuilderCls.getMethod("setAlwaysShow", Boolean::class.javaPrimitiveType)
+                .invoke(lsBuilder, true)
+            val settingsRequest = lsBuilderCls.getMethod("build").invoke(lsBuilder)
+
+            val task = clientCls
+                .getMethod("checkLocationSettings", lsReqCls)
+                .invoke(client, settingsRequest)
+
+            // اگر سرویس از قبل روشن باشد (نباید رخ دهد — تماس‌دهنده اول چک می‌کند)
+            val successListener = java.lang.reflect.Proxy.newProxyInstance(
+                loader, arrayOf(onSuccessCls)
+            ) { _, _, _ -> }
+
+            // اگر نیاز به فعال‌سازی باشد: استثنای ResolvableApiException حامل
+            // PendingIntent دیالوگ سیستمی است.
+            val failureListener = java.lang.reflect.Proxy.newProxyInstance(
+                loader, arrayOf(onFailureCls)
+            ) { _, _, args ->
+                val sender = runCatching {
+                    val ex = args.getOrNull(0) as? Throwable
+                    val pi = ex?.javaClass?.getMethod("getResolution")?.invoke(ex)
+                        ?: ex?.javaClass?.getMethod("getStatus")?.invoke(ex)?.let { st ->
+                            st.javaClass.getMethod("getResolution").invoke(st)
+                        }
+                    pi as? android.app.PendingIntent
+                }.getOrNull()?.intentSender
+                main.post { onResolution(sender) }
+            }
+
+            taskCls.getMethod("addOnSuccessListener", onSuccessCls).invoke(task, successListener)
+            taskCls.getMethod("addOnFailureListener", onFailureCls).invoke(task, failureListener)
+        } catch (_: Throwable) {
+            // پلی‌سرویس موجود نیست یا هر خطای دیگر — مسیر جایگزین: صفحهٔ تنظیمات
+            main.post { onResolution(null) }
+        }
     }
 }

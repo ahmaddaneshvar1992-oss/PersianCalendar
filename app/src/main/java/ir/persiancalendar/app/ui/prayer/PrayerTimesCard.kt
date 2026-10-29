@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
@@ -494,9 +495,9 @@ private fun PrayerMonthGrid(
     val firstIndex = PersianText.weekdayIndexSat0(firstDate) // ۰=شنبه
 
     Column(Modifier.fillMaxWidth()) {
-        // سربرگ روزهای هفته — مثل تقویم صفحه اصلی
+        // سربرگ روزهای هفته — با نام کامل مثل تقویم صفحه اصلی (نسخه ۱.۱۱۷)
         Row(modifier = Modifier.fillMaxWidth()) {
-            PersianText.weekDaysShort.forEach { wd ->
+            PersianText.weekDays.forEachIndexed { i, wd ->
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center
@@ -504,7 +505,9 @@ private fun PrayerMonthGrid(
                     Text(
                         text = wd,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (wd == "ج") holidayColor() else MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 10.5.sp,
+                        maxLines = 1,
+                        color = if (i == 6) holidayColor() else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

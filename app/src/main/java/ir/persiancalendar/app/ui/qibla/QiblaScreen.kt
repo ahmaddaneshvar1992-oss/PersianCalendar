@@ -54,6 +54,7 @@ import ir.persiancalendar.app.core.prayer.Cities
 import ir.persiancalendar.app.core.prayer.PrayerTimesCalculator
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.ui.components.SectionCard
+import ir.persiancalendar.app.ui.components.rememberGpsServiceEnabler
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -133,7 +134,7 @@ fun QiblaScreen(settings: AppSettings) {
         abs(((bearing - hd + 540.0) % 360.0) - 180.0) <= 5.0
     } ?: false
 
-    fun fetchGps() {
+    fun doFetchGps() {
         // نسخه ۱.۱۱.۴ — رفع باگ «GPS پیدا نمی‌کند»:
         // همه providerها (GPS+شبکه) با هم، آخرین موقعیت شناخته‌شده، پیام خطای روشن و تایم‌اوت
         Toast.makeText(context, "در حال یافتن موقعیت…", Toast.LENGTH_SHORT).show()
@@ -146,6 +147,19 @@ fun QiblaScreen(settings: AppSettings) {
             },
             onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
         )
+    }
+
+    // روشن‌کردن خودکار سرویس موقعیت (GPS) — نسخه ۱.۱۱۷ (درخواست کاربر):
+    // اگر سرویس موقعیت خاموش باشد دیالوگ سیستمی یک‌لمسی فعال‌سازی باز می‌شود
+    // و بعد از تأیید، یافتن موقعیت خودکار ادامه می‌یابد — بدون رفتن به تنظیمات.
+    val enableLocationService = rememberGpsServiceEnabler(
+        onServiceReady = { doFetchGps() },
+        onFailed = { msg -> Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+    )
+
+    fun fetchGps() {
+        if (LocationHelper.isServiceEnabled(context)) doFetchGps()
+        else enableLocationService()
     }
 
     val permLauncher = rememberLauncherForActivityResult(

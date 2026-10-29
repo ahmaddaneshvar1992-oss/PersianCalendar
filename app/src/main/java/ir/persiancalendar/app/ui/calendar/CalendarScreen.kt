@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
@@ -306,9 +307,9 @@ private fun MonthGrid(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            // روزهای هفته
+            // روزهای هفته — با نام کامل (نسخه ۱.۱۱۷ به درخواست کاربر: شنبه، یکشنبه، …)
             Row(modifier = Modifier.fillMaxWidth()) {
-                PersianText.weekDaysShort.forEach { wd ->
+                PersianText.weekDays.forEachIndexed { i, wd ->
                     Box(
                         modifier = Modifier.weight(1f),
                         contentAlignment = Alignment.Center
@@ -316,7 +317,9 @@ private fun MonthGrid(
                         Text(
                             text = wd,
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (wd == "ج") holidayColor() else MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = 10.5.sp,
+                            maxLines = 1,
+                            color = if (i == 6) holidayColor() else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -479,8 +482,10 @@ private fun WeekStrip(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = PersianText.weekDaysShort[i],
+                        text = PersianText.weekDays[i],
                         style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        maxLines = 1,
                         color = if (isSel) MaterialTheme.colorScheme.onPrimary
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
