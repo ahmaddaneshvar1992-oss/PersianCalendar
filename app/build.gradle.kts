@@ -13,11 +13,34 @@ android {
         applicationId = "ir.persiancalendar.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 29
-        versionName = "1.11.17"
+        versionCode = 30
+        versionName = "1.11.18"
 
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    // ====================================================================
+    // امضای ثابت نسخهٔ ۱.۱۱.۱۸ (رفع باگ «به‌روزرسانی نصب نمی‌شود» — درخواست کاربر)
+    //
+    // مشکل: CI قبلاً assembleDebug می‌ساخت که با کلیدِ debug موقتیِ رانِنر
+    // امضا می‌شد؛ چون هر اجرای CI کلید جدیدی تولید می‌کرد، هر APK جدید
+    // امضای متفاوتی داشت و اندروید با خطای «package conflicts with an
+    // existing package» اجازهٔ نصب روی نسخهٔ قبلی را نمی‌داد — کاربر
+    // مجبور بود هر بار برنامه را حذف و دوباره نصب کند.
+    //
+    // راه‌حل: keystore ثابت داخل مخزن (signing/badkhan-release.jks) و
+    // امضای «هر دو» نوع debug و release با همان کلید — از این به بعد همهٔ
+    // نسخه‌ها امضای یکسان دارند و به‌روزرسانی مستقیم روی نسخهٔ قبلی نصب
+    // می‌شود (بدون حذف برنامه).
+    // ====================================================================
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("signing/badkhan-release.jks")
+            storePassword = "BadkhanRelease2026"
+            keyAlias = "badkhan"
+            keyPassword = "BadkhanRelease2026"
         }
     }
 
@@ -30,7 +53,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // نکته: signingConfig نسخه release را طبق مستندات docs/README-FA.md تنظیم کنید
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            // امضای debug هم با کلید ثابت — تا APKهای CI همیشه قابل
+            // به‌روزرسانی روی هم باشند (حتی اگر روزی assembleDebug ساخته شود)
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -59,6 +87,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
+
+    // نسخه ۱.۱۱.۱۸ — ارتقای fragment به ۱.۳+ برای ActivityResult
+    // (ترنزیتیوس قدیمی fragment:1.1.0 خطای lint «InvalidFragmentVersionForActivityResult»
+    //  در build release می‌ساخت و apk منتشر نمی‌شد)
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
 
     // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
