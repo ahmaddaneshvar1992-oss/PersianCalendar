@@ -22,6 +22,10 @@ import java.net.URL
  *
  * تصویر اطلاعیه فقط وقتی منتشر می‌شود که URL اینترنتی باشد؛ تصویرهای
  * انتخاب‌شده از گالری (مسیر داخلی دستگاه) به کاربران دیگر نمی‌رسند.
+ *
+ * نسخهٔ ۱.۱۱.۲۲: دریافت خوراک چندمنبعی شد (FeedFetcher) — raw، jsDelivr،
+ * api.github و در بدترین حالت کش محلی — تا در شبکه‌هایی که به
+ * raw.githubusercontent.com دسترسی ندارند هم اطلاعیه‌ها برسند.
  */
 object AnnouncementFeed {
 
@@ -32,6 +36,17 @@ object AnnouncementFeed {
     private const val API_REPO = "ahmaddaneshvar1992-oss/PersianCalendar"
     private const val API_PATH = "feed/announcements.json"
     private const val STATE_FILE = "announcement_feed_state.txt"
+    private const val CACHE_FILE = "announcements_cache.json"
+
+    /** نام منبع آخرین دریافت موفق — برای نمایش در پنل مدیریت */
+    @Volatile
+    var lastSource: String = ""
+        private set
+
+    /** شرح خطاهای آخرین دریافت — برای عیب‌یابی در پنل مدیریت */
+    @Volatile
+    var lastError: String = ""
+        private set
 
     private fun stateFile(context: Context) = File(context.filesDir, STATE_FILE)
 
@@ -43,24 +58,15 @@ object AnnouncementFeed {
         runCatching { stateFile(context).writeText(t.toString()) }
     }
 
-    /** دریافت خوراک از گیت‌هاب — فهرست اطلاعیه‌ها؛ در خطا فهرست خالی برمی‌گردد */
-    fun fetchFeed(): List<Announcement> {
-        val conn = URL(FEED_URL).openConnection() as HttpURLConnection
-        return try {
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 10_000
-            conn.setRequestProperty("Cache-Control", "no-cache")
-            if (conn.responseCode != 200) emptyList()
-            else {
-                val body = conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
-                parseFeed(body)
-            }
-        } catch (e: Exception) {
-            emptyList()
-        } finally {
-            conn.disconnect()
-        }
+    /** دریافت خوراک از گیت‌هاب (چندمنبعی + کش) — فهرست اطلاعیه‌ها؛ در خطا خالی */
+    fun fetchFeed(cacheFile: File? = null): List<Announcement> {
+        val r = FeedFetcher.fetch(API_REPO, API_PATH, cacheFile)
+        lastSource = if (r.ok) r.source else ""
+        lastError = r.error
+        return if (r.ok) parseFeed(r.body) else emptyList()
     }
+
+    private fun cacheFile(context: Context) = File(context.filesDir, CACHE_FILE)
 
     /** تجزیهٔ JSON خوراک */
     fun parseFeed(json: String): List<Announcement> = runCatching {
@@ -90,7 +96,7 @@ object AnnouncementFeed {
      * فقط از نخ پس‌زمینه صدا زده شود.
      */
     fun sync(context: Context): Int {
-        val feed = runCatching { fetchFeed() }.getOrElse { return 0 }
+        val feed = runCatching { fetchFeed(cacheFile(context)) }.getOrElse { return 0 }
         if (feed.isEmpty()) return 0
         val fresh = AnnouncementBox.mergeFromFeed(context, feed)
         if (fresh.isEmpty()) return 0
@@ -188,5 +194,6 @@ object AnnouncementFeed {
     }
 
     /** بررسی خوراک از سمت مدیر (تست) — تعداد اطلاعیه‌های منتشرشده را می‌خواند */
-    fun checkFeed(): Int = fetchFeed().size
+    fun checkFeed(context: Context? = null): Int =
+        fetchFeed(context?.let { cacheFile(it) }).size
 }

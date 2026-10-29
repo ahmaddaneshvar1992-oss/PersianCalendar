@@ -26,6 +26,10 @@ import java.net.URL
  * تصویر بنر: اگر URL اینترنتی باشد همان‌طور منتشر می‌شود؛ اگر از گالری
  * انتخاب شده باشد (فایل داخلی) تا ۲۰۰ کیلوبایت به data URI تبدیل و داخل
  * خود خوراک جاسازی می‌شود تا همهٔ کاربران عکس را ببینند.
+ *
+ * نسخهٔ ۱.۱۱.۲۲: دریافت خوراک چندمنبعی شد (FeedFetcher) — raw، jsDelivr،
+ * api.github و در بدترین حالت کش محلی؛ چون بعضی کاربران به دلیل مسدود بودن
+ * یا ناپایداری raw.githubusercontent.com در شبکه‌های ایران خوراک را نمی‌گرفتند.
  */
 object MainAdFeed {
 
@@ -36,6 +40,17 @@ object MainAdFeed {
     private const val API_REPO = "ahmaddaneshvar1992-oss/PersianCalendar"
     private const val API_PATH = "feed/main_ads.json"
     private const val REMOTE_IDS_FILE = "main_ads_feed_ids.txt"
+    private const val CACHE_FILE = "main_ads_cache.json"
+
+    /** نام منبع آخرین دریافت موفق — برای نمایش در پنل مدیریت */
+    @Volatile
+    var lastSource: String = ""
+        private set
+
+    /** شرح خطاهای آخرین دریافت — برای عیب‌یابی در پنل مدیریت */
+    @Volatile
+    var lastError: String = ""
+        private set
 
     /** سقف حجم عکس گالری برای جاسازی در خوراک (بایت) */
     private const val MAX_IMAGE_BYTES = 200_000
@@ -52,24 +67,15 @@ object MainAdFeed {
         runCatching { remoteIdsFile(context).writeText(ids.joinToString(",")) }
     }
 
-    /** دریافت خوراک از گیت‌هاب — در خطا فهرست خالی برمی‌گردد */
-    fun fetchFeed(): List<MainAd> {
-        val conn = URL(FEED_URL).openConnection() as HttpURLConnection
-        return try {
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 10_000
-            conn.setRequestProperty("Cache-Control", "no-cache")
-            if (conn.responseCode != 200) emptyList()
-            else {
-                val body = conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
-                parseFeed(body)
-            }
-        } catch (e: Exception) {
-            emptyList()
-        } finally {
-            conn.disconnect()
-        }
+    /** دریافت خوراک از گیت‌هاب (چندمنبعی + کش) — در خطا فهرست خالی برمی‌گردد */
+    fun fetchFeed(cacheFile: File? = null): List<MainAd> {
+        val r = FeedFetcher.fetch(API_REPO, API_PATH, cacheFile)
+        lastSource = if (r.ok) r.source else ""
+        lastError = r.error
+        return if (r.ok) parseFeed(r.body) else emptyList()
     }
+
+    private fun cacheFile(context: Context) = File(context.filesDir, CACHE_FILE)
 
     /** تجزیهٔ JSON خوراک بنرها */
     fun parseFeed(json: String): List<MainAd> = runCatching {
@@ -100,7 +106,7 @@ object MainAdFeed {
      * خروجی: تعداد تغییرات (0 = چیزی عوض نشد). فقط از نخ پس‌زمینه صدا زده شود.
      */
     fun sync(context: Context): Int {
-        val feed = runCatching { fetchFeed() }.getOrElse { return 0 }
+        val feed = runCatching { fetchFeed(cacheFile(context)) }.getOrElse { return 0 }
         if (feed.isEmpty()) return 0
 
         val all = MainAdBox.load(context).toMutableList()
@@ -227,5 +233,6 @@ object MainAdFeed {
     }
 
     /** بررسی خوراک از سمت مدیر (تست) — تعداد بنرهای منتشرشده را می‌خواند */
-    fun checkFeed(): Int = fetchFeed().size
+    fun checkFeed(context: Context? = null): Int =
+        fetchFeed(context?.let { cacheFile(it) }).size
 }

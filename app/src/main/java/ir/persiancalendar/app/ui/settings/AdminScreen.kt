@@ -397,6 +397,11 @@ fun AdminScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
+                        "حساب‌ها آفلاین و روی هر گوشی جداگانه ذخیره می‌شوند؛ آمار کل نصب‌ها را در سایت گیت‌هاب ← Insights ← Traffic (Clones) ببینید.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
                         "پیام‌های صندوق پشتیبانی: ${supMsgs.size}",
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -708,9 +713,14 @@ fun AdminScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
-                                    val n = ir.persiancalendar.app.data.support.AnnouncementFeed.checkFeed()
+                                    val n = ir.persiancalendar.app.data.support.AnnouncementFeed.checkFeed(context)
                                     kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                        pubStatus = "خوراک فعلی کاربران: $n اطلاعیه"
+                                        val src = ir.persiancalendar.app.data.support.AnnouncementFeed.lastSource
+                                        val err = ir.persiancalendar.app.data.support.AnnouncementFeed.lastError
+                                        pubStatus = if (n > 0)
+                                            "خوراک فعلی کاربران: $n اطلاعیه — دریافت موفق از $src (نسخهٔ ۱.۱۱.۲۲ به بعد از چند منبع می‌گیرد)"
+                                        else
+                                            "دریافت خوراک ناموفق: ${err.take(160)}"
                                     }
                                 }
                             },
@@ -759,13 +769,25 @@ fun AdminScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "نکتهٔ مهم: دریافت بنرها فقط در نسخهٔ ۱.۱۱.۲۱ به بعد برنامه وجود دارد؛ کاربران روی نسخه‌های قدیمی‌تر باید برنامه را به‌روز کنند. " +
+                            "از نسخهٔ ۱.۱۱.۲۲ دریافت از سه منبع (raw و jsDelivr و api.github) انجام می‌شود تا در شبکه‌های مختلف ایران هم باز شود.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
                             scope.launch(Dispatchers.IO) {
-                                val n = ir.persiancalendar.app.data.support.MainAdFeed.checkFeed()
+                                val n = ir.persiancalendar.app.data.support.MainAdFeed.checkFeed(context)
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                    adPubStatus = "خوراک فعلی کاربران: $n بنر"
+                                    val src = ir.persiancalendar.app.data.support.MainAdFeed.lastSource
+                                    val err = ir.persiancalendar.app.data.support.MainAdFeed.lastError
+                                    adPubStatus = if (n > 0)
+                                        "خوراک فعلی کاربران: $n بنر — دریافت موفق از $src"
+                                    else
+                                        "دریافت خوراک ناموفق: ${err.take(160)}"
                                 }
                             }
                         },
