@@ -1,20 +1,10 @@
 [
   {
-    "id": 1793280109694,
-    "type": "news",
-    "title": "بنرهای تبلیغات صفحه اصلی حالا برای همهٔ کاربران منتشر می‌شود",
-    "body": "از این نسخه بنرهایی که مدیر در پنل مدیریت می‌سازد، با یک لمس برای همهٔ کاربران منتشر می‌شود — افزودن، حذف و تغییر ترتیب هم به همه می‌رسد.",
-    "link": "https://github.com/ahmaddaneshvar1992-oss/PersianCalendar/releases",
-    "image": "",
-    "on": true,
-    "at": 1793280109694
-  },
-  {
     "id": 1793271033603,
     "type": "news",
     "title": "رفع مشکل باز شدن لینک اطلاعیه‌ها و بنرها",
     "body": "از این نسخه لینک سایت اطلاعیه و بنر درست باز می‌شود — حتی بدون https. لمس اعلان سیستمی اطلاعیه لینک‌دار هم مستقیم سایت را باز می‌کند.",
-    "link": "https://github.com/ahmaddaneshvar1992-oss/PersianCalendar/releases",
+    "link": "https:\/\/github.com\/ahmaddaneshvar1992-oss\/PersianCalendar\/releases",
     "image": "",
     "on": true,
     "at": 1793271033603
@@ -24,7 +14,7 @@
     "type": "news",
     "title": "رد کردن اعلان اذان = قطع صدای اذان",
     "body": "از این نسخه اگر اعلان اذان را به کنار بکشید یا «پاک کردن همه» را بزنید، صدای اذان هم فوراً قطع می‌شود — دیگر لازم نیست جای دیگری توقف را بزنید.",
-    "link": "https://github.com/ahmaddaneshvar1992-oss/PersianCalendar/releases",
+    "link": "https:\/\/github.com\/ahmaddaneshvar1992-oss\/PersianCalendar\/releases",
     "image": "",
     "on": true,
     "at": 1793268009307
@@ -34,7 +24,7 @@
     "type": "news",
     "title": "به‌روزرسانی خودکار — دیگر لازم نیست برنامه را حذف کنید",
     "body": "از این نسخه همهٔ فایل‌های نصبی با کلید امضای ثابت ساخته می‌شوند؛ به‌روزرسانی مستقیم روی نسخهٔ قبلی نصب می‌شود و داده‌های شما (رویدادها و تنظیمات) حفظ می‌ماند. فقط برای نصب همین نسخه یک بار دیگر باید برنامهٔ قبلی را حذف کنید.",
-    "link": "https://github.com/ahmaddaneshvar1992-oss/PersianCalendar/releases",
+    "link": "https:\/\/github.com\/ahmaddaneshvar1992-oss\/PersianCalendar\/releases",
     "image": "",
     "on": true,
     "at": 1793265636251
