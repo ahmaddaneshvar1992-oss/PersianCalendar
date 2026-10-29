@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ویجت هواشناسی باد خزان — نسخه ۱.۱۱.۱۳ (راست‌به‌چپ، هم‌سبک با ویجت تقویم) -->
+<!-- ویجت هواشناسی بادخزان — نسخه ۱.۱۱.۱۳ (راست‌به‌چپ، هم‌سبک با ویجت تقویم) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_weather_root"
     android:layout_width="match_parent"

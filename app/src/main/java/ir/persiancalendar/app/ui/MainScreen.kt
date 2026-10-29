@@ -124,7 +124,11 @@ private val FabGreen = Color(0xFF1EA84D)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
+fun MainScreen(
+    settings: AppSettings,
+    openTabRequest: Int = -1,
+    openAnnouncements: Boolean = false
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -166,7 +170,7 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
         MenuItem("پشتیبانی", Icons.AutoMirrored.Filled.Help, action = "support"),
         MenuItem("پنل مدیریت", Icons.Filled.Shield, action = "admin")
     )
-    val screenTitles = listOf("باد خزان", "اوقات شرعی", "قبله‌نما", "رویدادها", "یادآورها", "تنظیمات")
+    val screenTitles = listOf("بادخزان", "اوقات شرعی", "قبله‌نما", "رویدادها", "یادآورها", "تنظیمات")
 
     // رویدادها یک بار برای همه صفحه‌ها
     val events by AppContainer.eventDao(context).observeAll().collectAsState(initial = emptyList())
@@ -181,6 +185,23 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
             supportVisible = false
             selectedTab = openTabRequest
         }
+    }
+
+    // باز شدن مستقیم روی پنل اطلاعیه‌ها — لمس اعلان اطلاعیه (نسخه ۱.۱۱.۱۶)
+    LaunchedEffect(openAnnouncements) {
+        if (openAnnouncements) {
+            annSheetVisible = true
+            AnnouncementBox.markSeen(context)
+            annUnseen = 0
+        }
+    }
+
+    // بررسی خوراک اطلاعیه‌های همگانی مدیر — در هر باز شدن برنامه (نسخه ۱.۱۱.۱۶)
+    LaunchedEffect(Unit) {
+        val freshCount = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
+        }
+        if (freshCount > 0) refreshAnnouncements()
     }
 
     // به‌روزرسانی اطلاعیه‌ها پس از بستن پنل مدیریت / شیت اطلاعیه (نسخه ۱.۶)
@@ -220,7 +241,7 @@ fun MainScreen(settings: AppSettings, openTabRequest: Int = -1) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            screenTitles.getOrElse(selectedTab) { "باد خزان" },
+                            screenTitles.getOrElse(selectedTab) { "بادخزان" },
                             style = MaterialTheme.typography.titleLarge
                         )
                         Spacer(Modifier.weight(1f))
@@ -634,7 +655,7 @@ private fun shareApp(context: android.content.Context) {
             type = "text/plain"
             putExtra(
                 Intent.EXTRA_TEXT,
-                "باد خزان (تقویم فارسی) — تقویم کامل شمسی با اوقات شرعی، قبله‌نما و یادآور\n" +
+                "بادخزان (تقویم فارسی) — تقویم کامل شمسی با اوقات شرعی، قبله‌نما و یادآور\n" +
                         "https://github.com/ahmaddaneshvar1992-oss/PersianCalendar/releases"
             )
         }

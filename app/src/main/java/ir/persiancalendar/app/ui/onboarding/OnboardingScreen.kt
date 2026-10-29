@@ -30,6 +30,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +55,7 @@ import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.notifications.AlarmScheduler
 import ir.persiancalendar.app.ui.components.CityPickerDialog
+import ir.persiancalendar.app.ui.components.JalaliDatePickerDialog
 import ir.persiancalendar.app.ui.components.SectionCard
 import ir.persiancalendar.app.ui.reminder.isIgnoringBattery
 import ir.persiancalendar.app.ui.reminder.requestIgnoreBattery
@@ -129,6 +132,22 @@ fun OnboardingScreen(settings: AppSettings) {
     // ---------- گام ۴: اعلان‌ها ----------
     var notifState by remember { mutableStateOf(notifGranted(context)) }
 
+    // ---------- گام ۵: مشخصات کاربر — جنسیت و تاریخ تولد (نسخه ۱.۱۱.۱۶ مطابق عکس کاربر) ----------
+    var gender by remember { mutableStateOf(settings.profileGender) }
+    // تاریخ تولد ذخیره‌شده با قالب "jy/jm/jd"
+    val savedBirth = remember {
+        settings.profileBirth.split("/").mapNotNull { it.toIntOrNull() }
+            .takeIf { it.size == 3 }
+            ?.let { (y, m, d) -> JalaliDate(y, m, d) }
+    }
+    var birthJ by remember { mutableStateOf(savedBirth) }
+    var birthPicker by remember { mutableStateOf(false) }
+    val currentJy = remember {
+        LocalDate.now().let {
+            CalendarConverter.gregorianToJalali(it.year, it.monthValue, it.dayOfMonth).year
+        }
+    }
+
     val notifLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -166,6 +185,9 @@ fun OnboardingScreen(settings: AppSettings) {
         scope.launch {
             repo.setCityIndex(cityIndex)
             repo.setPrayerNotifications(azanSet)
+            // مشخصات اختیاری کاربر — نسخه ۱.۱۱.۱۶ (مطابق عکس کاربر)
+            repo.setProfileGender(gender)
+            birthJ?.let { repo.setProfileBirth(it.year, it.month, it.day) }
             repo.setOnboardingDone(true)
         }
     }
@@ -193,7 +215,7 @@ fun OnboardingScreen(settings: AppSettings) {
             Column {
                 Text(stepTitles[step], style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "راه‌اندازی اولیه باد خزان",
+                    "راه‌اندازی اولیه بادخزان",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -475,14 +497,75 @@ fun OnboardingScreen(settings: AppSettings) {
                 }
             }
 
-            // ---------------- گام ۵: حساب کاربری ----------------
+            // ---------------- گام ۵: مشخصات و حساب کاربری ----------------
+            // نسخه ۱.۱۱.۱۶ (درخواست کاربر مطابق عکس): جنسیت و تاریخ تولد مثل نمونهٔ «بادسبا»
             4 -> {
+                SectionCard {
+                    Column(Modifier.padding(14.dp)) {
+                        Text("مشخصات شما", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "کاربر گرامی، تکمیل اطلاعات به ارائهٔ خدمات بهتر به شما کمک می‌کند." +
+                                " (اختیاری — می‌توانید خالی بگذارید)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(10.dp))
+
+                        // ---------- جنسیت: مرد / زن ----------
+                        Text("جنسیت", style = MaterialTheme.typography.labelLarge)
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = gender == "male",
+                                onClick = { gender = if (gender == "male") "" else "male" },
+                                label = { Text("مرد") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                            FilterChip(
+                                selected = gender == "female",
+                                onClick = { gender = if (gender == "female") "" else "female" },
+                                label = { Text("زن") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+
+                        // ---------- تاریخ تولد — انتخابگر تاریخ شمسی (مطابق عکس) ----------
+                        Text("تاریخ تولد", style = MaterialTheme.typography.labelLarge)
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedButton(
+                            onClick = { birthPicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                if (birthJ != null)
+                                    PersianText.jalaliDateFull(birthJ!!, true)
+                                else "انتخاب تاریخ"
+                            )
+                        }
+                        if (birthJ != null) {
+                            TextButton(onClick = { birthJ = null }) {
+                                Text("پاک کردن تاریخ تولد", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
                 SectionCard {
                     Column(Modifier.padding(14.dp)) {
                         Text("حساب کاربری و عضویت ویژه", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "با ساخت حساب کاربری می‌توانید عضویت ویژه بگیرید و از توسعه باد خزان حمایت کنید؛ وضعیت ویژه روی همین دستگاه ثبت می‌شود. ثبت‌نام کاملاً روی همین دستگاه انجام می‌شود و اجباری نیست.",
+                            "با ساخت حساب کاربری می‌توانید عضویت ویژه بگیرید و از توسعه بادخزان حمایت کنید؛ وضعیت ویژه روی همین دستگاه ثبت می‌شود. ثبت‌نام کاملاً روی همین دستگاه انجام می‌شود و اجباری نیست.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -544,6 +627,21 @@ fun OnboardingScreen(settings: AppSettings) {
             onSelected = { idx ->
                 cityIndex = idx
                 gpsStatus = null
+            }
+        )
+    }
+
+    // انتخابگر تاریخ تولد — نسخه ۱.۱۱.۱۶ (بازهٔ سال ۱۳۰۰ تا امسال)
+    if (birthPicker) {
+        JalaliDatePickerDialog(
+            initial = birthJ ?: JalaliDate(currentJy - 39, 1, 1),
+            minYear = 1300,
+            maxYear = currentJy,
+            title = "انتخاب تاریخ تولد",
+            onDismiss = { birthPicker = false },
+            onSelected = {
+                birthJ = it
+                birthPicker = false
             }
         )
     }

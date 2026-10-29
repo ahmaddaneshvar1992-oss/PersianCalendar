@@ -77,7 +77,7 @@ object AnnouncementBox {
             at = System.currentTimeMillis() - 86_400_000L
         ),
         Announcement(
-            id = 2L, type = "ad", title = "فرصت تبلیغ در باد خزان",
+            id = 2L, type = "ad", title = "فرصت تبلیغ در بادخزان",
             body = "برنامه شما می‌تواند جلوی هزاران کاربر نمایش داده شود. " +
                     "برای درخواست تبلیغ از منوی سه‌نقطه → پشتیبانی پیام بگذارید.",
             at = System.currentTimeMillis()
@@ -104,6 +104,22 @@ object AnnouncementBox {
         val all = load(context).toMutableList()
         all.add(ann)
         return save(context, all)
+    }
+
+    /**
+     * ادغام اطلاعیه‌های دریافتی از خوراک همگانی (گیت‌هاب) — نسخه ۱.۱۱.۱۶.
+     * فقط اطلاعیه‌هایی اضافه می‌شوند که شناسهٔ آن‌ها از قبل در فهرست محلی نیست؛
+     * خروجی: اطلاعیه‌هایی که واقعاً تازه بودند (برای ساختن اعلان سیستمی).
+     */
+    fun mergeFromFeed(context: Context, feed: List<Announcement>): List<Announcement> {
+        if (feed.isEmpty()) return emptyList()
+        val all = load(context).toMutableList()
+        val existingIds = all.map { it.id }.toHashSet()
+        val fresh = feed.filter { it.id !in existingIds }
+        if (fresh.isEmpty()) return emptyList()
+        all.addAll(fresh)
+        // قدیمی‌ها اول بمانند تا «asReversed» پنل، تازه‌ها را بالا نشان دهد
+        return if (save(context, all)) fresh else emptyList()
     }
 
     fun setEnabled(context: Context, id: Long, on: Boolean) {

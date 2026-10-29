@@ -49,18 +49,23 @@ fun SectionCard(
 
 /**
  * انتخاب تاریخ شمسی با سه فهرست کشویی (سال/ماه/روز)
+ * نسخه ۱.۱۱.۱۶: بازهٔ سال قابل تنظیم شد (minYear/maxYear) تا برای
+ * انتخاب تاریخ تولد در راه‌اندازی اولیه هم استفاده شود (درخواست کاربر).
  */
 @Composable
 fun JalaliDatePickerDialog(
     initial: JalaliDate,
     onDismiss: () -> Unit,
-    onSelected: (JalaliDate) -> Unit
+    onSelected: (JalaliDate) -> Unit,
+    minYear: Int = initial.year - 40,
+    maxYear: Int = initial.year + 40,
+    title: String = "انتخاب تاریخ شمسی"
 ) {
-    var year by remember { mutableStateOf(initial.year) }
+    var year by remember { mutableStateOf(initial.year.coerceIn(minYear, maxYear)) }
     var month by remember { mutableStateOf(initial.month) }
     var day by remember { mutableStateOf(initial.day.coerceAtMost(CalendarConverter.jalaliMonthLength(initial.year, initial.month))) }
 
-    val years = (initial.year - 40)..(initial.year + 40)
+    val years = minYear..maxYear
     val daysCount = CalendarConverter.jalaliMonthLength(year, month)
 
     AlertDialog(
@@ -73,7 +78,7 @@ fun JalaliDatePickerDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("انصراف") }
         },
-        title = { Text("انتخاب تاریخ شمسی") },
+        title = { Text(title) },
         text = {
             Row(
                 modifier = Modifier.fillMaxWidth(),

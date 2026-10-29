@@ -293,6 +293,11 @@ class DailyTickReceiver : BroadcastReceiver() {
                 // تازه‌سازی ویجت هواشناسی در نیمه‌شب (نسخه ۱.۱۱.۱۳)
                 ir.persiancalendar.app.widget.WeatherWidgetProvider.updateAll(context)
                 CalendarWidgetProvider.updateAll(context)
+                // بررسی خوراک اطلاعیه‌های همگانی مدیر — نسخه ۱.۱۱.۱۶ (درخواست کاربر)
+                // کاربرانی که برنامه را هر روز باز نمی‌کنند هم روزی یک بار اعلان اطلاعیه می‌گیرند
+                runCatching {
+                    ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
+                }
             } finally {
                 pending.finish()
             }

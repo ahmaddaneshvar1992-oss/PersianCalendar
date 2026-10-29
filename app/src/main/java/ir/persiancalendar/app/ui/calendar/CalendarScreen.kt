@@ -187,6 +187,7 @@ fun CalendarScreen(
                 events = events,
                 holidayRepo = holidayRepo,
                 persianDigits = persianDigits,
+                selected = selectedJalali,
                 // نسخه ۱.۱۱.۳ (گزارش کاربر): لمس ساده روز فقط انتخاب می‌کند و هیچ صفحه‌ای باز نمی‌شود؛
                 // جزئیات روز فقط با نگه‌داشتن انگشت روی روز باز می‌شود
                 onDayClick = {
@@ -233,9 +234,13 @@ fun CalendarScreen(
         Spacer(Modifier.height(10.dp))
 
         // ---------- کارت اوقات شرعی — نسخه ۱.۱۰: پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه (مطابق عکس) ----------
+        // نسخه ۱.۱۱.۱۶ (درخواست کاربر): با لمس هر روز، اوقات شرعی همان روز نمایش داده می‌شود
         PrayerTimesCard(
             settings = settings,
             persianDigits = persianDigits,
+            selectedDate = CalendarConverter.jalaliToGregorian(
+                selectedJalali.year, selectedJalali.month, selectedJalali.day
+            ).let { LocalDate.of(it.year, it.month, it.day) },
             onOpenPrayer = onOpenPrayer
         )
 
@@ -285,6 +290,7 @@ private fun MonthGrid(
     events: List<EventEntity>,
     holidayRepo: HolidayRepository,
     persianDigits: Boolean,
+    selected: JalaliDate,
     onDayClick: (JalaliDate) -> Unit,
     onDayLongClick: (JalaliDate) -> Unit
 ) {
@@ -334,6 +340,7 @@ private fun MonthGrid(
                                     jalali = j,
                                     gregorian = g,
                                     isToday = j == todayJ,
+                                    isSelected = j == selected,
                                     isHoliday = holidayRepo.isHoliday(j, g),
                                     eventColors = events.filter { eventOccursOn(it, g) }
                                         .map { EventDotColors[it.colorIndex % EventDotColors.size] }
@@ -360,6 +367,7 @@ private fun DayCell(
     jalali: JalaliDate,
     gregorian: LocalDate,
     isToday: Boolean,
+    isSelected: Boolean,
     isHoliday: Boolean,
     eventColors: List<androidx.compose.ui.graphics.Color>,
     persianDigits: Boolean,
@@ -369,48 +377,61 @@ private fun DayCell(
     val numText = if (persianDigits) PersianText.toPersianDigits(jalali.day.toString())
     else jalali.day.toString()
 
+    // نسخه ۱.۱۱.۱۶ (درخواست کاربر): روز لمس‌شده با یک دایره دور آن مشخص می‌شود
+    // و تاریخ/مناسبت‌ها/اوقات شرعی با همان روز به‌روز می‌شوند؛ امروز همچنان پرشده است.
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .aspectRatio(0.9f)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                when {
-                    isToday -> MaterialTheme.colorScheme.primary
-                    else -> androidx.compose.ui.graphics.Color.Transparent
-                }
-            )
-            .border(
-                width = if (isToday) 0.dp else 0.dp,
-                color = androidx.compose.ui.graphics.Color.Transparent,
-                shape = RoundedCornerShape(12.dp)
-            )
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(2.dp),
+            .padding(1.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = numText,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = when {
-                isToday -> MaterialTheme.colorScheme.onPrimary
-                isHoliday -> holidayColor()
-                else -> MaterialTheme.colorScheme.onSurface
-            }
-        )
-        Spacer(Modifier.height(3.dp))
-        Row(horizontalArrangement = Arrangement.Center) {
-            eventColors.forEach { c ->
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 1.dp)
-                        .size(5.dp)
-                        .background(c, CircleShape)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .background(
+                    when {
+                        isToday -> MaterialTheme.colorScheme.primary
+                        isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                        else -> androidx.compose.ui.graphics.Color.Transparent
+                    },
+                    CircleShape
                 )
+                .border(
+                    width = if (isSelected && !isToday) 2.dp else 0.dp,
+                    color = if (isSelected && !isToday) MaterialTheme.colorScheme.primary
+                    else androidx.compose.ui.graphics.Color.Transparent,
+                    shape = CircleShape
+                )
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = numText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = when {
+                        isToday -> MaterialTheme.colorScheme.onPrimary
+                        isHoliday -> holidayColor()
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                )
+                Spacer(Modifier.height(3.dp))
+                Row(horizontalArrangement = Arrangement.Center) {
+                    eventColors.forEach { c ->
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 1.dp)
+                                .size(5.dp)
+                                .background(c, CircleShape)
+                        )
+                    }
+                }
             }
         }
     }

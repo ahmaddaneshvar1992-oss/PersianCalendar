@@ -21,10 +21,15 @@ object NotificationHelper {
     const val CHANNEL_ONGOING = "ongoing_date"
     const val CHANNEL_REMINDERS = "reminders" // موتور یادآور عمومی — نسخه ۱.۱۱
     const val CHANNEL_AZAN_PLAYBACK = "azan_playback" // سرویس پخش اذان — نسخه ۱.۱۱.۷
+    const val CHANNEL_ANNOUNCE = "announcements" // اطلاعیه‌های همگانی مدیر — نسخه ۱.۱۱.۱۶
     const val NOTIF_ID_EVENT_BASE = 20000
     const val NOTIF_ID_PRAYER = 19999
     const val NOTIF_ID_REMINDER_BASE = 30000
     const val NOTIF_ID_AZAN_PLAYBACK = 29999
+    const val NOTIF_ID_ANNOUNCE = 29998
+
+    /** extra باز شدن برنامه روی پنل اطلاعیه‌ها — لمس اعلان اطلاعیه (نسخه ۱.۱۱.۱۶) */
+    const val EXTRA_OPEN_ANNOUNCEMENTS = "ir.persiancalendar.app.extra.OPEN_ANNOUNCEMENTS"
 
     // اکشن‌های اعلان یادآور — «انجام شد» و «بعداً یادآوری کن»
     const val ACTION_REMINDER_DONE = "ir.persiancalendar.app.action.REMINDER_DONE"
@@ -84,11 +89,21 @@ object NotificationHelper {
             setShowBadge(false)
         }
 
+        // کانال اطلاعیه‌های همگانی مدیر — نسخه ۱.۱۱.۱۶ (درخواست کاربر)
+        val announcements = NotificationChannel(
+            CHANNEL_ANNOUNCE,
+            "اطلاعیه‌ها (خبر و تبلیغ)",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "خبرها و اطلاعیه‌هایی که مدیر بادخزان برای کاربران ارسال می‌کند"
+        }
+
         nm.createNotificationChannel(events)
         nm.createNotificationChannel(prayers)
         nm.createNotificationChannel(ongoing)
         nm.createNotificationChannel(reminders)
         nm.createNotificationChannel(azanPlayback)
+        nm.createNotificationChannel(announcements)
     }
 
     private fun openAppIntent(context: Context): PendingIntent =
@@ -237,6 +252,39 @@ object NotificationHelper {
         val notification = builder.build()
         runCatching {
             NotificationManagerCompat.from(context).notify(NOTIF_ID_PRAYER, notification)
+        }
+    }
+
+    /** لمس اعلان اطلاعیه — برنامه روی پنل اطلاعیه‌ها (زنگ) باز می‌شود — نسخه ۱.۱۱.۱۶ */
+    private fun openAnnouncementsIntent(context: Context): PendingIntent =
+        PendingIntent.getActivity(
+            context, 0,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(EXTRA_OPEN_ANNOUNCEMENTS, true)
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+    /**
+     * اعلان سیستمی اطلاعیهٔ همگانی مدیر — نسخه ۱.۱۱.۱۶ (درخواست کاربر:
+     * «میخوام وقتی اطلاعیه میدم نوفیکیشنم برای کاربران نمایش داده بشه»)
+     * لمس اعلان، برنامه را روی پنل اطلاعیه‌ها باز می‌کند.
+     */
+    fun notifyAnnouncement(context: Context, title: String, body: String) {
+        val fullText = if (body.isNotBlank()) "$title\n$body" else title
+        val notification = NotificationCompat.Builder(context, CHANNEL_ANNOUNCE)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("اطلاعیه بادخزان")
+            .setContentText(title)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(fullText))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setAutoCancel(true)
+            .setContentIntent(openAnnouncementsIntent(context))
+            .build()
+        runCatching {
+            NotificationManagerCompat.from(context).notify(NOTIF_ID_ANNOUNCE, notification)
         }
     }
 }

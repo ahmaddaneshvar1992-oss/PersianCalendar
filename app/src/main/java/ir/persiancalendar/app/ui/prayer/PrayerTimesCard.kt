@@ -82,6 +82,7 @@ fun PrayerTimesCard(
     settings: AppSettings,
     persianDigits: Boolean,
     modifier: Modifier = Modifier,
+    selectedDate: LocalDate? = null,
     onOpenPrayer: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -93,11 +94,16 @@ fun PrayerTimesCard(
     val city = Cities.list[settings.cityIndex.coerceIn(0, Cities.list.size - 1)]
     val today = remember { LocalDate.now() }
     val todayJ = CalendarConverter.gregorianToJalali(today.year, today.monthValue, today.dayOfMonth)
+    // نسخه ۱.۱۱.۱۶ (درخواست کاربر): روز لمس‌شدهٔ تقویم صفحه اصلی —
+    // تاریخ، روزها و اوقات شرعی با همان روز به‌روز می‌شوند؛ null یعنی امروز
+    val target = selectedDate ?: today
+    val targetJ = CalendarConverter.gregorianToJalali(target.year, target.monthValue, target.dayOfMonth)
+    val isTodayView = target == today
     val holidayRepo = remember { AppContainer.holidayRepo(context) }
     // روز انتخابی در پنل «روزهای ماه» — پیش‌فرض امروز (نسخه ۱.۱۱.۱۰)
     var selectedDay by remember { mutableStateOf(todayJ.day) }
     val times = PrayerTimesCalculator.compute(
-        today, city.lat, city.lng, Cities.IRAN_TZ_HOURS, settings.prayerMethod
+        target, city.lat, city.lng, Cities.IRAN_TZ_HOURS, settings.prayerMethod
     )
 
     val timeLabels = listOf(
@@ -288,7 +294,7 @@ fun PrayerTimesCard(
                                     .background(MaterialTheme.colorScheme.outlineVariant)
                             )
                         }
-                        val isNext = i == nextIndex
+                        val isNext = isTodayView && i == nextIndex
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -317,16 +323,32 @@ fun PrayerTimesCard(
                         }
                     }
                 }
-                // خط زیر نوار: شهر + نزدیک‌ترین وقت
-                Text(
-                    text = "${city.name} (${city.province}) — نزدیک‌ترین وقت: $nextLabel · مانده $nextDiffText",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+                // خط زیر نوار: شهر + نزدیک‌ترین وقت (فقط برای امروز) یا روز انتخابی — نسخه ۱.۱۱.۱۶
+                if (isTodayView) {
+                    Text(
+                        text = "${city.name} (${city.province}) — نزدیک‌ترین وقت: $nextLabel · مانده $nextDiffText",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                } else {
+                    Text(
+                        text = "اوقات روز انتخابی: " + PersianText.weekDays.getOrElse(
+                            PersianText.weekdayIndexSat0(target)
+                        ) { "" } + " " +
+                                PersianText.jalaliDateFull(targetJ, false) +
+                                " — برای دیدن اوقات امروز، روز امروز را در تقویم لمس کنید",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
             }
         }
 

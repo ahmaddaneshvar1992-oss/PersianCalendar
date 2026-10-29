@@ -129,10 +129,10 @@ object OngoingDateNotifier {
             // نسخه ۱.۱۱.۱۳: آیکن پویای «عدد روز» به‌جای لوگوی برنامه (درخواست کاربر)
             .setSmallIcon(IconCompat.createWithBitmap(dayIconBitmap()))
             .setContentTitle(todayText())
-            .setContentText("باد خزان — ساعت ${PersianText.toPersianDigits(timeText)}")
+            .setContentText("بادخزان — ساعت ${PersianText.toPersianDigits(timeText)}")
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("باد خزان — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
+                    .bigText("بادخزان — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
             )
             .setOngoing(true)
             .setOnlyAlertOnce(true)

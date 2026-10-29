@@ -161,7 +161,7 @@ fun SupportScreen(onBack: () -> Unit) {
                     ) { Text("ارسال پیام") }
                     OutlinedButton(
                         onClick = {
-                            val subject = "پشتیبانی باد خزان — ${typeLabels[typeIdx]}"
+                            val subject = "پشتیبانی بادخزان — ${typeLabels[typeIdx]}"
                             val body = "$text\n\nنام: $name\nراه پاسخ‌گویی: $contact"
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
                                 data = Uri.parse(

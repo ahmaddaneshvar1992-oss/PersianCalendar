@@ -58,7 +58,15 @@ data class AppSettings(
     val ongoingDateNotif: Boolean = true,
     // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
     /** آیا ویزارد ۵ گامی قبل از ورود به برنامه تکمیل شده؟ */
-    val onboardingDone: Boolean = false
+    val onboardingDone: Boolean = false,
+    // ---------- نسخه ۱.۱۱.۱۶ (درخواست کاربر مطابق عکس): مشخصات کاربر در راه‌اندازی ----------
+    /** جنسیت کاربر: "" / "male" / "female" — گام پنجم راه‌اندازی اولیه */
+    val profileGender: String = "",
+    /** تاریخ تولد شمسی با قالب "jy/jm/jd" — خالی یعنی انتخاب نشده */
+    val profileBirth: String = "",
+    // ---------- نسخه ۱.۱۱.۱۶: انتشار اطلاعیه برای کاربران از پنل مدیریت ----------
+    /** توکن دسترسی گیت‌هاب (فقط روی دستگاه مدیر؛ برای انتشار خوراک اطلاعیه) */
+    val githubToken: String = ""
 )
 
 /** مخزن تنظیمات مبتنی بر DataStore */
@@ -80,6 +88,11 @@ class SettingsRepository(private val context: Context) {
         val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
         // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        // ---------- نسخه ۱.۱۱.۱۶: مشخصات کاربر (جنسیت و تاریخ تولد) ----------
+        val PROFILE_GENDER = stringPreferencesKey("profile_gender")
+        val PROFILE_BIRTH = stringPreferencesKey("profile_birth")
+        // ---------- نسخه ۱.۱۱.۱۶: توکن انتشار اطلاعیه (دستگاه مدیر) ----------
+        val GITHUB_TOKEN = stringPreferencesKey("github_token")
         // (کلیدهای تبلیغات نسخه‌های قدیمی در DataStore بی‌اثر مانده‌اند — نسخه ۱.۱۱.۵)
     }
 
@@ -97,7 +110,10 @@ class SettingsRepository(private val context: Context) {
             adhanSound = p[Keys.ADHAN_SOUND] ?: "moazenzadeh",
             adminPin = p[Keys.ADMIN_PIN] ?: "1234",
             ongoingDateNotif = p[Keys.ONGOING_DATE] ?: true,
-            onboardingDone = p[Keys.ONBOARDING_DONE] ?: false
+            onboardingDone = p[Keys.ONBOARDING_DONE] ?: false,
+            profileGender = p[Keys.PROFILE_GENDER] ?: "",
+            profileBirth = p[Keys.PROFILE_BIRTH] ?: "",
+            githubToken = p[Keys.GITHUB_TOKEN] ?: ""
         )
     }
 
@@ -133,6 +149,17 @@ class SettingsRepository(private val context: Context) {
     // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
     suspend fun setOnboardingDone(b: Boolean) =
         context.dataStore.edit { it[Keys.ONBOARDING_DONE] = b }
+
+    // ---------- نسخه ۱.۱۱.۱۶: مشخصات کاربر (گام پنجم راه‌اندازی — درخواست کاربر) ----------
+    suspend fun setProfileGender(g: String) =
+        context.dataStore.edit { it[Keys.PROFILE_GENDER] = g }
+
+    suspend fun setProfileBirth(jy: Int, jm: Int, jd: Int) =
+        context.dataStore.edit { it[Keys.PROFILE_BIRTH] = "$jy/$jm/$jd" }
+
+    // ---------- نسخه ۱.۱۱.۱۶: توکن انتشار اطلاعیه (پنل مدیریت) ----------
+    suspend fun setGithubToken(t: String) =
+        context.dataStore.edit { it[Keys.GITHUB_TOKEN] = t.trim() }
 
     companion object {
         fun encodeMask(s: Set<Int>): Int = s.fold(0) { acc, i -> acc or (1 shl i) }

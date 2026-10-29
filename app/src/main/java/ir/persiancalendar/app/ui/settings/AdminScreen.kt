@@ -3,6 +3,7 @@ package ir.persiancalendar.app.ui.settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -85,6 +86,10 @@ fun AdminScreen(onBack: () -> Unit) {
     // تصویر اطلاعیه — گالری یا URL (نسخه ۱.۱۱.۷)
     var annPickedImage by remember { mutableStateOf("") }
     var annImageUrl by remember { mutableStateOf("") }
+    // انتشار همگانی اطلاعیه برای کاربران — نسخه ۱.۱۱.۱۶ (درخواست کاربر)
+    var ghToken by remember { mutableStateOf(settings.githubToken) }
+    var pubStatus by remember { mutableStateOf("") }
+    var pubBusy by remember { mutableStateOf(false) }
     // بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶
     var ads by remember { mutableStateOf<List<MainAd>>(emptyList()) }
     var adTitle by remember { mutableStateOf("") }
@@ -651,6 +656,94 @@ fun AdminScreen(onBack: () -> Unit) {
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("+ افزودن اطلاعیه") }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // ---------- انتشار همگانی اطلاعیه برای کاربران — نسخه ۱.۱۱.۱۶ ----------
+            SectionCard {
+                Column(Modifier.padding(14.dp)) {
+                    Text("انتشار برای کاربران (اعلان سیستمی)", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "اطلاعیه‌هایی که بالاتر ثبت می‌کنید فقط روی همین دستگاه بودند. با «انتشار برای کاربران»، " +
+                            "فهرست اطلاعیه‌ها روی مخزن گیت‌هاب برنامه منتشر می‌شود و همهٔ کاربران هم به زنگ برنامه " +
+                            "هم اعلان سیستمی می‌گیرند (بررسی در هر باز شدن برنامه و هر نیمه‌شب)." +
+                            " عکس اطلاعیه فقط وقتی برای کاربران می‌رود که آدرس اینترنتی (URL) باشد.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = ghToken,
+                        onValueChange = { ghToken = it.take(120) },
+                        singleLine = true,
+                        label = { Text("توکن گیت‌هاب (فقط روی این دستگاه ذخیره می‌شود)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "راهنما: در گیت‌هاب ← Settings ← Developer settings ← Personal access tokens ← " +
+                            "Fine-grained token با دسترسی Contents: Read and write فقط برای مخزن PersianCalendar بسازید.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    repo.setGithubToken(ghToken)
+                                }
+                                Toast.makeText(context, "توکن ذخیره شد", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("ذخیره توکن") }
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    val n = ir.persiancalendar.app.data.support.AnnouncementFeed.checkFeed()
+                                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                        pubStatus = "خوراک فعلی کاربران: $n اطلاعیه"
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("بررسی خوراک کاربران") }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Button(
+                        onClick = {
+                            pubBusy = true
+                            scope.launch(Dispatchers.IO) {
+                                repo.setGithubToken(ghToken)
+                                val list = AnnouncementBox.active(context)
+                                val msg = ir.persiancalendar.app.data.support.AnnouncementFeed.publish(
+                                    context, ghToken, list
+                                )
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    pubBusy = false
+                                    pubStatus = msg
+                                    Toast.makeText(context, msg.take(60), Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        enabled = !pubBusy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (pubBusy) "در حال انتشار…" else "انتشار برای کاربران")
+                    }
+                    if (pubStatus.isNotBlank()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            pubStatus,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
