@@ -217,6 +217,9 @@ object NotificationHelper {
      * نسخه ۱.۱۱.۱۵ (درخواست کاربر): هنگام اذان، صفحهٔ تمام‌صفحهٔ اذان
      * (AzanActivity) با fullScreenIntent باز می‌شود؛ برای پیش‌نمایش داخل
      * برنامه fullScreen=false بدهید تا صفحهٔ برنامه قطع نشود.
+     * نسخهٔ ۱.۱۱.۱۹ (درخواست کاربر: «با رد کردن یا پاک کردن نوفیکیش اذان
+     * صدا اذان قطع بشه»): deleteIntent — کشیدن اعلان به کنار یا «پاک کردن
+     * همه» هم صدای اذان را قطع می‌کند.
      */
     fun notifyPrayer(
         context: Context,
@@ -235,6 +238,8 @@ object NotificationHelper {
             .setAutoCancel(true)
             .setContentIntent(openAppIntent(context))
             .addAction(0, "توقف صدا", azanStopIntent(context))
+            // نسخهٔ ۱.۱۱.۱۹: رد کردن/پاک کردن اعلان = توقف صدای اذان
+            .setDeleteIntent(azanStopIntent(context))
         if (fullScreen) {
             // نسخه ۱.۱۱.۱۵: صفحهٔ تمام‌صفحهٔ اذان با تصویر مسجد — حتی روی قفل صفحه
             builder.setFullScreenIntent(
