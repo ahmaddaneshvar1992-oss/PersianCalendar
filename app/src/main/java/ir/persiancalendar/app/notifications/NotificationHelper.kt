@@ -100,6 +100,22 @@ object NotificationHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+    /** دکمهٔ «توقف صدا» اعلان اوقات شرعی — نسخه ۱.۱۱.۱۴ (گزارش: «اذان توقف نداره») */
+    private fun azanStopIntent(context: Context): PendingIntent =
+        PendingIntent.getService(
+            context, 9003,
+            Intent(context, AzanPlaybackService::class.java)
+                .setAction(AzanPlaybackService.ACTION_STOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+    /** بستن اعلان اوقات شرعی (بعد از توقف صدا) — نسخه ۱.۱۱.۱۴ */
+    fun cancelPrayer(context: Context) {
+        runCatching {
+            NotificationManagerCompat.from(context).cancel(NOTIF_ID_PRAYER)
+        }
+    }
+
     fun notifyEvent(context: Context, notifId: Int, title: String, text: String) {
         val notification = NotificationCompat.Builder(context, CHANNEL_EVENTS)
             .setSmallIcon(R.drawable.ic_notification)
@@ -181,6 +197,8 @@ object NotificationHelper {
     /**
      * اعلان اذان/اوقات شرعی — نسخه ۱.۳
      * دسته ALARM + اولویت بالا تا روی صفحه بیاید؛ صدای اذان جداگانه با MediaPlayer پخش می‌شود.
+     * نسخه ۱.۱۱.۱۴: دکمهٔ «توقف صدا» اضافه شد تا کاربر برای قطع صدای اذان
+     * مجبور به بستن اجباری برنامه نباشد.
      */
     fun notifyPrayer(context: Context, label: String, timeText: String) {
         val notification = NotificationCompat.Builder(context, CHANNEL_PRAYERS)
@@ -193,6 +211,7 @@ object NotificationHelper {
             .setVibrate(longArrayOf(0, 400, 250, 400))
             .setAutoCancel(true)
             .setContentIntent(openAppIntent(context))
+            .addAction(0, "توقف صدا", azanStopIntent(context))
             .build()
         runCatching {
             NotificationManagerCompat.from(context).notify(NOTIF_ID_PRAYER, notification)

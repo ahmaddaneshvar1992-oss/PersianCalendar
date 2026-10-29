@@ -35,6 +35,12 @@ import java.time.format.DateTimeFormatter
  * دیگر لوگوی برنامه نیست؛ عدد روزِ ماه شمسی به‌صورت پویا رسم می‌شود
  * (مثلاً امروز ۷ آبان است → یک «۷» در نوار وضعیت دیده می‌شود — مثل
  * آیکن تقویم آیفون). متن اعلان همچنان تاریخ کامل است.
+ *
+ * نسخه ۱.۱۱.۱۴ (درخواست کاربر: «مثل برنامه ADM یا VPN همیشه فعال باشه»):
+ * این اعلان دیگر یک notify() ساده نیست؛ توسط سرویس Foreground همیشگی
+ * (CalendarForegroundService) نگه‌داری می‌شود تا هیچ‌وقت از نوار وضعیت پاک
+ * نشود — حتی اگر کاربر سوایپش کند یا سیستم پردازه را بکشد. تاریخ و ساعت
+ * هر دقیقه تازه می‌شود.
  */
 object OngoingDateNotifier {
 
@@ -97,7 +103,7 @@ object OngoingDateNotifier {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-    /** ساخت/به‌روزرسانی اعلان همیشگی (اگر از تنظیمات فعال باشد) */
+    /** ساخت/به‌روزرسانی اعلان همیشگی (اگر از تنظیمات فعال باشد) — نسخه ۱.۱۱.۱۴: با سرویس Foreground */
     fun update(context: Context) {
         val enabled = try {
             ir.persiancalendar.app.di.AppContainer.settingsRepo(context)
@@ -105,13 +111,17 @@ object OngoingDateNotifier {
         } catch (e: Exception) {
             true
         }
-        if (!enabled) {
+        if (enabled) {
+            CalendarForegroundService.start(context)
+        } else {
             cancel(context)
-            return
         }
+    }
 
+    /** ساخت اعلان همیشگی تاریخ — هم برای سرویس Foreground و هم برای جایگزین ساده */
+    fun buildOngoingNotification(context: Context): android.app.Notification {
         val timeText = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-        val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ONGOING)
+        return NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ONGOING)
             // نسخه ۱.۱۱.۱۳: آیکن پویای «عدد روز» به‌جای لوگوی برنامه (درخواست کاربر)
             .setSmallIcon(IconCompat.createWithBitmap(dayIconBitmap()))
             .setContentTitle("باد خزان")
@@ -128,17 +138,26 @@ object OngoingDateNotifier {
             .addAction(0, "لیست اعلان‌ها", tabIntent(context, TAB_EVENTS, 7002))
             .addAction(0, "تنظیم یادآورها", tabIntent(context, TAB_REMINDERS, 7003))
             .build()
+    }
 
+    /** نمایش/به‌روزرسانی مستقیم اعلان (حلقهٔ دقیقه‌ای سرویس + جایگزین بدون سرویس) */
+    fun postOngoing(context: Context) {
         runCatching {
-            NotificationManagerCompat.from(context).notify(NOTIF_ID_ONGOING, notification)
+            NotificationManagerCompat.from(context)
+                .notify(NOTIF_ID_ONGOING, buildOngoingNotification(context))
         }
     }
 
-    /** حذف اعلان همیشگی (وقتی کاربر از تنظیمات خاموشش می‌کند) */
-    fun cancel(context: Context) {
+    /** فقط حذف اعلان (داخلی) */
+    fun cancelNotification(context: Context) {
         runCatching {
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .cancel(NOTIF_ID_ONGOING)
         }
+    }
+
+    /** خاموش کردن کامل: توقف سرویس همیشگی + حذف اعلان (وقتی کاربر از تنظیمات خاموشش می‌کند) */
+    fun cancel(context: Context) {
+        CalendarForegroundService.stop(context)
     }
 }

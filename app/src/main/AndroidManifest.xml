@@ -17,6 +17,8 @@
     <!-- سرویس پخش اذان در پس‌زمینه — نسخه ۱.۱۱.۷ -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- سرویس همیشگی اعلان تاریخ — نسخه ۱.۱۱.۱۴ (مثل برنامه‌های VPN/ADM) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- اینترنت: خرید درون‌برنامه‌ای (Google Play Billing) و باز کردن لینک‌ها -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -101,6 +103,17 @@
             android:name=".notifications.AzanPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- سرویس همیشگی اعلان تاریخ — نسخه ۱.۱۱.۱۴: اعلان دائمی تاریخ مثل VPN/ADM
+             که با سوایپ و کشته‌شدن پردازه حذف نمی‌شود -->
+        <service
+            android:name=".notifications.CalendarForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="persistent_jalali_date_notification — always-visible calendar date/status notification like VPN or download-manager apps; refreshed every minute" />
+        </service>
 
         <!-- تیک روزانه -->
         <receiver
