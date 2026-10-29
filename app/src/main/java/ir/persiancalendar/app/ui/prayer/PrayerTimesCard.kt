@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.DropdownMenu
@@ -118,6 +119,15 @@ fun PrayerTimesCard(
             nowTick = LocalDateTime.now()
         }
     }
+    // نسخه ۱.۱۱.۱۵: وضعیت زندهٔ پخش اذان برای آیکن toggle (هر نیم ثانیه)
+    var azanPlayingLive by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            azanPlayingLive = ir.persiancalendar.app.notifications.AzanPlaybackService.isPlaying ||
+                ir.persiancalendar.app.notifications.AdhanSounds.isPlaying
+            delay(500)
+        }
+    }
     val nowH = nowTick.let { it.hour + it.minute / 60.0 }
     val nextIndex = timeValues.indexOfFirst { it > nowH }
 
@@ -170,18 +180,38 @@ fun PrayerTimesCard(
                     )
                     IconButton(
                         onClick = {
-                            ir.persiancalendar.app.notifications.AdhanSounds.play(
-                                context, settings.adhanSound
-                            )
-                            android.widget.Toast.makeText(
-                                context, "پخش اذان — ${city.name}", android.widget.Toast.LENGTH_SHORT
-                            ).show()
+                            // نسخه ۱.۱۱.۱۵ (درخواست کاربر): «وقتی روش می‌زنم اذان پخش
+                            // می‌شود و می‌خوام دوباره روش کلیک کنم متوقف بشه» — toggle
+                            val anyPlaying = ir.persiancalendar.app.notifications.AzanPlaybackService.isPlaying ||
+                                ir.persiancalendar.app.notifications.AdhanSounds.isPlaying
+                            if (anyPlaying) {
+                                // توقف هر دو مسیر پخش: پیش‌نمایش و سرویس اعلان
+                                ir.persiancalendar.app.notifications.AzanPlaybackService.stop(context)
+                                ir.persiancalendar.app.notifications.AdhanSounds.release()
+                                android.widget.Toast.makeText(
+                                    context, "پخش اذان متوقف شد", android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                val ok = ir.persiancalendar.app.notifications.AdhanSounds.play(
+                                    context, settings.adhanSound
+                                )
+                                if (ok) {
+                                    android.widget.Toast.makeText(
+                                        context, "پخش اذان — ${city.name}", android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    android.widget.Toast.makeText(
+                                        context, "برای پخش، از تنظیمات اوقات شرعی یکی از اذان‌ها را انتخاب کنید",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
                         },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
-                            Icons.Filled.VolumeUp,
-                            contentDescription = "پخش اذان",
+                            if (azanPlayingLive) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+                            contentDescription = if (azanPlayingLive) "توقف پخش اذان" else "پخش اذان",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(19.dp)
                         )

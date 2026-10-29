@@ -378,12 +378,23 @@ fun PrayerScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 androidx.compose.material3.TextButton(onClick = {
+                    // نسخه ۱.۱۱.۱۵ (درخواست کاربر): لمس دوباره = توقف پخش
+                    val playing = ir.persiancalendar.app.notifications.AzanPlaybackService.isPlaying ||
+                        ir.persiancalendar.app.notifications.AdhanSounds.isPlaying
+                    if (playing) {
+                        ir.persiancalendar.app.notifications.AzanPlaybackService.stop(context)
+                        ir.persiancalendar.app.notifications.AdhanSounds.release()
+                        Toast.makeText(context, "پخش اذان متوقف شد", Toast.LENGTH_SHORT).show()
+                        return@TextButton
+                    }
                     // پیش‌نمایش کامل و واقعی: اعلان اذان + پخش صدا با همان
                     // سرویس Foreground که هنگام وقت واقعی کار می‌کند (نسخه ۱.۱۱.۷)
+                    // نسخه ۱.۱۱.۱۵: پیش‌نمایش، صفحهٔ تمام‌صفحهٔ اذان را باز نمی‌کند
                     ir.persiancalendar.app.notifications.NotificationHelper.notifyPrayer(
                         context,
                         "اذان (نمونه)",
-                        "پیش‌نمایش اعلان اذان — هنگام وقت واقعی، اعلان دقیق با AlarmManager می‌آید"
+                        "پیش‌نمایش اعلان اذان — هنگام وقت واقعی، اعلان دقیق با AlarmManager می‌آید",
+                        fullScreen = false
                     )
                     ir.persiancalendar.app.notifications.AzanPlaybackService.start(
                         context, settings.adhanSound

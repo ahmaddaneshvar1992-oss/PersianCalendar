@@ -121,24 +121,38 @@ object OngoingDateNotifier {
     /** ساخت اعلان همیشگی تاریخ — هم برای سرویس Foreground و هم برای جایگزین ساده */
     fun buildOngoingNotification(context: Context): android.app.Notification {
         val timeText = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+        // نسخه ۱.۱۱.۱۵ (درخواست کاربر مطابق عکس: «متن‌هاش کمی بزرگ‌تر باشن»):
+        // تاریخ کامل به‌عنوان عنوانِ درشت اعلان است و نام برنامه و ساعت زیرش
+        // با حروف کوچک — بزرگ‌ترین حالت متنی که سیستم اعلان می‌دهد.
+        // نسخه ۱.۱۱.۱۵: لمس اعلان مستقیم روی تقویم اصلی باز می‌شود (نه رویدادها).
         return NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ONGOING)
             // نسخه ۱.۱۱.۱۳: آیکن پویای «عدد روز» به‌جای لوگوی برنامه (درخواست کاربر)
             .setSmallIcon(IconCompat.createWithBitmap(dayIconBitmap()))
-            .setContentTitle("باد خزان")
-            .setContentText(todayText())
+            .setContentTitle(todayText())
+            .setContentText("باد خزان — ساعت ${PersianText.toPersianDigits(timeText)}")
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("${todayText()} — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
+                    .bigText("باد خزان — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
             )
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setContentIntent(tabIntent(context, TAB_EVENTS, 7001))
+            .setContentIntent(calendarIntent(context))
             .addAction(0, "لیست اعلان‌ها", tabIntent(context, TAB_EVENTS, 7002))
             .addAction(0, "تنظیم یادآورها", tabIntent(context, TAB_REMINDERS, 7003))
             .build()
     }
+
+    /** لمس اعلان → باز شدن برنامه روی تقویم اصلی (بدون extra — نسخه ۱.۱۱.۱۵) */
+    private fun calendarIntent(context: Context): PendingIntent =
+        PendingIntent.getActivity(
+            context, 7001,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
 
     /** نمایش/به‌روزرسانی مستقیم اعلان (حلقهٔ دقیقه‌ای سرویس + جایگزین بدون سرویس) */
     fun postOngoing(context: Context) {

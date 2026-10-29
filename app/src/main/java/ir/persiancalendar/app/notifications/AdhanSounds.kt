@@ -57,6 +57,10 @@ object AdhanSounds {
     @Volatile
     private var player: MediaPlayer? = null
 
+    /** آیا پیش‌نمایش اذان همین حالا در حال پخش است؟ (برای دکمهٔ toggle — نسخه ۱.۱۱.۱۵) */
+    val isPlaying: Boolean
+        get() = runCatching { player?.isPlaying == true }.getOrDefault(false)
+
     /** پخش صدای اذان (پیش‌نمایش در صفحه اوقات شرعی یا هنگام هشدار اذان) */
     fun play(context: Context, key: String): Boolean {
         val resId = resIdFor(key) ?: return false

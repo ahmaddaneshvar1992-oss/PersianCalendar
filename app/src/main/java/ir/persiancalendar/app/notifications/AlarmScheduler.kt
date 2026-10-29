@@ -241,18 +241,25 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             "اذان صبح", "طلوع آفتاب", "اذان ظهر", "اذان عصر",
             "غروب آفتاب", "اذان مغرب", "اذان عشاء", "نیمه‌شب شرعی"
         )
-        NotificationHelper.notifyPrayer(
-            context, labels[index],
-            "اوقات شرعی امروز — ${labels[index]} (با صدای اذان دلخواه شما)"
-        )
 
-        // پخش صدای اذان انتخابی کاربر با سرویس Foreground (نسخه ۱.۱۱.۷)
+        // نسخه ۱.۱۱.۱۵: ابتدا تنظیمات خوانده می‌شود تا مشخص شود صدا پخش می‌شود یا نه؛
+        // اعلان فقط در صورت پخش صدا، صفحهٔ تمام‌صفحهٔ اذان را باز می‌کند
+        // (برای «بدون صدا» فقط اعلان معمولی می‌آید)
         val appContext = context.applicationContext
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val s = AppContainer.settingsRepo(appContext).settings.first()
-                AzanPlaybackService.start(appContext, s.adhanSound)
+                val withSound = AdhanSounds.resIdFor(s.adhanSound) != null
+                NotificationHelper.notifyPrayer(
+                    appContext, labels[index],
+                    "اوقات شرعی امروز — ${labels[index]} (با صدای اذان دلخواه شما)",
+                    fullScreen = withSound
+                )
+                if (withSound) {
+                    // پخش صدای اذان انتخابی کاربر با سرویس Foreground (نسخه ۱.۱۱.۷)
+                    AzanPlaybackService.start(appContext, s.adhanSound)
+                }
             } catch (e: Exception) {
                 // پخش صدا هرگز نباید اپ را منفجر کند
             } finally {

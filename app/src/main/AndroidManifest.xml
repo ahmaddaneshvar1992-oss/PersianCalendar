@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- استثنا شدن از بهینه‌سازی باتری تا آلارم‌ها حتماً سر وقت اجرا شوند — نسخه ۱.۱۱.۱۱ -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- صفحهٔ تمام‌صفحهٔ اذان (مثل ساعت‌های زنگ‌دار) — نسخه ۱.۱۱.۱۵ -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- سرویس پخش اذان در پس‌زمینه — نسخه ۱.۱۱.۷ -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -82,6 +84,17 @@
         <receiver
             android:name=".notifications.ReminderReceiver"
             android:exported="false" />
+
+        <!-- صفحهٔ تمام‌صفحهٔ اذان — نسخه ۱.۱۱.۱۵: هنگام وقت اذان با تصویر مسجد
+             بالای قفل صفحه باز می‌شود؛ بازگشت یا دکمهٔ توقف = قطع صدا -->
+        <activity
+            android:name=".notifications.AzanActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.PersianCalendar" />
 
         <!-- موتور یادآور عمومی (آب/دارو/ورزش/شخصی) — نسخه ۱.۱۱ -->
         <receiver

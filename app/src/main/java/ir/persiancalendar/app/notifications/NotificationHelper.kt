@@ -199,9 +199,17 @@ object NotificationHelper {
      * دسته ALARM + اولویت بالا تا روی صفحه بیاید؛ صدای اذان جداگانه با MediaPlayer پخش می‌شود.
      * نسخه ۱.۱۱.۱۴: دکمهٔ «توقف صدا» اضافه شد تا کاربر برای قطع صدای اذان
      * مجبور به بستن اجباری برنامه نباشد.
+     * نسخه ۱.۱۱.۱۵ (درخواست کاربر): هنگام اذان، صفحهٔ تمام‌صفحهٔ اذان
+     * (AzanActivity) با fullScreenIntent باز می‌شود؛ برای پیش‌نمایش داخل
+     * برنامه fullScreen=false بدهید تا صفحهٔ برنامه قطع نشود.
      */
-    fun notifyPrayer(context: Context, label: String, timeText: String) {
-        val notification = NotificationCompat.Builder(context, CHANNEL_PRAYERS)
+    fun notifyPrayer(
+        context: Context,
+        label: String,
+        timeText: String,
+        fullScreen: Boolean = true
+    ) {
+        val builder = NotificationCompat.Builder(context, CHANNEL_PRAYERS)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(label)
             .setContentText(timeText)
@@ -212,7 +220,21 @@ object NotificationHelper {
             .setAutoCancel(true)
             .setContentIntent(openAppIntent(context))
             .addAction(0, "توقف صدا", azanStopIntent(context))
-            .build()
+        if (fullScreen) {
+            // نسخه ۱.۱۱.۱۵: صفحهٔ تمام‌صفحهٔ اذان با تصویر مسجد — حتی روی قفل صفحه
+            builder.setFullScreenIntent(
+                PendingIntent.getActivity(
+                    context, 9100,
+                    Intent(context, AzanActivity::class.java).apply {
+                        putExtra(AzanActivity.EXTRA_LABEL, label)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    },
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                ),
+                true
+            ).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        }
+        val notification = builder.build()
         runCatching {
             NotificationManagerCompat.from(context).notify(NOTIF_ID_PRAYER, notification)
         }
