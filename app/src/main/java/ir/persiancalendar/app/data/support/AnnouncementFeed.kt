@@ -125,8 +125,17 @@ object AnnouncementFeed {
      * حذف/افزودن فقط با دریافت موفق از منبع زنده انجام می‌شود؛ در فالبک کش
      * آفلاین کاری انجام نمی‌شود تا محتوای قدیمی، فهرست رسمی مدیر تلقی نشود.
      * برای اطلاعیه‌های تازه‌تر از آخرین اعلان، اعلان سیستمی ساخته می‌شود.
-     * خروجی: تعداد اطلاعیه‌های تازه (0 = چیزی نبود).
-     * فقط از نخ پس‌زمینه صدا زده شود.
+     *
+     * نسخهٔ ۱.۱۱.۲۸ (گزارش کاربر: «اطلاعیه رو برا کاربرا میفرستم وقتی پاک
+     * میکنم واسه کاربرها پاک میشه چک کن»): دو رفع تکمیلی —
+     *  ۱) خروجی از «تعداد تازه‌ها» به «کل تغییرها» (افزودن/به‌روزرسانی/حذف)
+     *     تغییر کرد؛ قبلاً بعد از حذف همگانی (بدون اطلاعیهٔ تازه) خروجی صفر
+     *     بود و صفحهٔ اصلی کاربر فهرست کهنه را نشان می‌داد تا دفعهٔ بعد که
+     *     شیت اطلاعیه یا تنظیمات باز می‌شد.
+     *  ۲) اگر اعلان سینی سیستم (نوار وضعیت) متعلق به اطلاعیه‌ای باشد که الان
+     *     از خوراک حذف شده و اطلاعیهٔ جایگزینی باقی نمانده، همان اعلان هم از
+     *     نوار وضعیت کاربر برداشته می‌شود.
+     * خروجی: تعداد کل تغییرها (0 = چیزی عوض نشد). فقط از نخ پس‌زمینه صدا زده شود.
      */
     fun sync(context: Context): Int {
         val r = runCatching {
@@ -163,6 +172,13 @@ object AnnouncementFeed {
         //    (وقتی خوراک کامل خالی است یعنی همهٔ اطلاعیه‌های منتشرشده باید بروند)
         val feedIds = feed.map { it.id }.toHashSet()
         val gone = remoteIds.filterNot { it in feedIds }
+        val lastNotified = lastNotifiedAt(context)
+        // نسخهٔ ۱.۱۱.۲۸: آیا اعلان سینی سیستم متعلق به اطلاعیه‌ای است که الان
+        // حذف می‌شود؟ (اعلان سینی همیشه آخرین اطلاعیهٔ اعلان‌شده است؛ اگر همان
+        // حذف شده باشد و اطلاعیهٔ هم‌سن یا تازه‌تری باقی نمانده، اعلان هم برداشته می‌شود)
+        val trayGoes = gone.isNotEmpty() &&
+            all.any { it.id in gone && it.at >= lastNotified } &&
+            all.none { it.id !in gone && it.at >= lastNotified }
         if (gone.isNotEmpty()) {
             all.removeAll { it.id in gone }
             remoteIds.removeAll(gone.toSet())
@@ -174,21 +190,32 @@ object AnnouncementFeed {
             saveRemoteIds(context, remoteIds)
         }
 
-        // ۳) اعلان سیستمی برای اطلاعیه‌های تازه (منطق قبلی)
-        if (fresh.isEmpty()) return 0
-        val candidates = fresh.filter { it.at > lastNotifiedAt(context) }
-        if (candidates.isNotEmpty()) {
-            val newest = candidates.maxByOrNull { it.at } ?: return 0
-            ir.persiancalendar.app.notifications.NotificationHelper.notifyAnnouncement(
-                context,
-                title = if (candidates.size == 1) newest.title
-                else "${newest.title} (+${candidates.size - 1} اطلاعیهٔ دیگر)",
-                body = newest.body,
-                link = newest.link
-            )
-            setLastNotifiedAt(context, newest.at)
+        // ۳) نسخهٔ ۱.۱۱.۲۸: برداشتن اعلان سینی متعلق به اطلاعیهٔ حذف‌شده
+        if (trayGoes) runCatching {
+            androidx.core.app.NotificationManagerCompat.from(context)
+                .cancel(ir.persiancalendar.app.notifications.NotificationHelper.NOTIF_ID_ANNOUNCE)
         }
-        return fresh.size
+
+        // ۴) اعلان سیستمی برای اطلاعیه‌های تازه (منطق قبلی)
+        if (fresh.isNotEmpty()) {
+            val candidates = fresh.filter { it.at > lastNotified }
+            if (candidates.isNotEmpty()) {
+                val newest = candidates.maxByOrNull { it.at }
+                if (newest != null) {
+                    ir.persiancalendar.app.notifications.NotificationHelper.notifyAnnouncement(
+                        context,
+                        title = if (candidates.size == 1) newest.title
+                        else "${newest.title} (+${candidates.size - 1} اطلاعیهٔ دیگر)",
+                        body = newest.body,
+                        link = newest.link
+                    )
+                    setLastNotifiedAt(context, newest.at)
+                }
+            }
+        }
+        // نسخهٔ ۱.۱۱.۲۸: کل تغییرها برگردانده می‌شود تا رابط کاربری پس از حذف
+        // همگانی هم بلافاصله تازه شود (قبلاً فقط تازه‌ها شمرده می‌شد)
+        return changes
     }
 
     /**

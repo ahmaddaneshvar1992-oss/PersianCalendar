@@ -206,13 +206,15 @@ fun MainScreen(
     // بررسی خوراک اطلاعیه‌های همگانی مدیر — در هر باز شدن برنامه (نسخه ۱.۱۱.۱۶)
     LaunchedEffect(Unit) {
         lastFeedSyncAt = System.currentTimeMillis()
-        val (freshAnn, freshAds) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        // نسخهٔ ۱.۱۱.۲۸: خروجی sync کل تغییرهاست (افزودن/به‌روزرسانی/حذف) —
+        // پس از حذف همگانی هم فهرست صفحهٔ اصلی بلافاصله تازه می‌شود
+        val (annChanges, adChanges) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val a = ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
             val b = ir.persiancalendar.app.data.support.MainAdFeed.sync(context)
             a to b
         }
-        if (freshAnn > 0) refreshAnnouncements()
-        if (freshAds > 0) adsVersion++
+        if (annChanges > 0) refreshAnnouncements()
+        if (adChanges > 0) adsVersion++
     }
 
     // ---------- نسخهٔ ۱.۱۱.۲۵ (گزارش کاربر: «تبلیغات دیر آپلود میشه») ----------
@@ -228,6 +230,7 @@ fun MainScreen(
                 if (now - lastFeedSyncAt > 10 * 60_000L) {
                     lastFeedSyncAt = now
                     scope.launch(Dispatchers.IO) {
+                        // نسخهٔ ۱.۱۱.۲۸: کل تغییرها (شامل حذف) → رفرش فوری فهرست
                         val a = ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
                         val b = ir.persiancalendar.app.data.support.MainAdFeed.sync(context)
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
