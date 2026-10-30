@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,6 +49,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -169,9 +169,11 @@ fun MainScreen(
         MenuItem("رویدادها", Icons.Filled.EventNote, tab = 3),
         MenuItem("یادآورها", Icons.Filled.Alarm, tab = 4),
         MenuItem("تنظیمات", Icons.Filled.Settings, tab = 5),
-        MenuItem("پشتیبانی", Icons.AutoMirrored.Filled.Help, action = "support"),
-        MenuItem("پنل مدیریت", Icons.Filled.Shield, action = "admin")
+        MenuItem("پشتیبانی", Icons.AutoMirrored.Filled.Help, action = "support")
     )
+    // نسخهٔ ۱.۱۱.۲۵ (درخواست کاربر: «میخوام پنل مدیریت رو کسی جز من نبینه»):
+    // آیتم «پنل مدیریت» از منو حذف شد؛ ورود فقط از راه مخفی در تنظیمات است
+    // (۵ لمس پشت‌سرهم روی عنوان «درباره بادخزان») + همان رمز پنل.
     val screenTitles = listOf("بادخزان", "اوقات شرعی", "قبله‌نما", "رویدادها", "یادآورها", "تنظیمات")
 
     // رویدادها یک بار برای همه صفحه‌ها
@@ -198,8 +200,12 @@ fun MainScreen(
         }
     }
 
+    // آخرین زمان بررسی خوراک — هم برای باز شدن سرد و هم برای ON_RESUME (۱.۱۱.۲۵)
+    var lastFeedSyncAt by remember { mutableStateOf(System.currentTimeMillis()) }
+
     // بررسی خوراک اطلاعیه‌های همگانی مدیر — در هر باز شدن برنامه (نسخه ۱.۱۱.۱۶)
     LaunchedEffect(Unit) {
+        lastFeedSyncAt = System.currentTimeMillis()
         val (freshAnn, freshAds) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val a = ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
             val b = ir.persiancalendar.app.data.support.MainAdFeed.sync(context)
@@ -207,6 +213,33 @@ fun MainScreen(
         }
         if (freshAnn > 0) refreshAnnouncements()
         if (freshAds > 0) adsVersion++
+    }
+
+    // ---------- نسخهٔ ۱.۱۱.۲۵ (گزارش کاربر: «تبلیغات دیر آپلود میشه») ----------
+    // قبلاً خوراک فقط در باز شدن سرد برنامه گرفته می‌شد و کاربری که برنامه را
+    // باز نگه می‌داشت هرگز بنر تازه نمی‌دید. اکنون با هر برگشت به برنامه
+    // (ON_RESUME) اگر بیش از ۱۰ دقیقه از آخرین بررسی گذشته باشد، خوراک اطلاعیه
+    // و بنر دوباره گرفته می‌شود تا تغییرها در چند ثانیه دیده شوند.
+    val hostActivity = context as? androidx.activity.ComponentActivity
+    DisposableEffect(hostActivity) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                val now = System.currentTimeMillis()
+                if (now - lastFeedSyncAt > 10 * 60_000L) {
+                    lastFeedSyncAt = now
+                    scope.launch(Dispatchers.IO) {
+                        val a = ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
+                        val b = ir.persiancalendar.app.data.support.MainAdFeed.sync(context)
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            if (a > 0) refreshAnnouncements()
+                            if (b > 0) adsVersion++
+                        }
+                    }
+                }
+            }
+        }
+        hostActivity?.lifecycle?.addObserver(obs)
+        onDispose { hostActivity?.lifecycle?.removeObserver(obs) }
     }
 
     // به‌روزرسانی اطلاعیه‌ها پس از بستن پنل مدیریت / شیت اطلاعیه (نسخه ۱.۶)

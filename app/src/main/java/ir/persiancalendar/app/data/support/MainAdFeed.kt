@@ -24,8 +24,11 @@ import java.net.URL
  *    می‌شود (کنترل کامل مدیر با روشن/خاموش و حذف).
  *
  * تصویر بنر: اگر URL اینترنتی باشد همان‌طور منتشر می‌شود؛ اگر از گالری
- * انتخاب شده باشد (فایل داخلی) تا ۲۰۰ کیلوبایت به data URI تبدیل و داخل
- * خود خوراک جاسازی می‌شود تا همهٔ کاربران عکس را ببینند.
+ * انتخاب شده باشد به data URI تبدیل و داخل خود خوراک جاسازی می‌شود تا
+ * همهٔ کاربران عکس را ببینند.
+ * نسخهٔ ۱.۱۱.۲۵ (گزارش کاربر: «عکس‌ها واسه کاربرها نمایش داده نمیشه»):
+ * قبلاً عکس‌های بزرگ‌تر از ۲۰۰ کیلوبایت بی‌صدا حذف می‌شدند؛ اکنون عکس در
+ * لحظهٔ انتشار خودکار فشرده می‌شود تا همیشه جاسازی شود.
  *
  * نسخهٔ ۱.۱۱.۲۲: دریافت خوراک چندمنبعی شد (FeedFetcher) — raw، jsDelivr،
  * api.github و در بدترین حالت کش محلی؛ چون بعضی کاربران به دلیل مسدود بودن
@@ -53,7 +56,7 @@ object MainAdFeed {
         private set
 
     /** سقف حجم عکس گالری برای جاسازی در خوراک (بایت) */
-    private const val MAX_IMAGE_BYTES = 200_000
+    private const val MAX_IMAGE_BYTES = ImageEmbed.FEED_MAX_BYTES
 
     private fun remoteIdsFile(context: Context) = File(context.filesDir, REMOTE_IDS_FILE)
 
@@ -142,13 +145,9 @@ object MainAdFeed {
         return changes
     }
 
-    /** عکس فایل داخلی ← data URI (تا ۲۰۰ کیلوبایت)؛ در غیر این صورت خالی */
-    private fun localImageAsDataUri(path: String): String = runCatching {
-        val f = File(path)
-        if (!f.exists() || f.length() > MAX_IMAGE_BYTES) return ""
-        "data:image/jpeg;base64," +
-                Base64.encodeToString(f.readBytes(), Base64.NO_WRAP)
-    }.getOrDefault("")
+    /** عکس فایل داخلی ← data URI؛ بزرگ‌تر از سقف ← فشردهٔ خودکار در حافظه (۱.۱۱.۲۵) */
+    private fun localImageAsDataUri(path: String): String =
+        ImageEmbed.dataUriFromFile(path, MAX_IMAGE_BYTES)
 
     /**
      * انتشار فهرست بنرها برای همهٔ کاربران — گیت‌هاب Contents API.
@@ -158,10 +157,16 @@ object MainAdFeed {
         if (token.isBlank()) return "اول توکن گیت‌هاب را وارد و ذخیره کنید"
 
         val payload = JSONArray()
+        var embeddedImages = 0
+        var failedImages = 0
         list.filter { it.on }.forEach { a ->
             val image = when {
                 a.image.startsWith("http") -> a.image
-                a.image.isNotBlank() -> localImageAsDataUri(a.image)
+                a.image.isNotBlank() -> {
+                    val uri = localImageAsDataUri(a.image)
+                    if (uri.isNotBlank()) embeddedImages++ else failedImages++
+                    uri
+                }
                 else -> ""
             }
             payload.put(
@@ -216,8 +221,18 @@ object MainAdFeed {
             conn.readTimeout = 15_000
             conn.outputStream.use { it.write(bodyJson.toString().toByteArray(Charsets.UTF_8)) }
             when (conn.responseCode) {
-                in 200..299 ->
-                    "بنرها برای همهٔ کاربران منتشر شد ✓ (${payload.length()} بنر) — با باز کردن بعدی برنامه می‌بینند"
+                in 200..299 -> {
+                    // نسخهٔ ۱.۱۱.۲۵: کش CDN جی‌اس‌دلیور (تا ۱۲ ساعت!) همان لحظه پاک می‌شود
+                    FeedFetcher.purgeCdn(API_REPO, API_PATH)
+                    val img = when {
+                        embeddedImages > 0 && failedImages == 0 ->
+                            " — تصویر $embeddedImages بنر داخل خوراک جاسازی شد"
+                        embeddedImages > 0 ->
+                            " — تصویر $embeddedImages بنر جاسازی شد، $failedImages تصویر منتشر نشد"
+                        else -> ""
+                    }
+                    "بنرها برای همهٔ کاربران منتشر شد ✓ (${payload.length()} بنر)$img — با باز کردن بعدی برنامه می‌بینند"
+                }
                 401 -> "توکن نامعتبر است (کد ۴۰۱) — توکن را دوباره بررسی کنید"
                 403 -> "توکن اجازهٔ نوشتن در مخزن را ندارد (کد ۴۰۳) — دسترسی Contents: write لازم است"
                 404 -> "مخزن پیدا نشد (کد ۴۰۴)"

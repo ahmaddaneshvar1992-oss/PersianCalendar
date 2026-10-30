@@ -124,19 +124,12 @@ object MainAdBox {
 
     /**
      * کپی تصویر انتخاب‌شده از گالری به filesDir/ads — خروجی: مسیر فایل ذخیره‌شده
-     * یا رشته خالی در صورت خطا. تصویر با BitmapFactory اعتبارسنجی می‌شود.
+     * یا رشته خالی در صورت خطا. نسخهٔ ۱.۱۱.۲۵: تصویر خودکار فشرده و به حداکثر
+     * ۱۶۰۰ پیکسل کوچک می‌شود (قبلاً خام ذخیره می‌شد و عکس‌های چندمگابایتیِ
+     * گالری در انتشار بی‌صدا حذف می‌شدند و کاربران عکس را نمی‌دیدند).
      */
-    fun saveImageFromUri(context: Context, uri: Uri): String = runCatching {
-        val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
-            input.readBytes()
-        } ?: return ""
-        // اعتبارسنجی اینکه واقعاً تصویر است
-        val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return ""
-        bmp.recycle()
-        val out = File(adsDir(context), "ad_${System.currentTimeMillis()}.jpg")
-        out.writeBytes(bytes)
-        out.absolutePath
-    }.getOrDefault("")
+    fun saveImageFromUri(context: Context, uri: Uri): String =
+        ImageEmbed.saveSlimFromUri(context, uri, adsDir(context), "ad")
 
     private fun encode(list: List<MainAd>): String {
         val arr = JSONArray()

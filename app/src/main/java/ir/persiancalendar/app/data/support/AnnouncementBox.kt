@@ -137,19 +137,13 @@ object AnnouncementBox {
 
     /**
      * کپی تصویر انتخاب‌شده از گالری به filesDir/announcements — خروجی: مسیر فایل
-     * ذخیره‌شده یا رشته خالی در صورت خطا (همان الگوی MainAdBox — نسخه ۱.۱۱.۷)
+     * ذخیره‌شده یا رشته خالی در صورت خطا (نسخهٔ ۱.۱۱.۲۵: فشرده‌سازی خودکار —
+     * قبلاً خام ذخیره می‌شد و عکس بزرگ در انتشار جاسازی نمی‌شد)
      */
-    fun saveImageFromUri(context: Context, uri: android.net.Uri): String = runCatching {
-        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            ?: return ""
-        val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            ?: return ""
-        bmp.recycle()
-        val dir = File(context.filesDir, "announcements").apply { mkdirs() }
-        val out = File(dir, "ann_${System.currentTimeMillis()}.jpg")
-        out.writeBytes(bytes)
-        out.absolutePath
-    }.getOrDefault("")
+    fun saveImageFromUri(context: Context, uri: android.net.Uri): String {
+        val dir = File(context.filesDir, "announcements")
+        return ImageEmbed.saveSlimFromUri(context, uri, dir, "ann")
+    }
 
     /** اطلاعیه‌های فعال برای نمایش به کاربر */
     fun active(context: Context): List<Announcement> = load(context).filter { it.on }

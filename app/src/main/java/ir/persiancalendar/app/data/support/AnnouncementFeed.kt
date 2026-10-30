@@ -20,8 +20,10 @@ import java.net.URL
  *    اطلاعیهٔ تازه هم به زنگ (نقطهٔ قرمز) اضافه می‌شود و هم اعلان سیستمی می‌گیرد.
  *    لمس اعلان، برنامه را روی پنل اطلاعیه‌ها باز می‌کند.
  *
- * تصویر اطلاعیه فقط وقتی منتشر می‌شود که URL اینترنتی باشد؛ تصویرهای
- * انتخاب‌شده از گالری (مسیر داخلی دستگاه) به کاربران دیگر نمی‌رسند.
+ * تصویر اطلاعیه: URL اینترنتی همان‌طور منتشر می‌شود.
+ * نسخهٔ ۱.۱۱.۲۵ (گزارش کاربر: «عکس‌ها واسه کاربرها نمایش داده نمیشه»):
+ * از این نسخه عکس گالری هم با فشرده‌سازی خودکار به data URI تبدیل و داخل
+ * خوراک جاسازی می‌شود — قبلاً عکس گالری هرگز منتشر نمی‌شد.
  *
  * نسخهٔ ۱.۱۱.۲۲: دریافت خوراک چندمنبعی شد (FeedFetcher) — raw، jsDelivr،
  * api.github و در بدترین حالت کش محلی — تا در شبکه‌هایی که به
@@ -125,7 +127,19 @@ object AnnouncementFeed {
         if (token.isBlank()) return "اول توکن گیت‌هاب را وارد و ذخیره کنید"
 
         val payload = JSONArray()
+        var embeddedImages = 0
+        var failedImages = 0
         list.filter { it.on }.forEach { a ->
+            val image = when {
+                a.image.startsWith("http") -> a.image
+                a.image.isNotBlank() -> {
+                    // نسخهٔ ۱.۱۱.۲۵: عکس گالری هم جاسازی می‌شود (فشردهٔ خودکار تا ۲۰۰ کیلوبایت)
+                    val uri = ImageEmbed.dataUriFromFile(a.image)
+                    if (uri.isNotBlank()) embeddedImages++ else failedImages++
+                    uri
+                }
+                else -> ""
+            }
             payload.put(
                 JSONObject()
                     .put("id", a.id)
@@ -133,7 +147,7 @@ object AnnouncementFeed {
                     .put("title", a.title)
                     .put("body", a.body)
                     .put("link", a.link)
-                    .put("image", if (a.image.startsWith("http")) a.image else "")
+                    .put("image", image)
                     .put("on", true)
                     .put("at", a.at)
             )
@@ -177,8 +191,18 @@ object AnnouncementFeed {
             conn.readTimeout = 15_000
             conn.outputStream.use { it.write(bodyJson.toString().toByteArray(Charsets.UTF_8)) }
             when (conn.responseCode) {
-                in 200..299 ->
-                    "برای کاربران منتشر شد ✓ — با باز کردن بعدی برنامه یا تیک روزانه، اعلان می‌گیرند"
+                in 200..299 -> {
+                    // نسخهٔ ۱.۱۱.۲۵: کش CDN جی‌اس‌دلیور (تا ۱۲ ساعت!) همان لحظه پاک می‌شود
+                    FeedFetcher.purgeCdn(API_REPO, API_PATH)
+                    val img = when {
+                        embeddedImages > 0 && failedImages == 0 ->
+                            " — تصویر $embeddedImages اطلاعیه جاسازی شد"
+                        embeddedImages > 0 ->
+                            " — تصویر $embeddedImages اطلاعیه جاسازی شد، $failedImages تصویر منتشر نشد"
+                        else -> ""
+                    }
+                    "برای کاربران منتشر شد ✓$img — با باز کردن بعدی برنامه یا تیک روزانه، اعلان می‌گیرند"
+                }
                 401 -> "توکن نامعتبر است (کد ۴۰۱) — توکن را دوباره بررسی کنید"
                 403 -> "توکن اجازهٔ نوشتن در مخزن را ندارد (کد ۴۰۳) — دسترسی Contents: write لازم است"
                 404 -> "مخزن پیدا نشد (کد ۴۰۴)"

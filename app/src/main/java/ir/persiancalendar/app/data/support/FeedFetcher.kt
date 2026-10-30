@@ -123,6 +123,31 @@ object FeedFetcher {
         if (b.startsWith("https://") || b.startsWith("http://")) b else ""
     }.getOrDefault("")
 
+    /**
+     * پاک کردن کش CDN جی‌اس‌دلیور پس از انتشار (نسخهٔ ۱.۱۱.۲۵).
+     * علت: آینهٔ jsDelivr فایل شاخهٔ main را تا ۱۲ ساعت کش می‌کند؛ بدون پاکسازی،
+     * کاربرانی که از این منبع می‌گیرند تا نیم‌روز آگهی‌های قدیمی می‌دیدند.
+     * در خطا بی‌صدا رد می‌شود — انتشار خود مانع نمی‌شود.
+     */
+    fun purgeCdn(repo: String, path: String) {
+        runCatching {
+            val conn = URL("https://purge.jsdelivr.net/").openConnection() as HttpURLConnection
+            try {
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                conn.connectTimeout = 8_000
+                conn.readTimeout = 8_000
+                conn.outputStream.use {
+                    it.write("""{"path":["$repo@main/$path"]}""".toByteArray(Charsets.UTF_8))
+                }
+                conn.responseCode
+            } finally {
+                conn.disconnect()
+            }
+        }
+    }
+
     private fun httpGet(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         try {
