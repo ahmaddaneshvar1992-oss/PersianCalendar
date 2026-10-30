@@ -25,11 +25,19 @@ object LinkOpener {
 
     private val SCHEME = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://")
 
-    /** افزودن خودکار https:// به لینک‌های بدون scheme — برای ذخیره و باز کردن */
+    /**
+     * افزودن خودکار https:// به لینک‌های بدون scheme — برای ذخیره و باز کردن.
+     * نسخهٔ ۱.۱۱.۲۹ (بازرسی امنیتی: «لینک‌ها رو فقط با https:// بپذیر»):
+     * فقط http و https مجازند؛ هر scheme دیگری (intent، javascript، file و…)
+     * کنار گذاشته می‌شود و به‌جای آن https:// به ابتدای متن می‌نشیند.
+     */
     fun normalize(url: String): String {
         val t = url.trim()
         if (t.isEmpty()) return t
-        return if (SCHEME.containsMatchIn(t)) t else "https://$t"
+        val m = SCHEME.find(t) ?: return "https://$t"
+        val scheme = m.value.substringBefore("://").lowercase()
+        return if (scheme == "http" || scheme == "https") t
+        else "https://" + t.substring(m.value.length)
     }
 
     /**

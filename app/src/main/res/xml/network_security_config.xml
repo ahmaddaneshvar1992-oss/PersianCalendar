@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    نسخهٔ ۱.۱۱.۲۹ (بازرسی امنیتی — «ترافیک غیر HTTPS»):
+    ترافیک متن‌ساده (http) در همهٔ حالت‌ها مسدود می‌شود؛ همهٔ اتصال‌های
+    برنامه (هواشناسی، خوراک گیت‌هاب، سرور شخصی) باید https باشند.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

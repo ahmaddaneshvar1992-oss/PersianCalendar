@@ -181,37 +181,85 @@ fun AdminScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(6.dp))
 
         if (!authed) {
-            // ---------- ورود با رمز ----------
-            SectionCard {
-                Column(Modifier.padding(14.dp)) {
-                    Text("ورود توسعه‌دهنده", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "این پنل برای مدیریت بنرهای تبلیغ صفحه اصلی، اطلاعیه‌ها و مشاهده کاربران است. رمز پیش‌فرض ۱۲۳۴ است؛ حتماً قبل از انتشار عوضش کنید.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = pin,
-                        onValueChange = { pin = it.take(24) },
-                        singleLine = true,
-                        label = { Text("رمز مدیریت (حروف یا عدد)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            if (pin == settings.adminPin) {
-                                authed = true
-                                pin = ""
-                            } else {
-                                Toast.makeText(context, "رمز اشتباه است", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("ورود به پنل") }
+            if (settings.adminPin.isBlank()) {
+                // ---------- نسخهٔ ۱.۱۱.۲۹ (بازرسی امنیتی): پیش‌فرض «۱۲۳۴» حذف شد —
+                // اولین ورود اجبار به تنظیم رمز (حداقل ۶ کاراکتر، حرف + عدد) دارد
+                SectionCard {
+                    Column(Modifier.padding(14.dp)) {
+                        Text("تنظیم رمز پنل مدیریت", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "این پنل فقط روی همین گوشی کار می‌کند و برای مدیریت بنرها، اطلاعیه‌ها و انتشار است. " +
+                                "هنوز رمزی تنظیم نشده — یک رمز (حداقل ۶ کاراکتر، شامل حرف و عدد) تعیین کنید. این رمز فقط روی همین دستگاه ذخیره می‌شود.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = newPin,
+                            onValueChange = { newPin = it.take(24) },
+                            singleLine = true,
+                            label = { Text("رمز جدید (حداقل ۶ کاراکتر، حرف + عدد)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val hasLetter = newPin.any { it.isLetter() }
+                                val hasDigit = newPin.any { it.isDigit() }
+                                when {
+                                    newPin.length < 6 -> Toast.makeText(
+                                        context, "رمز باید حداقل ۶ کاراکتر باشد", Toast.LENGTH_SHORT
+                                    ).show()
+                                    !hasLetter || !hasDigit -> Toast.makeText(
+                                        context, "رمز باید هم حرف و هم عدد داشته باشد", Toast.LENGTH_SHORT
+                                    ).show()
+                                    else -> scope.launch {
+                                        repo.setAdminPin(newPin)
+                                        newPin = ""
+                                        authed = true
+                                        Toast.makeText(context, "رمز تنظیم شد — وارد پنل شدید", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("تنظیم رمز و ورود") }
+                    }
+                }
+            } else {
+                // ---------- ورود با رمز ----------
+                SectionCard {
+                    Column(Modifier.padding(14.dp)) {
+                        Text("ورود توسعه‌دهنده", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "این پنل برای مدیریت بنرهای تبلیغ صفحه اصلی، اطلاعیه‌ها و انتشار برای کاربران است. رمزی که در اولین ورود تنظیم کرده‌اید را وارد کنید.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = pin,
+                            onValueChange = { pin = it.take(24) },
+                            singleLine = true,
+                            label = { Text("رمز مدیریت (حروف یا عدد)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                if (pin == settings.adminPin) {
+                                    authed = true
+                                    pin = ""
+                                } else {
+                                    Toast.makeText(context, "رمز اشتباه است", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("ورود به پنل") }
+                    }
                 }
             }
         } else {
@@ -721,7 +769,9 @@ fun AdminScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "راهنما: در گیت‌هاب ← Settings ← Developer settings ← Personal access tokens ← " +
-                            "Fine-grained token با دسترسی Contents: Read and write فقط برای مخزن PersianCalendar بسازید.",
+                            "Fine-grained token با دسترسی Contents: Read and write فقط برای مخزن PersianCalendar بسازید. " +
+                            "توکن فقط روی همین دستگاه می‌ماند و هرگز جایی ارسال نمی‌شود؛ برای امنیت بیشتر تاریخ انقضای کوتاه بگذارید و " +
+                            "اگر گوشی گم شد یا مشکوک به لو رفتن هستید، اول توکن را در گیت‌هاب Revoke کنید و بعد «پاک کردن توکن» را بزنید.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -746,30 +796,45 @@ fun AdminScreen(onBack: () -> Unit) {
                             },
                             modifier = Modifier.weight(1f)
                         ) { Text("ذخیره توکن") }
+                        // نسخهٔ ۱.۱۱.۲۹ (بازرسی امنیتی): پاک‌کردن فوری توکن از دستگاه
+                        // — اگر گوشی گم شد یا توکن لو رفت، اول در گیت‌هاب Revoke بعد اینجا پاک کنید
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
-                                    // نسخهٔ ۱.۱۱.۲۷: خوراک خالی دیگر «ناموفق» نیست — چهار حالت جدا گزارش می‌شود
-                                    val cr = ir.persiancalendar.app.data.support.AnnouncementFeed.check(context)
+                                    runCatching { repo.setGithubToken("") }
                                     kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                        pubStatus = when {
-                                            !cr.ok ->
-                                                "دریافت خوراک ناموفق: ${cr.error.take(160)} — اتصال اینترنت را بررسی کنید؛ منابع به‌ترتیب آزموده می‌شوند: سرور شخصی، raw، jsDelivr، api.github"
-                                            cr.fromCache && cr.count > 0 ->
-                                                "الان به منبع زنده دسترسی نبود — آخرین نسخهٔ کش‌شدهٔ همین دستگاه: ${cr.count} اطلاعیه. جزئیات تلاش‌ها: ${cr.error.take(120)}"
-                                            cr.fromCache ->
-                                                "الان به منبع زنده دسترسی نبود و کش همین دستگاه هم خالی است (۰ اطلاعیه). با اینترنت وصل دوباره «بررسی خوراک کاربران» را بزنید. جزئیات: ${cr.error.take(120)}"
-                                            cr.count > 0 ->
-                                                "خوراک فعلی کاربران: ${cr.count} اطلاعیه — دریافت موفق از ${cr.source} (نسخهٔ ۱.۱۱.۲۲ به بعد از چند منبع می‌گیرد)"
-                                            else ->
-                                                "خوراک کاربران در حال حاضر خالی است (۰ اطلاعیه) — دریافت موفق از ${cr.source}. یعنی فهرست خالی برای همه منتشر شده و مشکلی نیست؛ برای رسیدن اطلاعیهٔ تازه، آن را ثبت و دکمهٔ «انتشار برای کاربران» را بزنید. (تا نسخهٔ ۱.۱۱.۲۶ این حالت به‌اشتباه «دریافت خوراک ناموفق» نمایش داده می‌شد)"
-                                        }
+                                        ghToken = ""
+                                        Toast.makeText(context, "توکن از این دستگاه پاک شد", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
                             modifier = Modifier.weight(1f)
-                        ) { Text("بررسی خوراک کاربران") }
+                        ) { Text("پاک کردن توکن") }
                     }
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                // نسخهٔ ۱.۱۱.۲۷: خوراک خالی دیگر «ناموفق» نیست — چهار حالت جدا گزارش می‌شود
+                                val cr = ir.persiancalendar.app.data.support.AnnouncementFeed.check(context)
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    pubStatus = when {
+                                        !cr.ok ->
+                                            "دریافت خوراک ناموفق: ${cr.error.take(160)} — اتصال اینترنت را بررسی کنید؛ منابع به‌ترتیب آزموده می‌شوند: سرور شخصی، raw، jsDelivr، api.github"
+                                        cr.fromCache && cr.count > 0 ->
+                                            "الان به منبع زنده دسترسی نبود — آخرین نسخهٔ کش‌شدهٔ همین دستگاه: ${cr.count} اطلاعیه. جزئیات تلاش‌ها: ${cr.error.take(120)}"
+                                        cr.fromCache ->
+                                            "الان به منبع زنده دسترسی نبود و کش همین دستگاه هم خالی است (۰ اطلاعیه). با اینترنت وصل دوباره «بررسی خوراک کاربران» را بزنید. جزئیات: ${cr.error.take(120)}"
+                                        cr.count > 0 ->
+                                            "خوراک فعلی کاربران: ${cr.count} اطلاعیه — دریافت موفق از ${cr.source} (نسخهٔ ۱.۱۱.۲۲ به بعد از چند منبع می‌گیرد)"
+                                        else ->
+                                            "خوراک کاربران در حال حاضر خالی است (۰ اطلاعیه) — دریافت موفق از ${cr.source}. یعنی فهرست خالی برای همه منتشر شده و مشکلی نیست؛ برای رسیدن اطلاعیهٔ تازه، آن را ثبت و دکمهٔ «انتشار برای کاربران» را بزنید. (تا نسخهٔ ۱.۱۱.۲۶ این حالت به‌اشتباه «دریافت خوراک ناموفق» نمایش داده می‌شد)"
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("بررسی خوراک کاربران") }
                     Spacer(Modifier.height(6.dp))
                     Button(
                         onClick = {
@@ -892,7 +957,7 @@ fun AdminScreen(onBack: () -> Unit) {
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "رمز باید هم حرف داشته باشد و هم عدد — مثلاً admin1403",
+                        "رمز باید هم حرف داشته باشد و هم عدد",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -906,7 +971,7 @@ fun AdminScreen(onBack: () -> Unit) {
                                     context, "رمز باید حداقل ۶ کاراکتر باشد", Toast.LENGTH_SHORT
                                 ).show()
                                 !hasLetter || !hasDigit -> Toast.makeText(
-                                    context, "رمز باید هم حرف و هم عدد داشته باشد — مثلاً abc1234", Toast.LENGTH_SHORT
+                                    context, "رمز باید هم حرف و هم عدد داشته باشد", Toast.LENGTH_SHORT
                                 ).show()
                                 else -> scope.launch {
                                     repo.setAdminPin(newPin)

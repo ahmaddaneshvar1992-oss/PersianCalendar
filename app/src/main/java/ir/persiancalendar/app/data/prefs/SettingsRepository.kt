@@ -53,7 +53,9 @@ data class AppSettings(
     /** صدای اذان: moazenzadeh / rezayian / none (کلیدهای قدیمی در AdhanSounds نرمال می‌شوند) */
     val adhanSound: String = "moazenzadeh",
     /** رمز پنل مدیریت (حروف و/یا اعداد — نسخه ۱.۳) */
-    val adminPin: String = "1234",
+    // نسخهٔ ۱.۱۱.۲۹ (گزارش بازرسی امنیتی): پیش‌فرض «۱۲۳۴» حذف شد —
+    // مقدار خالی یعنی رمز هنوز تنظیم نشده و پنل در اولین ورود اجبار به تنظیم رمز دارد
+    val adminPin: String = "",
     /** اعلان همیشگی تاریخ امروز در نوار وضعیت */
     val ongoingDateNotif: Boolean = true,
     // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
@@ -108,7 +110,7 @@ class SettingsRepository(private val context: Context) {
             prayerNotifications = decodeMask(p[Keys.PRAYER_NOTIF] ?: (1 or 4 or 32)),
             useCurrentLocation = p[Keys.USE_LOCATION] ?: false,
             adhanSound = p[Keys.ADHAN_SOUND] ?: "moazenzadeh",
-            adminPin = p[Keys.ADMIN_PIN] ?: "1234",
+            adminPin = p[Keys.ADMIN_PIN] ?: "",
             ongoingDateNotif = p[Keys.ONGOING_DATE] ?: true,
             onboardingDone = p[Keys.ONBOARDING_DONE] ?: false,
             profileGender = p[Keys.PROFILE_GENDER] ?: "",

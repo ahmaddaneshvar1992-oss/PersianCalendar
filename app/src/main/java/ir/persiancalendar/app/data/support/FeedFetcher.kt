@@ -142,11 +142,15 @@ object FeedFetcher {
         return base
     }
 
-    /** اعتبارسنجی آدرس سرور: فقط http/https و بدون / انتهایی */
+    /**
+     * اعتبارسنجی آدرس سرور: فقط https و بدون / انتهایی
+     * (نسخهٔ ۱.۱۱.۲۹: http حذف شد — با networkSecurityConfig کلیرتکست مسدود است؛
+     * برای سرور شخصی گواهی رایگان Let's Encrypt بگیرید)
+     */
     private fun parseBase(json: String): String = runCatching {
         var b = JSONObject(json).optString("feedBaseUrl").trim()
         if (b.endsWith("/")) b = b.dropLast(1)
-        if (b.startsWith("https://") || b.startsWith("http://")) b else ""
+        if (b.startsWith("https://")) b else ""
     }.getOrDefault("")
 
     /**

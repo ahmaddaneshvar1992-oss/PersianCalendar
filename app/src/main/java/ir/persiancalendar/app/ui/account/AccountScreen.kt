@@ -25,8 +25,6 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.VpnKey
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,7 +62,7 @@ import java.time.ZoneId
 /**
  * صفحه حساب کاربری و عضویت ویژه:
  * - ثبت‌نام/ورود کاربر جدید (محلی، آفلاین، پسورد هش‌شده)
- * - ارتقا به عضویت ویژه: خرید درون‌برنامه‌ای (گوگل‌پلی) یا کد فعال‌سازی
+ * - ارتقا به عضویت ویژه: خرید درون‌برنامه‌ای (گوگل‌پلی)
  * - نسخه ۱.۱۱.۵: باز شدن صفحه روی همه گوشی‌ها بدون خروج از برنامه (هاردنینگ Billing)
  */
 @Composable
@@ -82,8 +80,6 @@ fun AccountScreen(onBack: () -> Unit) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var codeDialogVisible by remember { mutableStateOf(false) }
-    var codeText by remember { mutableStateOf("") }
 
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
 
@@ -256,7 +252,8 @@ fun AccountScreen(onBack: () -> Unit) {
                             Text(
                                 when (premiumSource) {
                                     "billing" -> "فعال — خرید فروشگاهی"
-                                    "code" -> "فعال — کد فعال‌سازی"
+                                    // "code": عضویت‌های قدیمی فعال‌شده با کد — از ۱.۱۱.۲۹ مسیر کد حذف شده ولی وضعیت حفظ می‌شود
+                                    "code" -> "فعال"
                                     else -> "فعال"
                                 },
                                 style = MaterialTheme.typography.labelMedium,
@@ -288,10 +285,7 @@ fun AccountScreen(onBack: () -> Unit) {
                             onClick = {
                                 val activity = context as? Activity
                                 if (activity == null || !BillingManager.launchPremiumPurchase(activity)) {
-                                    toast(
-                                        "اتصال به فروشگاه برقرار نیست.\n" +
-                                                "روی گوشی‌های بدون گوگل‌پلی از «کد فعال‌سازی» استفاده کنید."
-                                    )
+                                    toast("اتصال به فروشگاه برقرار نیست. دوباره تلاش کنید.")
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -300,23 +294,6 @@ fun AccountScreen(onBack: () -> Unit) {
                             Spacer(Modifier.size(6.dp))
                             Text("ارتقا از طریق فروشگاه" + (BillingManager.premiumPrice?.let { " — $it" } ?: ""))
                         }
-                        Spacer(Modifier.height(8.dp))
-
-                        // کد فعال‌سازی
-                        OutlinedButton(
-                            onClick = { codeDialogVisible = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Filled.VpnKey, contentDescription = null)
-                            Spacer(Modifier.size(6.dp))
-                            Text("وارد کردن کد فعال‌سازی")
-                        }
-                        Text(
-                            "کد فعال‌سازی را می‌توانید از توسعه‌دهنده تهیه کنید (برای گوشی‌های بدون گوگل‌پلی).",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 6.dp)
-                        )
                     }
                 }
             }
@@ -346,44 +323,6 @@ fun AccountScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(16.dp))
-    }
-
-    // ---------- دیالوگ کد فعال‌سازی ----------
-    if (codeDialogVisible) {
-        AlertDialog(
-            onDismissRequest = { codeDialogVisible = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            val (ok, msg) = repo.activateWithCode(codeText)
-                            withContext(Dispatchers.Main) {
-                                codeDialogVisible = false
-                                codeText = ""
-                                toast(msg)
-                            }
-                        }
-                    }
-                ) { Text("فعال‌سازی") }
-            },
-            dismissButton = {
-                TextButton(onClick = { codeDialogVisible = false }) { Text("انصراف") }
-            },
-            title = { Text("کد فعال‌سازی") },
-            text = {
-                Column {
-                    Text("کدی که از توسعه‌دهنده دریافت کرده‌اید را وارد کنید:")
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = codeText,
-                        onValueChange = { codeText = it },
-                        singleLine = true,
-                        placeholder = { Text("PF-XXXX-XXXX-XXXX") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        )
     }
 }
 

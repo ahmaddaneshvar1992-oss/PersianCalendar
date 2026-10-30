@@ -8,13 +8,14 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import ir.persiancalendar.app.core.premium.ActivationCode
 import ir.persiancalendar.app.data.db.UserDao
 import ir.persiancalendar.app.data.db.UserEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -29,10 +30,16 @@ sealed class AuthResult {
 /**
  * مخزن حساب کاربری و عضویت ویژه — کاملاً آفلاین و محلی.
  *
- * - ثبت‌نام/ورود: کاربران در Room با پسورد هش‌شده (SHA-256 + نمک × ۱۰۰۰ دور) نگهداری می‌شوند.
+ * - ثبت‌نام/ورود: کاربران در Room با پسورد هش‌شده نگهداری می‌شوند.
+ *   نسخهٔ ۱.۱۱.۲۹ (گزارش بازرسی امنیتی: «هش رمز با SHA-256 ساده»): هش از
+ *   SHA-256 تکراری ۱۰۰۰ دور به PBKDF2-HmacSHA256 با ۱۲۰٬۰۰۰ دور ارتقا یافت
+ *   (روی اندروید‌های ۲۴–۲۵ که PBKDF2-HmacSHA256 ندارند، PBKDF2-HmacSHA1).
+ *   حساب‌های قدیمی هنگام ورود موفق، شفاف به قالب جدید مهاجرت می‌کنند.
  * - نشست جاری: شناسه کاربر در DataStore.
- * - عضویت ویژه: دو مسیر — خرید درون‌برنامه‌ای (BillingManager) یا کد فعال‌سازی.
- *   در هر دو حالت تبلیغات به‌طور کامل غیرفعال می‌شود.
+ * - عضویت ویژه: خرید درون‌برنامه‌ای (BillingManager).
+ *   نسخهٔ ۱.۱۱.۲۹: کد فعال‌سازی آفلاین (کلید HMAC داخل APK) کامل حذف شد —
+ *   هر کلیدی داخل اپ با decompile قابل استخراج است؛ کسانی که قبلاً با کد
+ *   فعال شده‌اند عضویت‌شان سر جای خود می‌ماند.
  */
 class AccountRepository(private val context: Context, private val userDao: UserDao) {
 
@@ -123,10 +130,19 @@ class AccountRepository(private val context: Context, private val userDao: UserD
         val u = username.trim().lowercase()
         val user = userDao.findByUsername(u)
             ?: return AuthResult.Error("کاربری با این شماره/ایمیل یافت نشد")
-        return if (hashPassword(password, user.salt) == user.passwordHash) {
+        return if (verifyPassword(password, user.salt, user.passwordHash)) {
             context.accountStore.edit { it[Keys.SESSION_USER] = user.id }
+            // نسخهٔ ۱.۱۱.۲۹: مهاجرت شفاف حساب‌های قدیمی (SHA-256 تکراری) به PBKDF2
+            // در اولین ورود موفق — بدون هیچ کاری از سمت کاربر
+            if (!user.passwordHash.startsWith("pbkdf2$")) {
+                runCatching {
+                    userDao.update(
+                        user.copy(passwordHash = hashPassword(password, user.salt))
+                    )
+                }
+            }
             // اگر حساب ویژه است، سطح دستگاه هم فعال شود
-            if (user.premium) grantDevicePremium(user.premiumSource.ifEmpty { "code" })
+            if (user.premium) grantDevicePremium(user.premiumSource.ifEmpty { "billing" })
             AuthResult.Success(user)
         } else AuthResult.Error("رمز عبور اشتباه است")
     }
@@ -142,29 +158,20 @@ class AccountRepository(private val context: Context, private val userDao: UserD
         logout()
     }
 
-    // ---------- کد فعال‌سازی ----------
-
-    /**
-     * اعتبارسنجی کد فعال‌سازی و اعطای عضویت ویژه.
-     * خروجی: (موفق بودن، پیام برای نمایش)
-     */
-    suspend fun activateWithCode(rawCode: String): Pair<Boolean, String> {
-        val code = ActivationCode.normalize(rawCode)
-        if (!ActivationCode.isValidFormat(code)) {
-            return false to "قالب کد صحیح نیست (مثال: PF-XXXX-XXXX-XXXX)"
-        }
-        val serial = ActivationCode.findSerial(code)
-            ?: return false to "کد فعال‌سازی معتبر نیست"
-        grantDevicePremium("code")
-        context.accountStore.edit { it[Keys.ACTIVATED_CODE] = code }
-        return true to "عضویت ویژه با موفقیت فعال شد"
-    }
-
-    val activatedCode: Flow<String> =
-        context.accountStore.data.map { it[Keys.ACTIVATED_CODE].orEmpty() }
+    // ---------- کد فعال‌سازی (نسخهٔ ۱.۱۱.۲۹ حذف شد) ----------
+    // سیستم کد آفلاین با کلید HMAC داخل APK به‌کلی برداشته شد — راه امن‌تر:
+    // خرید درون‌برنامه‌ای (BillingManager) و در آینده اعتبارسنجی سمت سرور.
+    // عضویت فعال‌شدهٔ قبلی با کد در DataStore دست‌نخورده می‌ماند.
 
     companion object {
-        private const val HASH_ITERATIONS = 1000
+        // ---------- نسخهٔ ۱.۱۱.۲۹ (بازرسی امنیتی): PBKDF2 جای SHA-256 تکراری ----------
+        // قالب ذخیره در ستون passwordHash:
+        //   جدید:  "pbkdf2$<algo>$<iters>$<hashBase64>"  (نمک جدا در ستون salt)
+        //   قدیمی: Base64 خام (SHA-256 تکراری ۱۰۰۰ دور — فقط برای مهاجرت ورود)
+        private const val PBKDF2_ITERATIONS = 120_000
+        private const val PBKDF2_KEY_BITS = 256
+        private const val PREFIX = "pbkdf2"
+        private const val LEGACY_ITERATIONS = 1000
 
         private fun newSalt(): String {
             val b = ByteArray(16)
@@ -172,11 +179,50 @@ class AccountRepository(private val context: Context, private val userDao: UserD
             return Base64.encodeToString(b, Base64.NO_WRAP)
         }
 
+        /** PBKDF2 با بهترین الگوریتم موجود — HmacSHA256 از API ۲۶، قبل‌تر HmacSHA1 */
+        private fun pbkdf2(password: CharArray, salt: ByteArray, iterations: Int): ByteArray {
+            val algo = try {
+                SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+            } catch (e: Exception) {
+                SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+            }
+            val spec = PBEKeySpec(password, salt, iterations, PBKDF2_KEY_BITS)
+            return algo.generateSecret(spec).encoded
+        }
+
+        /** هش قالب جدید برای ثبت‌نام و مهاجرت */
         fun hashPassword(password: String, salt: String): String {
-            var digest = (salt + password).toByteArray(Charsets.UTF_8)
-            val md = MessageDigest.getInstance("SHA-256")
-            repeat(HASH_ITERATIONS) { digest = md.digest(digest) }
-            return Base64.encodeToString(digest, Base64.NO_WRAP)
+            val algo = if (runCatching {
+                    SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                }.isSuccess
+            ) "HmacSHA256" else "HmacSHA1"
+            val hash = pbkdf2(password.toCharArray(), salt.toByteArray(Charsets.UTF_8), PBKDF2_ITERATIONS)
+            return "$PREFIX\$$algo\$$PBKDF2_ITERATIONS\$" +
+                Base64.encodeToString(hash, Base64.NO_WRAP)
+        }
+
+        /** تأیید رمز — قالب جدید یا قدیمی؛ ورود موفق با قالب قدیمی مهاجرت داده می‌شود */
+        fun verifyPassword(password: String, salt: String, stored: String): Boolean {
+            return if (stored.startsWith("$PREFIX$")) {
+                val parts = stored.split("$")
+                if (parts.size != 4) return false
+                val iters = parts[2].toIntOrNull() ?: return false
+                if (iters < 1 || iters > 10_000_000) return false
+                val expected = runCatching { Base64.decode(parts[3], Base64.NO_WRAP) }.getOrNull()
+                    ?: return false
+                val algo = if (parts[1] == "HmacSHA1") "PBKDF2WithHmacSHA1" else "PBKDF2WithHmacSHA256"
+                runCatching {
+                    val f = SecretKeyFactory.getInstance(algo)
+                    val spec = PBEKeySpec(password.toCharArray(), salt.toByteArray(Charsets.UTF_8), iters, PBKDF2_KEY_BITS)
+                    f.generateSecret(spec).encoded.contentEquals(expected)
+                }.getOrDefault(false)
+            } else {
+                // قالب قدیمی — SHA-256 تکراری ۱۰۰۰ دور
+                var digest = (salt + password).toByteArray(Charsets.UTF_8)
+                val md = MessageDigest.getInstance("SHA-256")
+                repeat(LEGACY_ITERATIONS) { digest = md.digest(digest) }
+                Base64.encodeToString(digest, Base64.NO_WRAP) == stored
+            }
         }
     }
 }
