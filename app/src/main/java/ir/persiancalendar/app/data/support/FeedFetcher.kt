@@ -26,6 +26,11 @@ import java.net.URL
  *  ۳) api.github.com — خود API گیت‌هاب بدون توکن (سقف ۶۰ درخواست در ساعت)
  *  ۴) کش محلی — آخرین دریافت موفق روی دستگاه، تا کاربر در قطعی شبکه هم
  *     بنرها/اطلاعیه‌های قبلی را از دست ندهد
+ *
+ * نسخهٔ ۱.۱۱.۳۰ (بازرسی امنیتی: «فید بدون امضاست») — هر منبع فقط وقتی پذیرفته
+ * می‌شود که امضای Ed25519 فایل (فایل .sig کنار آن) با کلید عمومی داخل اپ درست
+ * باشد؛ منبع بدون امضا یا با امضای نامعتبر رد و منبع بعدی آزموده می‌شود و در
+ * کش محلی هم فقط محتوای تأییدشده ذخیره می‌شود. جزئیات: FeedSecurity.
  */
 object FeedFetcher {
 
@@ -71,6 +76,8 @@ object FeedFetcher {
      * است؛ اگر منبعی (مثلاً به‌خاطر پورتال captive یا صفحهٔ خطای HTML با کد ۲۰۰)
      * پاسخ غیرآرایه بدهد، آن منبع رد می‌شود و منبع بعدی آزموده می‌شود. پیش از این
      * چنین پاسخی «موفق» شمرده و حتی کش محلی را با HTML آلوده می‌کرد.
+     *
+     * نسخهٔ ۱.۱۱.۳۰ — تأیید امضای Ed25519 هر منبع پیش از پذیرش (FeedSecurity).
      */
     fun fetch(repo: String, path: String, cache: File?, jsonArray: Boolean = false): Result {
         val sources = mutableListOf<Pair<String, String>>()
@@ -81,15 +88,14 @@ object FeedFetcher {
         sources.add("api.github.com" to "https://api.github.com/repos/$repo/contents/$path")
         val errors = StringBuilder()
         for ((name, url) in sources) {
-            val res = runCatching { httpGet(url) }
-            val raw = res.getOrNull()
-            if (raw.isNullOrBlank()) {
+            val res = runCatching { fetchSignedBody(url) }
+            val body = res.getOrNull()
+            if (body == null) {
                 errors.append(name).append(": ")
                     .append(res.exceptionOrNull()?.message ?: "پاسخ خالی")
                     .append(" | ")
                 continue
             }
-            val body = if (url.contains("api.github.com")) decodeContents(raw) else raw
             val healthy = body.isNotBlank() && (!jsonArray || body.trim().startsWith("["))
             if (healthy) {
                 if (cache != null) runCatching { cache.writeText(body) }
@@ -99,7 +105,7 @@ object FeedFetcher {
                 .append(if (body.isBlank()) "محتوا تجزیه نشد" else "پاسخ آرایهٔ JSON نبود")
                 .append(" | ")
         }
-        // ۴) کش محلی — آخرین دریافت موفق
+        // ۴) کش محلی — آخرین دریافت موفق (همیشه نسخهٔ تأییدشدهٔ امضایی است)
         if (cache != null) {
             val cached = runCatching { cache.readText() }.getOrDefault("")
             if (cached.isNotBlank())
@@ -109,11 +115,45 @@ object FeedFetcher {
     }
 
     /**
+     * نسخهٔ ۱.۱۱.۳۰ — دریافت فایل و امضای .sig آن از «همان یک منبع» و تأیید
+     * Ed25519 روی بایت‌های دقیق فایل. اگر امضا نباشد یا نامعتبر باشد IOException
+     * با شرح دقیق پرتاب می‌شود تا منبع بعدی آزموده شود. برای منبع api.github.com
+     * هر دو فایل با Contents API خوانده و از کدگذاری Base64 دیکد می‌شوند.
+     */
+    private fun fetchSignedBody(url: String): String {
+        val isApi = url.contains("api.github.com")
+        val rawBytes = httpGetBytes(url)
+        val contentBytes = if (isApi) {
+            // پاسخ Contents API: JSON با فیلد content به صورت Base64
+            val b64 = JSONObject(String(rawBytes, Charsets.UTF_8)).optString("content")
+                .replace("\n", "").replace("\r", "")
+            Base64.decode(b64, Base64.DEFAULT)
+        } else rawBytes
+        val body = String(contentBytes, Charsets.UTF_8)
+        val sigB64 = runCatching {
+            val sigRaw = httpGetBytes("$url.sig")
+            if (isApi) {
+                val b64 = JSONObject(String(sigRaw, Charsets.UTF_8)).optString("content")
+                    .replace("\n", "").replace("\r", "")
+                String(Base64.decode(b64, Base64.DEFAULT), Charsets.UTF_8)
+            } else String(sigRaw, Charsets.UTF_8)
+        }.getOrElse {
+            throw java.io.IOException("فایل امضا (.sig) کنار خوراک خوانده نشد")
+        }
+        if (!FeedSecurity.verify(contentBytes, sigB64))
+            throw java.io.IOException("امضای Ed25519 معتبر نیست (فایل بی‌امضا یا جعلی)")
+        return body
+    }
+
+    /**
      * آدرس میزبان شخصی خوراک از feed/config.json مخزن خوانده می‌شود (منبع صفر).
      * تا وقتی feedBaseUrl خالی باشد فقط منابع گیت‌هاب استفاده می‌شوند؛ وقتی مدیر
      * آدرس سرور خود را ثبت کند، اپ‌های ۱.۱۱.۲۴ به بعد بدون به‌روزرسانی به سرور او
      * می‌روند و گیت‌هاب فقط پشتیبان می‌ماند. نتیجه در حافظه (۳۰ دقیقه) و روی
      * دستگاه کش می‌شود تا در قطعی گیت‌هاب هم آخرین آدرس شناخته‌شده به کار رود.
+     *
+     * نسخهٔ ۱.۱۱.۳۰ — تنظیمات سرور هم مثل خوراک‌ها باید امضای معتبر داشته باشد؛
+     * منبعی که config.json بدون امضا یا با امضای جعلی بدهد رد می‌شود.
      */
     private fun serverBase(repo: String, cache: File?): String {
         val now = System.currentTimeMillis()
@@ -126,10 +166,8 @@ object FeedFetcher {
             "https://api.github.com/repos/$repo/contents/$CONFIG_PATH"
         )
         for (url in urls) {
-            val raw = runCatching { httpGet(url) }.getOrNull()
-            if (raw.isNullOrBlank()) continue
-            val text = if (url.contains("api.github.com")) decodeContents(raw) else raw
-            if (text.isNotBlank()) {
+            val text = runCatching { fetchSignedBody(url) }.getOrNull()
+            if (!text.isNullOrBlank()) {
                 if (cfgFile != null) runCatching { cfgFile.writeText(text) }
                 base = parseBase(text)
                 break
@@ -178,7 +216,7 @@ object FeedFetcher {
         }
     }
 
-    private fun httpGet(url: String): String {
+    private fun httpGetBytes(url: String): ByteArray {
         val conn = URL(url).openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = 8_000
@@ -193,16 +231,9 @@ object FeedFetcher {
                     else -> "کد $code"
                 }
             )
-            return conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+            return conn.inputStream.use { it.readBytes() }
         } finally {
             conn.disconnect()
         }
     }
-
-    /** پاسخ Contents API گیت‌هاب: JSON با فیلد content به صورت Base64 */
-    private fun decodeContents(json: String): String = runCatching {
-        val b64 = JSONObject(json).optString("content")
-            .replace("\n", "").replace("\r", "")
-        String(Base64.decode(b64, Base64.DEFAULT), Charsets.UTF_8)
-    }.getOrDefault("")
 }

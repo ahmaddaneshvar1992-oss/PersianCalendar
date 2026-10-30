@@ -13,11 +13,30 @@ android {
         applicationId = "ir.persiancalendar.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 41
-        versionName = "1.11.29"
+        versionCode = 42
+        versionName = "1.11.30"
 
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    // ====================================================================
+    // نسخهٔ ۱.۱۱.۳۰ (بازرسی امنیتی مرحلهٔ دوم: «پنل ادمین هنوز داخل اپ است»،
+    // «githubToken هنوز در اپ هست») — تفکیک فلاور:
+    //   public : نسخهٔ کاربران — هیچ پنل مدیریت، رمز پنل یا توکنی ندارد؛
+    //            کد آن‌ها اصلاً کامپایل نمی‌شود (پوشهٔ src/admin در این فلاور نیست).
+    //   admin  : نسخهٔ شخصی مدیر — پنل کامل با توکن انتشار؛ فقط برای دستگاه خودش.
+    // هر دو فلاور همان applicationId/versionCode/امضا را دارند؛ APK منتشرشده
+    // برای کاربران همیشه «public» است.
+    // ====================================================================
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("public") {
+            dimension = "distribution"
+        }
+        create("admin") {
+            dimension = "distribution"
         }
     }
 
@@ -114,4 +133,7 @@ dependencies {
 
     // خرید درون‌برنامه‌ای (عضویت ویژه — Google Play)
     implementation(libs.billing.ktx)
+
+    // نسخهٔ ۱.۱۱.۳۰ — تأیید امضای Ed25519 خوراک (فقط کلید عمومی در اپ است)
+    implementation("com.google.crypto.tink:tink-android:1.16.0")
 }

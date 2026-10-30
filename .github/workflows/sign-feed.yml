@@ -1,0 +1,54 @@
+name: Sign feed files (Ed25519)
+
+# نسخهٔ ۱.۱۱.۳۰ — امضای خودکار خوراک‌ها (بازرسی امنیتی: «فید بدون امضاست»)
+# هر وقت یکی از فایل‌های خوراک عوض شود (انتشار از پنل مدیر، ویرایش وب گیت‌هاب،
+# یا کامیت از رایانه) این وورکفلو امضای Ed25519 تازه می‌سازد و کنار فایل می‌گذارد.
+# کلید خصوصی در Secret مخزن (FEED_SIGNING_KEY) است — هرگز در اپ یا در کد نیست.
+# اپ فقط با کلید عمومیِ داخل خودش امضا را تأیید می‌کند.
+
+on:
+  push:
+    paths:
+      - 'feed/announcements.json'
+      - 'feed/main_ads.json'
+      - 'feed/config.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sign-feed
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install cryptography
+        run: pip install cryptography
+
+      - name: Sign feed files (امضای Ed25519 روی بایت‌های دقیق)
+        env:
+          FEED_SIGNING_KEY: ${{ secrets.FEED_SIGNING_KEY }}
+        run: python scripts/sign_feed.py
+
+      - name: Commit signatures
+        run: |
+          git config user.name "feed-signer[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add feed/*.sig
+          if git diff --cached --quiet; then
+            echo "امضاها تغییری نکرده‌اند — کاری لازم نیست"
+            exit 0
+          fi
+          git commit -m "امضای Ed25519 خوراک (خودکار) [skip ci]"
+          git push

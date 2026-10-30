@@ -1,12 +1,9 @@
 package ir.persiancalendar.app.data.support
 
 import android.content.Context
-import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * توزیع همگانی بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۲۱
@@ -54,9 +51,6 @@ object MainAdFeed {
     @Volatile
     var lastError: String = ""
         private set
-
-    /** سقف حجم عکس گالری برای جاسازی در خوراک (بایت) */
-    private const val MAX_IMAGE_BYTES = ImageEmbed.FEED_MAX_BYTES
 
     private fun remoteIdsFile(context: Context) = File(context.filesDir, REMOTE_IDS_FILE)
 
@@ -155,108 +149,6 @@ object MainAdFeed {
             saveRemoteIds(context, remoteIds)
         }
         return changes
-    }
-
-    /** عکس فایل داخلی ← data URI؛ بزرگ‌تر از سقف ← فشردهٔ خودکار در حافظه (۱.۱۱.۲۵) */
-    private fun localImageAsDataUri(path: String): String =
-        ImageEmbed.dataUriFromFile(path, MAX_IMAGE_BYTES)
-
-    /**
-     * انتشار فهرست بنرها برای همهٔ کاربران — گیت‌هاب Contents API.
-     * خروجی: پیام نتیجه برای نمایش در پنل مدیریت. فقط از نخ پس‌زمینه صدا زده شود.
-     */
-    fun publish(context: Context, token: String, list: List<MainAd>): String {
-        if (token.isBlank()) return "اول توکن گیت‌هاب را وارد و ذخیره کنید"
-
-        val payload = JSONArray()
-        var embeddedImages = 0
-        var failedImages = 0
-        list.filter { it.on }.forEach { a ->
-            val image = when {
-                a.image.startsWith("http") -> a.image
-                a.image.isNotBlank() -> {
-                    val uri = localImageAsDataUri(a.image)
-                    if (uri.isNotBlank()) embeddedImages++ else failedImages++
-                    uri
-                }
-                else -> ""
-            }
-            payload.put(
-                JSONObject()
-                    .put("id", a.id)
-                    .put("title", a.title)
-                    .put("body", a.body)
-                    .put("cta", a.cta)
-                    .put("link", a.link)
-                    .put("image", image)
-                    .put("colorIndex", a.colorIndex)
-                    .put("on", true)
-                    .put("at", a.at)
-            )
-        }
-
-        val bodyJson = JSONObject()
-            .put("message", "بنرهای بادخزان — انتشار از پنل مدیریت")
-            .put(
-                "content",
-                Base64.encodeToString(payload.toString(2).toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
-            )
-
-        // ۱) اگر فایل از قبل هست، sha آن لازم است (وگرنه فایل ساخته می‌شود)
-        val sha = runCatching {
-            val conn = URL("https://api.github.com/repos/$API_REPO/contents/$API_PATH")
-                .openConnection() as HttpURLConnection
-            try {
-                conn.setRequestProperty("Authorization", "Bearer $token")
-                conn.setRequestProperty("Accept", "application/vnd.github+json")
-                conn.connectTimeout = 10_000
-                conn.readTimeout = 10_000
-                if (conn.responseCode == 200) {
-                    JSONObject(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
-                        .optString("sha")
-                } else ""
-            } finally {
-                conn.disconnect()
-            }
-        }.getOrDefault("")
-        if (sha.isNotBlank()) bodyJson.put("sha", sha)
-
-        // ۲) PUT فایل
-        val conn = URL("https://api.github.com/repos/$API_REPO/contents/$API_PATH")
-            .openConnection() as HttpURLConnection
-        return try {
-            conn.requestMethod = "PUT"
-            conn.setRequestProperty("Authorization", "Bearer $token")
-            conn.setRequestProperty("Accept", "application/vnd.github+json")
-            conn.doOutput = true
-            conn.connectTimeout = 15_000
-            conn.readTimeout = 15_000
-            conn.outputStream.use { it.write(bodyJson.toString().toByteArray(Charsets.UTF_8)) }
-            when (conn.responseCode) {
-                in 200..299 -> {
-                    // نسخهٔ ۱.۱۱.۲۵: کش CDN جی‌اس‌دلیور (تا ۱۲ ساعت!) همان لحظه پاک می‌شود
-                    FeedFetcher.purgeCdn(API_REPO, API_PATH)
-                    val img = when {
-                        embeddedImages > 0 && failedImages == 0 ->
-                            " — تصویر $embeddedImages بنر داخل خوراک جاسازی شد"
-                        embeddedImages > 0 ->
-                            " — تصویر $embeddedImages بنر جاسازی شد، $failedImages تصویر منتشر نشد"
-                        else -> ""
-                    }
-                    "بنرها برای همهٔ کاربران منتشر شد ✓ (${payload.length()} بنر)$img — با باز کردن بعدی برنامه می‌بینند"
-                }
-                401 -> "توکن نامعتبر است (کد ۴۰۱) — توکن را دوباره بررسی کنید"
-                403 -> "توکن اجازهٔ نوشتن در مخزن را ندارد (کد ۴۰۳) — دسترسی Contents: write لازم است"
-                404 -> "مخزن پیدا نشد (کد ۴۰۴)"
-                else -> "خطا (کد ${conn.responseCode}): " + runCatching {
-                    conn.errorStream?.use { s -> s.readBytes().toString(Charsets.UTF_8) }?.take(180)
-                }.getOrNull().orEmpty()
-            }
-        } catch (e: Exception) {
-            "ارتباط برقرار نشد: ${e.message ?: "خطای شبکه"}"
-        } finally {
-            conn.disconnect()
-        }
     }
 
     /**

@@ -21,3 +21,7 @@ local.properties
 # Misc
 .DS_Store
 *.log
+
+# نسخهٔ ۱.۱۱.۳۰ — کلید خصوصی امضای خوراک هرگز وارد مخزن نمی‌شود
+signing/feed-ed25519-private.b64
+*.private.b64

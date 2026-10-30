@@ -36,7 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import ir.persiancalendar.app.data.db.UserEntity
-import ir.persiancalendar.app.data.prefs.AppSettings
+import ir.persiancalendar.app.data.prefs.AdminSecrets
 import ir.persiancalendar.app.data.support.Announcement
 import ir.persiancalendar.app.data.support.AnnouncementBox
 import ir.persiancalendar.app.data.support.MainAd
@@ -68,8 +68,11 @@ import kotlinx.coroutines.launch
 fun AdminScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val repo = AppContainer.settingsRepo(context)
-    val settings by repo.settings.collectAsState(initial = AppSettings())
+    // نسخهٔ ۱.۱۱.۳۰: رمز پنل و توکن از AdminSecrets فلاور admin می‌آیند
+    // (در نسخهٔ عمومی اصلاً این صفحه وجود ندارد)
+    val secrets = remember { AdminSecrets(context) }
+    val savedPin by secrets.adminPin.collectAsState(initial = "")
+    val savedToken by secrets.githubToken.collectAsState(initial = "")
 
     var authed by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
@@ -87,14 +90,14 @@ fun AdminScreen(onBack: () -> Unit) {
     var annPickedImage by remember { mutableStateOf("") }
     var annImageUrl by remember { mutableStateOf("") }
     // انتشار همگانی اطلاعیه برای کاربران — نسخه ۱.۱۱.۱۶ (درخواست کاربر)
-    var ghToken by remember { mutableStateOf(settings.githubToken) }
+    var ghToken by remember { mutableStateOf("") }
     // نسخهٔ ۱.۱۱.۲۳ (گزارش کاربر: «توکن ذخیره می‌کنم ولی بعد از برگشت دوباره باید بگذارم»):
     // collectAsState با مقدار اولیهٔ خالی شروع می‌شود و فیلد در فریم اول خالی قفل
     // می‌شد؛ حالا وقتی تنظیمات واقعی از DataStore رسید، توکن ذخیره‌شده در فیلد
     // می‌نشیند — بدون بازنویسی چیزی که کاربر در حال تایپ آن است.
-    LaunchedEffect(settings.githubToken) {
-        if (settings.githubToken.isNotBlank() && ghToken.isBlank()) {
-            ghToken = settings.githubToken
+    LaunchedEffect(savedToken) {
+        if (savedToken.isNotBlank() && ghToken.isBlank()) {
+            ghToken = savedToken
         }
     }
     var pubStatus by remember { mutableStateOf("") }
@@ -181,7 +184,7 @@ fun AdminScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(6.dp))
 
         if (!authed) {
-            if (settings.adminPin.isBlank()) {
+            if (savedPin.isBlank()) {
                 // ---------- نسخهٔ ۱.۱۱.۲۹ (بازرسی امنیتی): پیش‌فرض «۱۲۳۴» حذف شد —
                 // اولین ورود اجبار به تنظیم رمز (حداقل ۶ کاراکتر، حرف + عدد) دارد
                 SectionCard {
@@ -216,7 +219,7 @@ fun AdminScreen(onBack: () -> Unit) {
                                         context, "رمز باید هم حرف و هم عدد داشته باشد", Toast.LENGTH_SHORT
                                     ).show()
                                     else -> scope.launch {
-                                        repo.setAdminPin(newPin)
+                                        secrets.setAdminPin(newPin)
                                         newPin = ""
                                         authed = true
                                         Toast.makeText(context, "رمز تنظیم شد — وارد پنل شدید", Toast.LENGTH_SHORT).show()
@@ -250,7 +253,7 @@ fun AdminScreen(onBack: () -> Unit) {
                         Spacer(Modifier.height(8.dp))
                         Button(
                             onClick = {
-                                if (pin == settings.adminPin) {
+                                if (pin == savedPin) {
                                     authed = true
                                     pin = ""
                                 } else {
@@ -769,7 +772,7 @@ fun AdminScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "راهنما: در گیت‌هاب ← Settings ← Developer settings ← Personal access tokens ← " +
-                            "Fine-grained token با دسترسی Contents: Read and write فقط برای مخزن PersianCalendar بسازید. " +
+                            "Fine-grained token با دسترسی Contents: Read and write و Actions: Read and write فقط برای مخزن PersianCalendar بسازید (Actions برای ساخته‌شدن خودکار امضای خوراک لازم است). " +
                             "توکن فقط روی همین دستگاه می‌ماند و هرگز جایی ارسال نمی‌شود؛ برای امنیت بیشتر تاریخ انقضای کوتاه بگذارید و " +
                             "اگر گوشی گم شد یا مشکوک به لو رفتن هستید، اول توکن را در گیت‌هاب Revoke کنید و بعد «پاک کردن توکن» را بزنید.",
                         style = MaterialTheme.typography.bodySmall,
@@ -781,7 +784,7 @@ fun AdminScreen(onBack: () -> Unit) {
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
                                     // نسخهٔ ۱.۱۱.۲۳: نتیجهٔ واقعی ذخیره گزارش می‌شود، نه پیام همیشگی
-                                    runCatching { repo.setGithubToken(ghToken) }
+                                    runCatching { secrets.setGithubToken(ghToken) }
                                         .onSuccess {
                                             kotlinx.coroutines.withContext(Dispatchers.Main) {
                                                 Toast.makeText(context, "توکن ذخیره شد — بعد از خروج هم می‌ماند", Toast.LENGTH_SHORT).show()
@@ -801,7 +804,7 @@ fun AdminScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
-                                    runCatching { repo.setGithubToken("") }
+                                    runCatching { secrets.setGithubToken("") }
                                     kotlinx.coroutines.withContext(Dispatchers.Main) {
                                         ghToken = ""
                                         Toast.makeText(context, "توکن از این دستگاه پاک شد", Toast.LENGTH_SHORT).show()
@@ -840,9 +843,9 @@ fun AdminScreen(onBack: () -> Unit) {
                         onClick = {
                             pubBusy = true
                             scope.launch(Dispatchers.IO) {
-                                repo.setGithubToken(ghToken)
+                                secrets.setGithubToken(ghToken)
                                 val list = AnnouncementBox.active(context)
-                                val msg = ir.persiancalendar.app.data.support.AnnouncementFeed.publish(
+                                val msg = ir.persiancalendar.app.data.support.FeedPublisher.publishAnnouncements(
                                     context, ghToken, list
                                 )
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -913,8 +916,8 @@ fun AdminScreen(onBack: () -> Unit) {
                         onClick = {
                             adPubBusy = true
                             scope.launch(Dispatchers.IO) {
-                                repo.setGithubToken(ghToken)
-                                val msg = ir.persiancalendar.app.data.support.MainAdFeed.publish(
+                                secrets.setGithubToken(ghToken)
+                                val msg = ir.persiancalendar.app.data.support.FeedPublisher.publishMainAds(
                                     context, ghToken, MainAdBox.active(context)
                                 )
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -974,7 +977,7 @@ fun AdminScreen(onBack: () -> Unit) {
                                     context, "رمز باید هم حرف و هم عدد داشته باشد", Toast.LENGTH_SHORT
                                 ).show()
                                 else -> scope.launch {
-                                    repo.setAdminPin(newPin)
+                                    secrets.setAdminPin(newPin)
                                     newPin = ""
                                     Toast.makeText(context, "رمز پنل تغییر کرد", Toast.LENGTH_SHORT).show()
                                 }

@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+// نسخهٔ ۱.۱۱.۳۰: internal تا AdminSecrets فلاور «admin» (رمز پنل + توکن) هم
+// از همین DataStore استفاده کند؛ در فلاور عمومی هیچ کلیدی از این دو وجود ندارد
+internal val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 /** حالت نمایش تم */
 enum class ThemeMode(val label: String) {
@@ -52,10 +54,7 @@ data class AppSettings(
     // ---------- نسخه ۱.۲: اذان دلخواه + پنل مدیریت (۱.۱۱.۸: اذان‌های واقعی) ----------
     /** صدای اذان: moazenzadeh / rezayian / none (کلیدهای قدیمی در AdhanSounds نرمال می‌شوند) */
     val adhanSound: String = "moazenzadeh",
-    /** رمز پنل مدیریت (حروف و/یا اعداد — نسخه ۱.۳) */
-    // نسخهٔ ۱.۱۱.۲۹ (گزارش بازرسی امنیتی): پیش‌فرض «۱۲۳۴» حذف شد —
-    // مقدار خالی یعنی رمز هنوز تنظیم نشده و پنل در اولین ورود اجبار به تنظیم رمز دارد
-    val adminPin: String = "",
+    /** رمز پنل مدیریت — نسخهٔ ۱.۱۱.۳۰ به AdminSecrets (فلاور admin) منتقل شد */
     /** اعلان همیشگی تاریخ امروز در نوار وضعیت */
     val ongoingDateNotif: Boolean = true,
     // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
@@ -65,10 +64,10 @@ data class AppSettings(
     /** جنسیت کاربر: "" / "male" / "female" — گام پنجم راه‌اندازی اولیه */
     val profileGender: String = "",
     /** تاریخ تولد شمسی با قالب "jy/jm/jd" — خالی یعنی انتخاب نشده */
-    val profileBirth: String = "",
-    // ---------- نسخه ۱.۱۱.۱۶: انتشار اطلاعیه برای کاربران از پنل مدیریت ----------
-    /** توکن دسترسی گیت‌هاب (فقط روی دستگاه مدیر؛ برای انتشار خوراک اطلاعیه) */
-    val githubToken: String = ""
+    val profileBirth: String = ""
+    // نسخهٔ ۱.۱۱.۳۰ (بازرسی امنیتی): adminPin و githubToken به AdminSecrets
+    // (فلاور «admin») منتقل شدند — در APK عمومی نه فیلدی هست، نه کلید DataStore،
+    // نه کد انتشار؛ پنل مدیریت اصلاً در نسخهٔ عمومی کامپایل نمی‌شود.
 )
 
 /** مخزن تنظیمات مبتنی بر DataStore */
@@ -85,7 +84,6 @@ class SettingsRepository(private val context: Context) {
         val USE_LOCATION = booleanPreferencesKey("use_current_location")
         // ---------- نسخه ۱.۲ ----------
         val ADHAN_SOUND = stringPreferencesKey("adhan_sound")
-        val ADMIN_PIN = stringPreferencesKey("admin_pin")
         // ---------- نسخه ۱.۳ ----------
         val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
         // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
@@ -93,8 +91,6 @@ class SettingsRepository(private val context: Context) {
         // ---------- نسخه ۱.۱۱.۱۶: مشخصات کاربر (جنسیت و تاریخ تولد) ----------
         val PROFILE_GENDER = stringPreferencesKey("profile_gender")
         val PROFILE_BIRTH = stringPreferencesKey("profile_birth")
-        // ---------- نسخه ۱.۱۱.۱۶: توکن انتشار اطلاعیه (دستگاه مدیر) ----------
-        val GITHUB_TOKEN = stringPreferencesKey("github_token")
         // (کلیدهای تبلیغات نسخه‌های قدیمی در DataStore بی‌اثر مانده‌اند — نسخه ۱.۱۱.۵)
     }
 
@@ -110,12 +106,10 @@ class SettingsRepository(private val context: Context) {
             prayerNotifications = decodeMask(p[Keys.PRAYER_NOTIF] ?: (1 or 4 or 32)),
             useCurrentLocation = p[Keys.USE_LOCATION] ?: false,
             adhanSound = p[Keys.ADHAN_SOUND] ?: "moazenzadeh",
-            adminPin = p[Keys.ADMIN_PIN] ?: "",
             ongoingDateNotif = p[Keys.ONGOING_DATE] ?: true,
             onboardingDone = p[Keys.ONBOARDING_DONE] ?: false,
             profileGender = p[Keys.PROFILE_GENDER] ?: "",
-            profileBirth = p[Keys.PROFILE_BIRTH] ?: "",
-            githubToken = p[Keys.GITHUB_TOKEN] ?: ""
+            profileBirth = p[Keys.PROFILE_BIRTH] ?: ""
         )
     }
 
@@ -142,8 +136,6 @@ class SettingsRepository(private val context: Context) {
     // ---------- نسخه ۱.۲: اذان دلخواه + پنل مدیریت ----------
     suspend fun setAdhanSound(key: String) = context.dataStore.edit { it[Keys.ADHAN_SOUND] = key }
 
-    suspend fun setAdminPin(pin: String) = context.dataStore.edit { it[Keys.ADMIN_PIN] = pin }
-
     // ---------- نسخه ۱.۳: اعلان همیشگی ----------
     suspend fun setOngoingDateNotif(b: Boolean) =
         context.dataStore.edit { it[Keys.ONGOING_DATE] = b }
@@ -159,9 +151,6 @@ class SettingsRepository(private val context: Context) {
     suspend fun setProfileBirth(jy: Int, jm: Int, jd: Int) =
         context.dataStore.edit { it[Keys.PROFILE_BIRTH] = "$jy/$jm/$jd" }
 
-    // ---------- نسخه ۱.۱۱.۱۶: توکن انتشار اطلاعیه (پنل مدیریت) ----------
-    suspend fun setGithubToken(t: String) =
-        context.dataStore.edit { it[Keys.GITHUB_TOKEN] = t.trim() }
 
     companion object {
         fun encodeMask(s: Set<Int>): Int = s.fold(0) { acc, i -> acc or (1 shl i) }

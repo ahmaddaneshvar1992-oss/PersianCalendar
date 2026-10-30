@@ -86,7 +86,8 @@ import ir.persiancalendar.app.ui.prayer.PrayerScreen
 import ir.persiancalendar.app.ui.qibla.QiblaScreen
 import ir.persiancalendar.app.ui.reminder.ReminderEditorSheet
 import ir.persiancalendar.app.ui.reminder.RemindersScreen
-import ir.persiancalendar.app.ui.settings.AdminScreen
+import ir.persiancalendar.app.ui.dev.DevGate
+import ir.persiancalendar.app.ui.dev.DevPanel
 import ir.persiancalendar.app.ui.settings.SettingsScreen
 import ir.persiancalendar.app.ui.support.SupportScreen
 import kotlinx.coroutines.Dispatchers
@@ -138,7 +139,7 @@ fun MainScreen(
     // صفحه حساب کاربری و عضویت ویژه
     var accountVisible by remember { mutableStateOf(false) }
     // پنل مدیریت تبلیغات (نسخه ۱.۲)
-    var adminVisible by remember { mutableStateOf(false) }
+    var devPanelVisible by remember { mutableStateOf(false) }
     // نسخهٔ ۱.۱۱.۲۱: کلید بازسازی بنرها پس از sync خوراک راه‌دور یا تغییر پنل مدیریت
     var adsVersion by remember { mutableStateOf(0) }
     // صفحه پشتیبانی (نسخه ۱.۵)
@@ -185,7 +186,7 @@ fun MainScreen(
         if (openTabRequest in 0..5) {
             dayDetail = null
             accountVisible = false
-            adminVisible = false
+            devPanelVisible = false
             supportVisible = false
             selectedTab = openTabRequest
         }
@@ -246,7 +247,7 @@ fun MainScreen(
     }
 
     // به‌روزرسانی اطلاعیه‌ها پس از بستن پنل مدیریت / شیت اطلاعیه (نسخه ۱.۶)
-    LaunchedEffect(adminVisible, annSheetVisible, supportVisible) {
+    LaunchedEffect(devPanelVisible, annSheetVisible, supportVisible) {
         refreshAnnouncements()
         // نسخهٔ ۱.۱۱.۲۱: بنرها هم بعد از بستن پنل مدیریت دوباره خوانده می‌شوند
         adsVersion++
@@ -257,12 +258,12 @@ fun MainScreen(
     // به صفحه اصلی تقویم برمی‌گردد؛ فقط روی خود صفحه اصلی تقویم، برگشت برنامه را می‌بندد
     BackHandler(
         enabled = selectedTab != 0 || dayDetail != null ||
-                accountVisible || adminVisible || supportVisible
+                accountVisible || devPanelVisible || supportVisible
     ) {
         when {
             dayDetail != null -> dayDetail = null
             accountVisible -> accountVisible = false
-            adminVisible -> adminVisible = false
+            devPanelVisible -> devPanelVisible = false
             supportVisible -> supportVisible = false
             else -> selectedTab = 0
         }
@@ -271,7 +272,7 @@ fun MainScreen(
     Scaffold(
         // ---------- نوار بالا با منوی سه‌نقطه سمت چپ (نسخه ۱.۵) ----------
         topBar = {
-            if (!accountVisible && !adminVisible && !supportVisible && dayDetail == null) {
+            if (!accountVisible && !devPanelVisible && !supportVisible && dayDetail == null) {
                 var menuOpen by remember { mutableStateOf(false) }
                 Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
                     // نسخه ۱.۱۱.۲: statusBarsPadding — دکمه سه‌نقطه و زنگ اطلاعیه و عنوان
@@ -380,7 +381,8 @@ fun MainScreen(
                                                         "account" -> accountVisible = true
                                                         "share" -> shareApp(context)
                                                         "support" -> supportVisible = true
-                                                        "admin" -> adminVisible = true
+                                                        // نسخهٔ ۱.۱۱.۳۰: فقط در فلاور admin — نسخهٔ عمومی پنل ندارد
+                                                        "admin" -> if (DevGate.enabled) devPanelVisible = true
                                                         else -> if (item.tab >= 0) selectedTab = item.tab
                                                     }
                                                 }
@@ -397,7 +399,7 @@ fun MainScreen(
         // ---------- نسخه ۱.۱۱.۵: نوار پایین تبلیغات حذف شد — پایین صفحه محتواست ----------
         // ---------- دکمه سبز «+» — رویداد جدید در تقویم/رویدادها، یادآور جدید در یادآورها ----------
         floatingActionButton = {
-            if (!accountVisible && !adminVisible && !supportVisible && dayDetail == null &&
+            if (!accountVisible && !devPanelVisible && !supportVisible && dayDetail == null &&
                 (selectedTab == 0 || selectedTab == 3 || selectedTab == 4)
             ) {
                 FloatingActionButton(
@@ -428,9 +430,9 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (adminVisible) {
+            if (devPanelVisible) {
                 // ---------- پنل مدیریت تبلیغات (نسخه ۱.۲) ----------
-                AdminScreen(onBack = { adminVisible = false })
+                DevPanel(onBack = { devPanelVisible = false })
             } else if (accountVisible) {
                 // ---------- حساب کاربری و عضویت ویژه ----------
                 AccountScreen(onBack = { accountVisible = false })
@@ -507,7 +509,7 @@ fun MainScreen(
                     5 -> SettingsScreen(
                         settings = settings,
                         onOpenAccount = { accountVisible = true },
-                        onOpenAdmin = { adminVisible = true }
+                        onDevPanel = { devPanelVisible = true }
                     )
                 }
             }
