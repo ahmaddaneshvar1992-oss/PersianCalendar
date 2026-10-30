@@ -49,10 +49,30 @@ object FeedFetcher {
     )
 
     /**
+     * نتیجهٔ ساختارمند «بررسی خوراک» پنل مدیریت — نسخهٔ ۱.۱۱.۲۷.
+     * (گزارش کاربر: «میگه دریافت خوراک ناموفق») تا این نسخه خوراکِ خالی —
+     * که بعد از حذف همهٔ اطلاعیه‌ها/بنرها و انتشار، حالت درست است — با
+     * «دریافت ناموفق» اشتباه گرفته می‌شد. اکنون چهار حالت از هم جدا می‌شوند:
+     * خوراک پر، خوراک خالیِ موفق، نسخهٔ کش‌شدهٔ آفلاین و دریافت ناموفق واقعی.
+     */
+    data class CheckResult(
+        val ok: Boolean,        // دریافت موفق (از منبع زنده یا کش)
+        val count: Int,         // تعداد اقلام معتبر خوراک (۰ = خوراک خالی)
+        val source: String,     // نام منبع موفق
+        val fromCache: Boolean, // true = از کش محلی، نه منبع زنده
+        val error: String       // شرح خطا وقتی ok=false (و جزئیات تلاش‌ها در حالت کش)
+    )
+
+    /**
      * دریافت فایل خوراک از چند منبع. در موفقیت، متن در فایل cache ذخیره
      * می‌شود تا در قطعی‌های بعدی هم چیزی برای نمایش باشد.
+     *
+     * نسخهٔ ۱.۱۱.۲۷ — پارامتر jsonArray: خوراک اطلاعیه/بنر همیشه آرایهٔ JSON
+     * است؛ اگر منبعی (مثلاً به‌خاطر پورتال captive یا صفحهٔ خطای HTML با کد ۲۰۰)
+     * پاسخ غیرآرایه بدهد، آن منبع رد می‌شود و منبع بعدی آزموده می‌شود. پیش از این
+     * چنین پاسخی «موفق» شمرده و حتی کش محلی را با HTML آلوده می‌کرد.
      */
-    fun fetch(repo: String, path: String, cache: File?): Result {
+    fun fetch(repo: String, path: String, cache: File?, jsonArray: Boolean = false): Result {
         val sources = mutableListOf<Pair<String, String>>()
         val base = serverBase(repo, cache)
         if (base.isNotBlank()) sources.add("سرور شخصی" to "$base/$path")
@@ -70,11 +90,14 @@ object FeedFetcher {
                 continue
             }
             val body = if (url.contains("api.github.com")) decodeContents(raw) else raw
-            if (body.isNotBlank()) {
+            val healthy = body.isNotBlank() && (!jsonArray || body.trim().startsWith("["))
+            if (healthy) {
                 if (cache != null) runCatching { cache.writeText(body) }
                 return Result(true, body, name, "")
             }
-            errors.append(name).append(": محتوا تجزیه نشد | ")
+            errors.append(name).append(": ")
+                .append(if (body.isBlank()) "محتوا تجزیه نشد" else "پاسخ آرایهٔ JSON نبود")
+                .append(" | ")
         }
         // ۴) کش محلی — آخرین دریافت موفق
         if (cache != null) {
@@ -158,7 +181,14 @@ object FeedFetcher {
             conn.readTimeout = 8_000
             conn.setRequestProperty("Cache-Control", "no-cache")
             val code = conn.responseCode
-            if (code != 200) throw java.io.IOException("کد $code")
+            // نسخهٔ ۱.۱۱.۲۷: شرح کدهای پرتکرار برای عیب‌یابی سریع در پنل مدیریت
+            if (code != 200) throw java.io.IOException(
+                when (code) {
+                    404 -> "کد ۴۰۴ (فایل در این منبع نیست)"
+                    403 -> "کد ۴۰۳ (محدودیت یا مسدودسازی)"
+                    else -> "کد $code"
+                }
+            )
             return conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
         } finally {
             conn.disconnect()

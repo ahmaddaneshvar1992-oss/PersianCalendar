@@ -73,7 +73,7 @@ object AnnouncementFeed {
 
     /** دریافت خوراک از گیت‌هاب (چندمنبعی + کش) — فهرست اطلاعیه‌ها؛ در خطا خالی */
     fun fetchFeed(cacheFile: File? = null): List<Announcement> {
-        val r = FeedFetcher.fetch(API_REPO, API_PATH, cacheFile)
+        val r = FeedFetcher.fetch(API_REPO, API_PATH, cacheFile, jsonArray = true)
         lastSource = if (r.ok) r.source else ""
         lastError = r.error
         return if (r.ok) parseFeed(r.body) else emptyList()
@@ -129,8 +129,9 @@ object AnnouncementFeed {
      * فقط از نخ پس‌زمینه صدا زده شود.
      */
     fun sync(context: Context): Int {
-        val r = runCatching { FeedFetcher.fetch(API_REPO, API_PATH, cacheFile(context)) }
-            .getOrElse { return 0 }
+        val r = runCatching {
+            FeedFetcher.fetch(API_REPO, API_PATH, cacheFile(context), jsonArray = true)
+        }.getOrElse { return 0 }
         lastSource = if (r.ok) r.source else ""
         lastError = r.error
         if (!r.ok || r.fromCache) return 0
@@ -289,7 +290,23 @@ object AnnouncementFeed {
         }
     }
 
-    /** بررسی خوراک از سمت مدیر (تست) — تعداد اطلاعیه‌های منتشرشده را می‌خواند */
-    fun checkFeed(context: Context? = null): Int =
-        fetchFeed(context?.let { cacheFile(it) }).size
+    /**
+     * بررسی خوراک از سمت مدیر (تست) — نتیجهٔ ساختارمند برای نمایش دقیق در پنل.
+     * نسخهٔ ۱.۱۱.۲۷ (گزارش کاربر: «میگه دریافت خوراک ناموفق»): تا این نسخه
+     * خوراکِ خالی با دریافت ناموفق اشتباه گرفته می‌شد — یعنی بعد از حذف همهٔ
+     * اطلاعیه‌ها و انتشارِ فهرست خالی [] (رفتار درست از ۱.۱۱.۲۶)، دکمهٔ بررسی
+     * پیام «دریافت خوراک ناموفق» می‌داد و مدیر فکر می‌کرد چیزی شکسته است.
+     * اکنون چهار حالت جداگانه گزارش می‌شود: خوراک پر / خوراک خالیِ موفق /
+     * نسخهٔ کش‌شدهٔ آفلاین / دریافت ناموفق واقعی با جزئیات منابع.
+     */
+    fun check(context: Context? = null): FeedFetcher.CheckResult {
+        val r = FeedFetcher.fetch(API_REPO, API_PATH, context?.let { cacheFile(it) }, jsonArray = true)
+        lastSource = if (r.ok) r.source else ""
+        lastError = r.error
+        val n = if (r.ok) parseFeed(r.body).size else 0
+        return FeedFetcher.CheckResult(
+            ok = r.ok, count = n, source = r.source,
+            fromCache = r.fromCache, error = r.error
+        )
+    }
 }

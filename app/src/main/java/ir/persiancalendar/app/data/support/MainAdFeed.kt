@@ -72,7 +72,7 @@ object MainAdFeed {
 
     /** دریافت خوراک از گیت‌هاب (چندمنبعی + کش) — در خطا فهرست خالی برمی‌گردد */
     fun fetchFeed(cacheFile: File? = null): List<MainAd> {
-        val r = FeedFetcher.fetch(API_REPO, API_PATH, cacheFile)
+        val r = FeedFetcher.fetch(API_REPO, API_PATH, cacheFile, jsonArray = true)
         lastSource = if (r.ok) r.source else ""
         lastError = r.error
         return if (r.ok) parseFeed(r.body) else emptyList()
@@ -115,8 +115,9 @@ object MainAdFeed {
      * خروجی: تعداد تغییرات (0 = چیزی عوض نشد). فقط از نخ پس‌زمینه صدا زده شود.
      */
     fun sync(context: Context): Int {
-        val r = runCatching { FeedFetcher.fetch(API_REPO, API_PATH, cacheFile(context)) }
-            .getOrElse { return 0 }
+        val r = runCatching {
+            FeedFetcher.fetch(API_REPO, API_PATH, cacheFile(context), jsonArray = true)
+        }.getOrElse { return 0 }
         lastSource = if (r.ok) r.source else ""
         lastError = r.error
         if (!r.ok || r.fromCache) return 0
@@ -258,7 +259,20 @@ object MainAdFeed {
         }
     }
 
-    /** بررسی خوراک از سمت مدیر (تست) — تعداد بنرهای منتشرشده را می‌خواند */
-    fun checkFeed(context: Context? = null): Int =
-        fetchFeed(context?.let { cacheFile(it) }).size
+    /**
+     * بررسی خوراک از سمت مدیر (تست) — نتیجهٔ ساختارمند برای نمایش دقیق در پنل.
+     * نسخهٔ ۱.۱۱.۲۷: خوراک خالی [] (بعد از حذف همهٔ بنرها و انتشار) دیگر
+     * «دریافت ناموفق» تلقی نمی‌شود؛ چهار حالت از هم جدا می‌شوند — خوراک پر،
+     * خوراک خالیِ موفق، نسخهٔ کش‌شدهٔ آفلاین و دریافت ناموفق واقعی.
+     */
+    fun check(context: Context? = null): FeedFetcher.CheckResult {
+        val r = FeedFetcher.fetch(API_REPO, API_PATH, context?.let { cacheFile(it) }, jsonArray = true)
+        lastSource = if (r.ok) r.source else ""
+        lastError = r.error
+        val n = if (r.ok) parseFeed(r.body).size else 0
+        return FeedFetcher.CheckResult(
+            ok = r.ok, count = n, source = r.source,
+            fromCache = r.fromCache, error = r.error
+        )
+    }
 }

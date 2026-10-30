@@ -749,14 +749,21 @@ fun AdminScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
-                                    val n = ir.persiancalendar.app.data.support.AnnouncementFeed.checkFeed(context)
+                                    // نسخهٔ ۱.۱۱.۲۷: خوراک خالی دیگر «ناموفق» نیست — چهار حالت جدا گزارش می‌شود
+                                    val cr = ir.persiancalendar.app.data.support.AnnouncementFeed.check(context)
                                     kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                        val src = ir.persiancalendar.app.data.support.AnnouncementFeed.lastSource
-                                        val err = ir.persiancalendar.app.data.support.AnnouncementFeed.lastError
-                                        pubStatus = if (n > 0)
-                                            "خوراک فعلی کاربران: $n اطلاعیه — دریافت موفق از $src (نسخهٔ ۱.۱۱.۲۲ به بعد از چند منبع می‌گیرد)"
-                                        else
-                                            "دریافت خوراک ناموفق: ${err.take(160)}"
+                                        pubStatus = when {
+                                            !cr.ok ->
+                                                "دریافت خوراک ناموفق: ${cr.error.take(160)} — اتصال اینترنت را بررسی کنید؛ منابع به‌ترتیب آزموده می‌شوند: سرور شخصی، raw، jsDelivr، api.github"
+                                            cr.fromCache && cr.count > 0 ->
+                                                "الان به منبع زنده دسترسی نبود — آخرین نسخهٔ کش‌شدهٔ همین دستگاه: ${cr.count} اطلاعیه. جزئیات تلاش‌ها: ${cr.error.take(120)}"
+                                            cr.fromCache ->
+                                                "الان به منبع زنده دسترسی نبود و کش همین دستگاه هم خالی است (۰ اطلاعیه). با اینترنت وصل دوباره «بررسی خوراک کاربران» را بزنید. جزئیات: ${cr.error.take(120)}"
+                                            cr.count > 0 ->
+                                                "خوراک فعلی کاربران: ${cr.count} اطلاعیه — دریافت موفق از ${cr.source} (نسخهٔ ۱.۱۱.۲۲ به بعد از چند منبع می‌گیرد)"
+                                            else ->
+                                                "خوراک کاربران در حال حاضر خالی است (۰ اطلاعیه) — دریافت موفق از ${cr.source}. یعنی فهرست خالی برای همه منتشر شده و مشکلی نیست؛ برای رسیدن اطلاعیهٔ تازه، آن را ثبت و دکمهٔ «انتشار برای کاربران» را بزنید. (تا نسخهٔ ۱.۱۱.۲۶ این حالت به‌اشتباه «دریافت خوراک ناموفق» نمایش داده می‌شد)"
+                                        }
                                     }
                                 }
                             },
@@ -816,14 +823,21 @@ fun AdminScreen(onBack: () -> Unit) {
                     OutlinedButton(
                         onClick = {
                             scope.launch(Dispatchers.IO) {
-                                val n = ir.persiancalendar.app.data.support.MainAdFeed.checkFeed(context)
+                                // نسخهٔ ۱.۱۱.۲۷: خوراک خالی دیگر «ناموفق» نیست — چهار حالت جدا گزارش می‌شود
+                                val cr = ir.persiancalendar.app.data.support.MainAdFeed.check(context)
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                    val src = ir.persiancalendar.app.data.support.MainAdFeed.lastSource
-                                    val err = ir.persiancalendar.app.data.support.MainAdFeed.lastError
-                                    adPubStatus = if (n > 0)
-                                        "خوراک فعلی کاربران: $n بنر — دریافت موفق از $src"
-                                    else
-                                        "دریافت خوراک ناموفق: ${err.take(160)}"
+                                    adPubStatus = when {
+                                        !cr.ok ->
+                                            "دریافت خوراک ناموفق: ${cr.error.take(160)} — اتصال اینترنت را بررسی کنید؛ منابع به‌ترتیب آزموده می‌شوند: سرور شخصی، raw، jsDelivr، api.github"
+                                        cr.fromCache && cr.count > 0 ->
+                                            "الان به منبع زنده دسترسی نبود — آخرین نسخهٔ کش‌شدهٔ همین دستگاه: ${cr.count} بنر. جزئیات تلاش‌ها: ${cr.error.take(120)}"
+                                        cr.fromCache ->
+                                            "الان به منبع زنده دسترسی نبود و کش همین دستگاه هم خالی است (۰ بنر). با اینترنت وصل دوباره «بررسی خوراک بنرها» را بزنید. جزئیات: ${cr.error.take(120)}"
+                                        cr.count > 0 ->
+                                            "خوراک فعلی کاربران: ${cr.count} بنر — دریافت موفق از ${cr.source}"
+                                        else ->
+                                            "خوراک بنرهای کاربران در حال حاضر خالی است (۰ بنر) — دریافت موفق از ${cr.source}. یعنی فهرست خالی برای همه منتشر شده و مشکلی نیست؛ برای نمایش بنر تازه، آن را بسازید و دکمهٔ «انتشار بنرها برای کاربران» را بزنید. (تا نسخهٔ ۱.۱۱.۲۶ این حالت به‌اشتباه «دریافت خوراک ناموفق» نمایش داده می‌شد)"
+                                    }
                                 }
                             }
                         },
