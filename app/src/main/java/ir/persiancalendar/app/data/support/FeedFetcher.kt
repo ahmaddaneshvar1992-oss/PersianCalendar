@@ -7,7 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * دریافت مقاوم خوراک‌ها از چند منبع — نسخهٔ ۱.۱۱.۲۲
+ * دریافت مقاوم خوراک‌ها از چند منبع — نسخهٔ ۱.۱۱.۲۲، سرور شخصی از ۱.۱۱.۲۴
  *
  * مشکل گزارش‌شده (بازرسی): انتشار از پنل مدیریت روی مخزن درست کار می‌کند
  * (کامیت‌های «انتشار از پنل مدیریت» روی مخزن ثبت می‌شوند) اما بعضی کاربران
@@ -16,6 +16,10 @@ import java.net.URL
  *
  * اکنون منابع به‌ترتیب آزموده می‌شوند و اولین پاسخ سالم برمی‌گردد:
  *
+ *  ۰) سرور شخصی — اگر مدیر آدرس سرور خود را در feed/config.json مخزن ثبت
+ *     کرده باشد (فیلد feedBaseUrl)، اپ اول از همان سرور می‌گیرد؛ با این کار
+ *     بدون به‌روزرسانی اپ می‌توان میزبان خوراک را عوض کرد. اگر سرور در دسترس
+ *     نباشد به‌صورت خودکار به منابع گیت‌هاب برمی‌گردیم.
  *  ۱) raw.githubusercontent.com — همیشه تازه‌ترین (کش CDN حدود ۵ دقیقه)
  *  ۲) cdn.jsdelivr.net — آینهٔ گیت‌هاب که در اکثر شبکه‌های ایران باز است
  *     (کش تا ۱۲ ساعت — یعنی حداکثر چند ساعت تأخیر در رسیدن تغییرها)
@@ -24,6 +28,15 @@ import java.net.URL
  *     بنرها/اطلاعیه‌های قبلی را از دست ندهد
  */
 object FeedFetcher {
+
+    /** مسیر فایل تنظیمات میزبان خوراک در مخزن */
+    private const val CONFIG_PATH = "feed/config.json"
+
+    /** عمر اعتبار تنظیمات در حافظه — پس از آن یک‌بار دیگر خوانده می‌شود */
+    private const val CONFIG_TTL_MS = 30 * 60 * 1000L
+
+    @Volatile private var cachedBase: String? = null
+    @Volatile private var cachedBaseAt = 0L
 
     data class Result(
         val ok: Boolean,      // آیا محتوایی به دست آمد
@@ -37,11 +50,12 @@ object FeedFetcher {
      * می‌شود تا در قطعی‌های بعدی هم چیزی برای نمایش باشد.
      */
     fun fetch(repo: String, path: String, cache: File?): Result {
-        val sources = listOf(
-            "raw.githubusercontent.com" to "https://raw.githubusercontent.com/$repo/main/$path",
-            "jsDelivr CDN" to "https://cdn.jsdelivr.net/gh/$repo@main/$path",
-            "api.github.com" to "https://api.github.com/repos/$repo/contents/$path"
-        )
+        val sources = mutableListOf<Pair<String, String>>()
+        val base = serverBase(repo, cache)
+        if (base.isNotBlank()) sources.add("سرور شخصی" to "$base/$path")
+        sources.add("raw.githubusercontent.com" to "https://raw.githubusercontent.com/$repo/main/$path")
+        sources.add("jsDelivr CDN" to "https://cdn.jsdelivr.net/gh/$repo@main/$path")
+        sources.add("api.github.com" to "https://api.github.com/repos/$repo/contents/$path")
         val errors = StringBuilder()
         for ((name, url) in sources) {
             val res = runCatching { httpGet(url) }
@@ -67,6 +81,47 @@ object FeedFetcher {
         }
         return Result(false, "", "", errors.toString())
     }
+
+    /**
+     * آدرس میزبان شخصی خوراک از feed/config.json مخزن خوانده می‌شود (منبع صفر).
+     * تا وقتی feedBaseUrl خالی باشد فقط منابع گیت‌هاب استفاده می‌شوند؛ وقتی مدیر
+     * آدرس سرور خود را ثبت کند، اپ‌های ۱.۱۱.۲۴ به بعد بدون به‌روزرسانی به سرور او
+     * می‌روند و گیت‌هاب فقط پشتیبان می‌ماند. نتیجه در حافظه (۳۰ دقیقه) و روی
+     * دستگاه کش می‌شود تا در قطعی گیت‌هاب هم آخرین آدرس شناخته‌شده به کار رود.
+     */
+    private fun serverBase(repo: String, cache: File?): String {
+        val now = System.currentTimeMillis()
+        cachedBase?.let { if (now - cachedBaseAt < CONFIG_TTL_MS) return it }
+        val cfgFile = cache?.parentFile?.let { File(it, "feed_config_cache.json") }
+        var base = ""
+        val urls = listOf(
+            "https://raw.githubusercontent.com/$repo/main/$CONFIG_PATH",
+            "https://cdn.jsdelivr.net/gh/$repo@main/$CONFIG_PATH",
+            "https://api.github.com/repos/$repo/contents/$CONFIG_PATH"
+        )
+        for (url in urls) {
+            val raw = runCatching { httpGet(url) }.getOrNull()
+            if (raw.isNullOrBlank()) continue
+            val text = if (url.contains("api.github.com")) decodeContents(raw) else raw
+            if (text.isNotBlank()) {
+                if (cfgFile != null) runCatching { cfgFile.writeText(text) }
+                base = parseBase(text)
+                break
+            }
+        }
+        if (base.isBlank() && cfgFile != null)
+            base = runCatching { parseBase(cfgFile.readText()) }.getOrDefault("")
+        cachedBase = base
+        cachedBaseAt = now
+        return base
+    }
+
+    /** اعتبارسنجی آدرس سرور: فقط http/https و بدون / انتهایی */
+    private fun parseBase(json: String): String = runCatching {
+        var b = JSONObject(json).optString("feedBaseUrl").trim()
+        if (b.endsWith("/")) b = b.dropLast(1)
+        if (b.startsWith("https://") || b.startsWith("http://")) b else ""
+    }.getOrDefault("")
 
     private fun httpGet(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
