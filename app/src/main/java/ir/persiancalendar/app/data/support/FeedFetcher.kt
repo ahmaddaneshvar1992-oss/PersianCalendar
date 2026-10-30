@@ -42,7 +42,10 @@ object FeedFetcher {
         val ok: Boolean,      // آیا محتوایی به دست آمد
         val body: String,     // متن JSON خوراک
         val source: String,   // نام منبع موفق — برای نمایش در پنل مدیریت
-        val error: String     // شرح خطای منبع‌ها — برای عیب‌یابی
+        val error: String,    // شرح خطای منبع‌ها — برای عیب‌یابی
+        val fromCache: Boolean = false // نسخهٔ ۱.۱۱.۲۶: true = از کش محلی آمده (نه منبع زنده)؛
+        // در این حالت همگام‌سازی چیزی اضافه/حذف نمی‌کند تا محتوای آفلاین
+        // اشتباهی به‌عنوان فهرست رسمی مدیر تفسیر شود
     )
 
     /**
@@ -77,7 +80,7 @@ object FeedFetcher {
         if (cache != null) {
             val cached = runCatching { cache.readText() }.getOrDefault("")
             if (cached.isNotBlank())
-                return Result(true, cached, "کش محلی (آخرین دریافت موفق)", errors.toString())
+                return Result(true, cached, "کش محلی (آخرین دریافت موفق)", errors.toString(), true)
         }
         return Result(false, "", "", errors.toString())
     }

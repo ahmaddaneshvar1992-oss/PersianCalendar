@@ -106,11 +106,22 @@ object MainAdFeed {
      * همگام‌سازی کاربر: بنرهای تازه اضافه، بنرهای مدیریت‌شدهٔ قبلی به‌روز و
      * بنرهایی که از خوراک حذف شده‌اند (مدیر خاموش/حذف کرده) برداشته می‌شوند.
      * بنرهایی که کاربر/مدیر خودش محلی ساخته دست‌نخورده می‌مانند.
+     * نسخهٔ ۱.۱۱.۲۶ (گزارش کاربر دربارهٔ اطلاعیه‌ها، همان اشکال برای بنرها):
+     * وقتی مدیر همهٔ بنرها را حذف می‌کند خوراک خالی [] می‌شود؛ قبلاً در همین
+     * حالت همگام‌سازی قبل از رسیدن به بخش حذف خارج می‌شد و بنرها روی دستگاه
+     * کاربر می‌ماندند. اکنون خوراکِ خالی هم معتبر است و حذف‌ها انجام می‌شود.
+     * حذف/افزودن فقط با دریافت موفق از منبع زنده انجام می‌شود؛ در فالبک کش
+     * آفلاین کاری انجام نمی‌شود و پاسخ غیرآرایه (مثلاً HTML) هم ناموفق است.
      * خروجی: تعداد تغییرات (0 = چیزی عوض نشد). فقط از نخ پس‌زمینه صدا زده شود.
      */
     fun sync(context: Context): Int {
-        val feed = runCatching { fetchFeed(cacheFile(context)) }.getOrElse { return 0 }
-        if (feed.isEmpty()) return 0
+        val r = runCatching { FeedFetcher.fetch(API_REPO, API_PATH, cacheFile(context)) }
+            .getOrElse { return 0 }
+        lastSource = if (r.ok) r.source else ""
+        lastError = r.error
+        if (!r.ok || r.fromCache) return 0
+        if (!r.body.trim().startsWith("[")) return 0
+        val feed = parseFeed(r.body)
 
         val all = MainAdBox.load(context).toMutableList()
         val remoteIds = loadRemoteIds(context)

@@ -28,6 +28,16 @@ import java.net.URL
  * نسخهٔ ۱.۱۱.۲۲: دریافت خوراک چندمنبعی شد (FeedFetcher) — raw، jsDelivr،
  * api.github و در بدترین حالت کش محلی — تا در شبکه‌هایی که به
  * raw.githubusercontent.com دسترسی ندارند هم اطلاعیه‌ها برسند.
+ *
+ * نسخهٔ ۱.۱۱.۲۶ (گزارش کاربر: «اطلاعیه که میفرستم برا کاربرا بعد که حذف
+ * میکنم از پنل مدیریت واسه کاربرا حذف نمیشه»):
+ * تا این نسخه همگام‌سازی فقط «اضافه» می‌کرد؛ اطلاعیه‌ای که مدیر از خوراک
+ * حذف می‌کرد تا همیشه روی دستگاه کاربر می‌ماند و اگر خوراک کامل خالی
+ * می‌شد، همگام‌سازی همان اول خارج می‌شد و هیچ حذفی انجام نمی‌شد.
+ * از این نسخه همگام‌سازی مثل بنرها دوطرفه است: اطلاعیه‌های مدیریت‌شدهٔ
+ * خوراک که دیگر در خوراک نیستند (حتی وقتی خوراک کلاً خالی شده) از
+ * دستگاه کاربر هم برداشته می‌شوند؛ فقط در دریافت موفق از منبع زنده —
+ * نه از کش آفلاین — و اطلاعیه‌های محلیِ خود کاربر/مدیر دست‌نخورده می‌مانند.
  */
 object AnnouncementFeed {
 
@@ -39,6 +49,7 @@ object AnnouncementFeed {
     private const val API_PATH = "feed/announcements.json"
     private const val STATE_FILE = "announcement_feed_state.txt"
     private const val CACHE_FILE = "announcements_cache.json"
+    private const val REMOTE_IDS_FILE = "announcement_feed_ids.txt"
 
     /** نام منبع آخرین دریافت موفق — برای نمایش در پنل مدیریت */
     @Volatile
@@ -70,6 +81,18 @@ object AnnouncementFeed {
 
     private fun cacheFile(context: Context) = File(context.filesDir, CACHE_FILE)
 
+    private fun remoteIdsFile(context: Context) = File(context.filesDir, REMOTE_IDS_FILE)
+
+    /** شناسه‌هایی که از خوراک آمده‌اند — فقط این‌ها با خوراک مدیریت می‌شوند (۱.۱۱.۲۶، همان الگوی بنرها) */
+    private fun loadRemoteIds(context: Context): MutableSet<Long> = runCatching {
+        remoteIdsFile(context).readText().trim()
+            .split(",").filter { it.isNotBlank() }.map { it.toLong() }.toMutableSet()
+    }.getOrDefault(mutableSetOf())
+
+    private fun saveRemoteIds(context: Context, ids: Set<Long>) {
+        runCatching { remoteIdsFile(context).writeText(ids.joinToString(",")) }
+    }
+
     /** تجزیهٔ JSON خوراک */
     fun parseFeed(json: String): List<Announcement> = runCatching {
         val arr = JSONArray(json)
@@ -92,17 +115,66 @@ object AnnouncementFeed {
     }.getOrDefault(emptyList())
 
     /**
-     * همگام‌سازی کاربر: خوراک خوانده می‌شود، اطلاعیه‌های تازه به فهرست محلی
-     * (زنگ) اضافه می‌شوند و برای اطلاعیه‌های تازه‌تر از آخرین اعلان، اعلان
-     * سیستمی ساخته می‌شود. خروجی: تعداد اطلاعیه‌های تازه (0 = چیزی نبود).
+     * همگام‌سازی کاربر — نسخهٔ ۱.۱۱.۲۶ دوطرفه شد:
+     *  ۱) اطلاعیه‌های تازهٔ خوراک به فهرست محلی (زنگ) اضافه می‌شوند؛
+     *  ۲) اطلاعیه‌های مدیریت‌شدهٔ قبلی اگر در خوراک عوض شده باشند به‌روز می‌شوند؛
+     *  ۳) اطلاعیه‌های مدیریت‌شده‌ای که از خوراک حذف شده‌اند — حتی وقتی مدیر
+     *     همهٔ اطلاعیه‌ها را حذف کرده و خوراک خالی [] است — از دستگاه کاربر
+     *     هم برداشته می‌شوند (گزارش کاربر: «حذف میکنم از پنل واسه کاربرا
+     *     حذف نمیشه»). اطلاعیه‌های محلیِ خود دستگاه دست‌نخورده می‌مانند.
+     * حذف/افزودن فقط با دریافت موفق از منبع زنده انجام می‌شود؛ در فالبک کش
+     * آفلاین کاری انجام نمی‌شود تا محتوای قدیمی، فهرست رسمی مدیر تلقی نشود.
+     * برای اطلاعیه‌های تازه‌تر از آخرین اعلان، اعلان سیستمی ساخته می‌شود.
+     * خروجی: تعداد اطلاعیه‌های تازه (0 = چیزی نبود).
      * فقط از نخ پس‌زمینه صدا زده شود.
      */
     fun sync(context: Context): Int {
-        val feed = runCatching { fetchFeed(cacheFile(context)) }.getOrElse { return 0 }
-        if (feed.isEmpty()) return 0
-        val fresh = AnnouncementBox.mergeFromFeed(context, feed)
-        if (fresh.isEmpty()) return 0
+        val r = runCatching { FeedFetcher.fetch(API_REPO, API_PATH, cacheFile(context)) }
+            .getOrElse { return 0 }
+        lastSource = if (r.ok) r.source else ""
+        lastError = r.error
+        if (!r.ok || r.fromCache) return 0
+        // خوراک همیشه آرایهٔ JSON است؛ اگر منبعی پاسخ نامعتبر (مثلاً HTML)
+        // داد، به‌عنوان دریافت ناموفق در نظر می‌گیریم تا اطلاعیه‌ها اشتباهی پاک نشوند
+        if (!r.body.trim().startsWith("[")) return 0
+        val feed = parseFeed(r.body)
 
+        val all = AnnouncementBox.load(context).toMutableList()
+        val remoteIds = loadRemoteIds(context)
+        var changes = 0
+        val fresh = mutableListOf<Announcement>()
+
+        // ۱) اطلاعیهٔ تازه ← افزودن | اطلاعیهٔ مدیریت‌شدهٔ موجود ← به‌روزرسانی
+        feed.forEach { f ->
+            val idx = all.indexOfFirst { it.id == f.id }
+            if (idx < 0) {
+                all.add(f)
+                remoteIds.add(f.id)
+                fresh.add(f)
+                changes++
+            } else if (f.id in remoteIds && all[idx] != f) {
+                all[idx] = f
+                changes++
+            }
+        }
+
+        // ۲) اطلاعیه‌های مدیریت‌شده که از خوراک حذف شده‌اند ← برداشتن از دستگاه
+        //    (وقتی خوراک کامل خالی است یعنی همهٔ اطلاعیه‌های منتشرشده باید بروند)
+        val feedIds = feed.map { it.id }.toHashSet()
+        val gone = remoteIds.filterNot { it in feedIds }
+        if (gone.isNotEmpty()) {
+            all.removeAll { it.id in gone }
+            remoteIds.removeAll(gone.toSet())
+            changes += gone.size
+        }
+
+        if (changes > 0) {
+            AnnouncementBox.save(context, all)
+            saveRemoteIds(context, remoteIds)
+        }
+
+        // ۳) اعلان سیستمی برای اطلاعیه‌های تازه (منطق قبلی)
+        if (fresh.isEmpty()) return 0
         val candidates = fresh.filter { it.at > lastNotifiedAt(context) }
         if (candidates.isNotEmpty()) {
             val newest = candidates.maxByOrNull { it.at } ?: return 0
