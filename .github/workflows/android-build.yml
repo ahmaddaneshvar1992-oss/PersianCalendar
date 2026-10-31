@@ -14,6 +14,20 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # نسخهٔ ۱.۱۱.۳۲ (بازرسی امنیتی): کیستور امضا دیگر نباید داخل مخزن عمومی باشد.
+      # تا وقتی Secret «KEYSTORE_JKS_B64» تعریف نشده، از فایل موقت داخل مخزن استفاده
+      # می‌شود تا CI نشکند؛ پس از تعریف Secret، فایل از مخزن حذف خواهد شد.
+      - name: Restore signing keystore from Secret (یا فایل موقت)
+        env:
+          KEYSTORE_JKS_B64: ${{ secrets.KEYSTORE_JKS_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_JKS_B64" ]; then
+            echo "$KEYSTORE_JKS_B64" | base64 -d > signing/badkhan-release.jks
+            echo "کیستور از Secret بازگردانی شد"
+          else
+            echo "⚠ Secret KEYSTORE_JKS_B64 تعریف نشده — استفاده از فایل داخل مخزن (موقت)"
+          fi
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -42,6 +56,9 @@ jobs:
       #   public : نسخهٔ کاربران (بدون پنل مدیریت/توکن/رمز) → Release عمومی
       #   admin  : نسخهٔ شخصی مدیر (پنل کامل) → فقط artifact خصوصی گیت‌هاب
       - name: Build release APKs (امضای ثابت — قابل به‌روزرسانی روی نسخهٔ قبلی)
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew :app:assemblePublicRelease :app:assembleAdminRelease --stacktrace

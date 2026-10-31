@@ -57,9 +57,12 @@ android {
     signingConfigs {
         create("release") {
             storeFile = rootProject.file("signing/badkhan-release.jks")
-            storePassword = "BadkhanRelease2026"
+            // نسخهٔ ۱.۱۱.۳۲ (بازرسی امنیتی): رمز از Secret/محیط خوانده می‌شود؛
+            // مقدار فعلی فقط fallback موقت است تا CI تا تعریف Secret نشکند —
+            // پس از انتقال کیستور به Secret این دو مقدار literal حذف می‌شوند.
+            storePassword = System.getenv("KEYSTORE_STORE_PASSWORD") ?: "BadkhanRelease2026"
             keyAlias = "badkhan"
-            keyPassword = "BadkhanRelease2026"
+            keyPassword = System.getenv("KEYSTORE_KEY_PASSWORD") ?: "BadkhanRelease2026"
         }
     }
 
