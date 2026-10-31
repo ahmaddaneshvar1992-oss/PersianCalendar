@@ -23,6 +23,21 @@ jobs:
       - name: Setup Gradle with cache
         uses: gradle/actions/setup-gradle@v4
 
+      # نسخهٔ ۱.۱۱.۳۱ — پایهٔ اعتماد: تست‌های خودکار تبدیل تاریخ پیش از هر ساخت.
+      # با شکست هر تست، APK ساخته و منتشر نمی‌شود.
+      - name: Run unit tests (تبدیل تاریخ — پایهٔ اعتماد)
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testPublicReleaseUnitTest --stacktrace
+
+      - name: Upload test report (فقط هنگام شکست)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+
       # نسخهٔ ۱.۱۱.۳۰ — دو فلاور:
       #   public : نسخهٔ کاربران (بدون پنل مدیریت/توکن/رمز) → Release عمومی
       #   admin  : نسخهٔ شخصی مدیر (پنل کامل) → فقط artifact خصوصی گیت‌هاب
