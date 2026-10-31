@@ -133,14 +133,22 @@ class CalendarConverterTest {
         }
     }
 
-    // ---------- قمری (الگوریتم جدولی کویتی — دقت حدود یک روز) ----------
+    // ---------- قمری (جدولی کویتی + هم‌ترازی رسمی +۱ — HIJRI_ADJUST_DAYS) ----------
+
+    @Test
+    fun `hijri aligned to official calendar`() {
+        // گزارش مدیر (۲۰۲۶-۱۰-۳۱): «امروز ۲۰ جمادی‌الاول ۱۴۴۸ هست درستش کن» —
+        // جدولی کویتی ۱۹ می‌داد؛ با هم‌ترازی رسمی باید ۲۰ شود
+        assertEquals(HijriDate(1448, 5, 20), CalendarConverter.gregorianToHijri(2026, 10, 31))
+        // روز بعد: ۲۱ جمادی‌الاول
+        assertEquals(HijriDate(1448, 5, 21), CalendarConverter.gregorianToHijri(2026, 11, 1))
+    }
 
     @Test
     fun `hijri known pairs`() {
-        // جفت اسکرین‌شات باد صبا: ۳۱ اکتبر ۲۰۲۶ — الگوریتم کویتی خود برنامه: ۱۹ جمادی‌الاول ۱۴۴۸
-        assertEquals(HijriDate(1448, 5, 19), CalendarConverter.gregorianToHijri(2026, 10, 31))
-        assertEquals(HijriDate(1448, 6, 4), CalendarConverter.gregorianToHijri(2026, 11, 15))
-        assertEquals(GregorianDate(2025, 3, 30), CalendarConverter.hijriToGregorian(1446, 9, 30))
+        assertEquals(HijriDate(1448, 6, 5), CalendarConverter.gregorianToHijri(2026, 11, 15))
+        // معکوس با هم‌ترازی: روزی که تقویم رسمی آن را «۳۰ رمضان ۱۴۴۶» می‌داند
+        assertEquals(GregorianDate(2025, 3, 29), CalendarConverter.hijriToGregorian(1446, 9, 30))
     }
 
     @Test
