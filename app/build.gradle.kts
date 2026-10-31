@@ -13,8 +13,8 @@ android {
         applicationId = "ir.persiancalendar.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 42
-        versionName = "1.11.30"
+        versionCode = 43
+        versionName = "1.11.31"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -136,4 +136,8 @@ dependencies {
 
     // نسخهٔ ۱.۱۱.۳۰ — تأیید امضای Ed25519 خوراک (فقط کلید عمومی در اپ است)
     implementation("com.google.crypto.tink:tink-android:1.16.0")
+
+    // نسخهٔ ۱.۱۱.۳۱ — تست خودکار تبدیل تاریخ (در CI پیش از ساخت اجرا می‌شود؛
+    // فقط برای JVM تست — داخل APK نمی‌رود)
+    testImplementation("junit:junit:4.13.2")
 }

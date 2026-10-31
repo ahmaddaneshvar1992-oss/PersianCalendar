@@ -9,6 +9,12 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.text.SpannableString
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -41,6 +47,14 @@ import java.time.format.DateTimeFormatter
  * (CalendarForegroundService) نگه‌داری می‌شود تا هیچ‌وقت از نوار وضعیت پاک
  * نشود — حتی اگر کاربر سوایپش کند یا سیستم پردازه را بکشد. تاریخ و ساعت
  * هر دقیقه تازه می‌شود.
+ *
+ * نسخه ۱.۱۱.۳۱ (درخواست کاربر با اسکرین‌شات: «میخوام نوار اعلان شبیه باد صبا باشه
+ * تاریخ میلادی داشته باشه، فونت درشت، اون تاریخ که رنگ آبی داره»):
+ *  - عنوانِ تاریخ شمسی با AbsoluteSizeSpan واقعاً درشت می‌شود (۳۰dp، پهن)
+ *  - خط دوم آبی‌رنگ: تاریخ میلادی با ماه فارسی («۳۱ اکتبر ۲۰۲۶») + تاریخ قمری
+ *    («۱۹ جمادی‌الاول ۱۴۴۸») — همان‌چینش باد صبا؛ رنگ آبی روی زمینهٔ تیره و روشن
+ *    هر دو خواناست (Material Blue 300)
+ *  - خط ساعت در متن باز‌شدهٔ اعلان (BigText) حفظ شده است
  */
 object OngoingDateNotifier {
 
@@ -67,6 +81,22 @@ object OngoingDateNotifier {
         val wd = weekDayNames[today.dayOfWeek] ?: ""
         return "$wd ${PersianText.toPersianDigits(j.day.toString())} " +
             "${PersianText.jalaliMonths[j.month - 1]} ${PersianText.toPersianDigits(j.year.toString())}"
+    }
+
+    /**
+     * خط دوم اعلان — نسخهٔ ۱.۱۱.۳۱ (سبک باد صبا):
+     * میلادی با ماه فارسی + قمری: «۳۱ اکتبر ۲۰۲۶ ، ۱۹ جمادی‌الاول ۱۴۴۸»
+     * (قمری با همان الگوریتم جدولی کویتی خود برنامه است — دقت حدود یک روز)
+     */
+    fun secondaryDateText(): String {
+        val today = LocalDate.now()
+        val g = "${PersianText.toPersianDigits(today.dayOfMonth.toString())} " +
+            "${PersianText.gregorianMonthsFa[today.monthValue - 1]} " +
+            PersianText.toPersianDigits(today.year.toString())
+        val h = CalendarConverter.gregorianToHijri(today.year, today.monthValue, today.dayOfMonth)
+        val hj = "${PersianText.toPersianDigits(h.day.toString())} " +
+            "${PersianText.hijriMonths[h.month - 1]} ${PersianText.toPersianDigits(h.year.toString())}"
+        return "$g ، $hj"
     }
 
     /**
@@ -121,19 +151,27 @@ object OngoingDateNotifier {
     /** ساخت اعلان همیشگی تاریخ — هم برای سرویس Foreground و هم برای جایگزین ساده */
     fun buildOngoingNotification(context: Context): android.app.Notification {
         val timeText = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-        // نسخه ۱.۱۱.۱۵ (درخواست کاربر مطابق عکس: «متن‌هاش کمی بزرگ‌تر باشن»):
-        // تاریخ کامل به‌عنوان عنوانِ درشت اعلان است و نام برنامه و ساعت زیرش
-        // با حروف کوچک — بزرگ‌ترین حالت متنی که سیستم اعلان می‌دهد.
-        // نسخه ۱.۱۱.۱۵: لمس اعلان مستقیم روی تقویم اصلی باز می‌شود (نه رویدادها).
+        // نسخهٔ ۱.۱۱.۳۱ (درخواست کاربر با اسکرین‌شات باد صبا): عنوانِ درشت + خط آبی میلادی/قمری.
+        // SpannableString در اعلان‌ها رندر می‌شود (AbsoluteSizeSpan/StyleSpan/ForegroundColorSpan)؛
+        // اگر رابط کاربری شرکتی آن‌ها را ساده کند، فقط به متن معمولی برمی‌گردد — افت‌پذیری امن.
+        val title = SpannableString(todayText())
+        title.setSpan(StyleSpan(Typeface.BOLD), 0, title.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        title.setSpan(AbsoluteSizeSpan(30, true), 0, title.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        val sub = SpannableString(secondaryDateText())
+        sub.setSpan(ForegroundColorSpan(0xFF64B5F6.toInt()), 0, sub.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        sub.setSpan(AbsoluteSizeSpan(16, true), 0, sub.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        val big = SpannableStringBuilder(sub)
+        big.append("\n")
+        big.append("بادخزان — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
+
         return NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ONGOING)
             // نسخه ۱.۱۱.۱۳: آیکن پویای «عدد روز» به‌جای لوگوی برنامه (درخواست کاربر)
             .setSmallIcon(IconCompat.createWithBitmap(dayIconBitmap()))
-            .setContentTitle(todayText())
-            .setContentText("بادخزان — ساعت ${PersianText.toPersianDigits(timeText)}")
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("بادخزان — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
-            )
+            .setContentTitle(title)
+            .setContentText(sub)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(big))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
