@@ -60,9 +60,11 @@ android {
             // نسخهٔ ۱.۱۱.۳۲ (بازرسی امنیتی): رمز از Secret/محیط خوانده می‌شود؛
             // مقدار فعلی فقط fallback موقت است تا CI تا تعریف Secret نشکند —
             // پس از انتقال کیستور به Secret این دو مقدار literal حذف می‌شوند.
-            storePassword = System.getenv("KEYSTORE_STORE_PASSWORD") ?: "BadkhanRelease2026"
+            // نکته: وقتی Secret تعریف نشده، CI متغیر را خالی (نه غایب) می‌گذارد
+            // → باید takeIf باشد وگرنه رشتهٔ خالی جای fallback می‌نشیند.
+            storePassword = System.getenv("KEYSTORE_STORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "BadkhanRelease2026"
             keyAlias = "badkhan"
-            keyPassword = System.getenv("KEYSTORE_KEY_PASSWORD") ?: "BadkhanRelease2026"
+            keyPassword = System.getenv("KEYSTORE_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: "BadkhanRelease2026"
         }
     }
 
