@@ -1,6 +1,7 @@
 package ir.persiancalendar.app.data.support
 
 import android.content.Context
+import ir.persiancalendar.app.core.ads.AdPolicy
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -74,27 +75,74 @@ object MainAdFeed {
 
     private fun cacheFile(context: Context) = File(context.filesDir, CACHE_FILE)
 
-    /** تجزیهٔ JSON خوراک بنرها */
+    /**
+     * تجزیهٔ JSON خوراک بنرها
+     * نسخهٔ ۱.۱۱.۳۴ (درخواست کاربر: بنرهای تبلیغاتی قابل حذف):
+     *  - فیلدهای جدید اختیاری هر آیتم: priority، startAt/endAt (ISO-8601 یا
+     *    epoch ms)، dismissDays (پیش‌فرض ۷ — ۰ = همیشه)، minVersionCode
+     *  - همهٔ متن‌ها clamp می‌شوند (هیچ متن خام بلندی رندر نمی‌شود)
+     *  - آیتم بدون id یا بدون title حذف می‌شود (رفتار قبلی)
+     * فرمت فید همان آرایهٔ JSON قبلی است — سازگار با نسخه‌های قدیمی اپ
+     * (فیلدهای جدید در آن‌ها نادیده گرفته می‌شود).
+     */
     fun parseFeed(json: String): List<MainAd> = runCatching {
         val arr = JSONArray(json)
         (0 until arr.length()).mapNotNull {
             val o = arr.getJSONObject(it)
             val id = o.optLong("id", 0L)
-            val title = o.optString("title").trim()
+            val title = AdPolicy.clamp(o.optString("title"), AdPolicy.MAX_TITLE)
             if (id == 0L || title.isEmpty()) null
             else MainAd(
                 id = id,
                 title = title,
-                body = o.optString("body"),
-                cta = o.optString("cta", "مشاهده"),
-                link = o.optString("link"),
-                image = o.optString("image"),
+                body = AdPolicy.clamp(o.optString("body"), AdPolicy.MAX_BODY),
+                cta = AdPolicy.clamp(o.optString("cta", "مشاهده"), AdPolicy.MAX_CTA)
+                    .ifBlank { "مشاهده" },
+                link = o.optString("link").trim().take(AdPolicy.MAX_URL),
+                image = o.optString("image").trim().take(AdPolicy.MAX_URL),
                 colorIndex = o.optInt("colorIndex", 0).coerceIn(0, 7),
                 on = true,
-                at = o.optLong("at", 0L)
+                at = o.optLong("at", 0L),
+                priority = o.optInt("priority", 0).coerceIn(-1000, 1000),
+                startAt = parseWhen(o.opt("startAt")),
+                endAt = parseWhen(o.opt("endAt")),
+                dismissDays = o.optInt("dismissDays", 7).coerceIn(0, AdPolicy.MAX_DISMISS_DAYS),
+                minVersionCode = o.optInt("minVersionCode", 0).coerceAtLeast(0)
             )
         }
     }.getOrDefault(emptyList())
+
+    /**
+     * پارس زمان فید — نسخهٔ ۱.۱۱.۳۴: رشتهٔ ISO-8601 (Instant/OffsetDateTime؛
+     * LocalDateTime به‌عنوان Asia/Tehran تفسیر می‌شود) یا عدد epoch میلی‌ثانیه.
+     * خروجی نامعتبر = ۰ (بدون محدودیت).
+     */
+    fun parseWhen(raw: Any?): Long = runCatching {
+        when (raw) {
+            is Number -> raw.toLong()
+            is String -> {
+                val s = raw.trim()
+                when {
+                    s.isEmpty() -> 0L
+                    s.toLongOrNull() != null -> s.toLong()
+                    else -> {
+                        try {
+                            java.time.Instant.parse(s).toEpochMilli()
+                        } catch (_: java.time.format.DateTimeParseException) {
+                            try {
+                                java.time.OffsetDateTime.parse(s).toInstant().toEpochMilli()
+                            } catch (_: java.time.format.DateTimeParseException) {
+                                java.time.LocalDateTime.parse(s)
+                                    .atZone(java.time.ZoneId.of("Asia/Tehran"))
+                                    .toInstant().toEpochMilli()
+                            }
+                        }
+                    }
+                }
+            }
+            else -> 0L
+        }
+    }.getOrDefault(0L)
 
     /**
      * همگام‌سازی کاربر: بنرهای تازه اضافه، بنرهای مدیریت‌شدهٔ قبلی به‌روز و

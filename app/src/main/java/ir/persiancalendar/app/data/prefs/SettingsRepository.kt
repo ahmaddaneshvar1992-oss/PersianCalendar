@@ -55,8 +55,12 @@ data class AppSettings(
     /** صدای اذان: moazenzadeh / rezayian / none (کلیدهای قدیمی در AdhanSounds نرمال می‌شوند) */
     val adhanSound: String = "moazenzadeh",
     // ---------- نسخهٔ ۱.۱۱.۳۳: صفحهٔ خودکار اذان ----------
-    /** باز شدن خودکار صفحهٔ اوقات شرعی هنگام رسیدن وقت اذان */
-    val azanAutoOpenScreen: Boolean = true,
+    /** باز شدن خودکار صفحهٔ اوقات شرعی هنگام رسیدن وقت اذان
+     *  نسخهٔ ۱.۱۱.۳۴ (نکتهٔ Google Play کاربر): پیش‌فرض «خاموش» شد —
+     *  Full-Screen Intent در اندروید ۱۴+ برای اپ‌های غیرتماسی/غیرآلارمی
+     *  محدود است؛ فقط با تأیید صریح کاربر روشن می‌شود تا در بازبینی استور
+     *  مشکلی پیش نیاید. */
+    val azanAutoOpenScreen: Boolean = false,
     /** نمایش تمام‌صفحه حتی وقتی گوشی روشن و باز است و اپ دیگری جلوی صفحه است */
     val azanAlwaysFullScreen: Boolean = false,
     /** با خروج از صفحهٔ اذان، پخش هم متوقف شود؟ */
@@ -70,8 +74,15 @@ data class AppSettings(
     // ---------- نسخه ۱.۱۱.۱۶ (درخواست کاربر مطابق عکس): مشخصات کاربر در راه‌اندازی ----------
     /** جنسیت کاربر: "" / "male" / "female" — گام پنجم راه‌اندازی اولیه */
     val profileGender: String = "",
-    /** تاریخ تولد شمسی با قالب "jy/jm/jd" — خالی یعنی انتخاب نشده */
-    val profileBirth: String = ""
+    /** تاریخ تولد شمسی با قالب "jy/jm/jd" — خالی یعنی انتخاب نشده؛
+     *  نسخهٔ ۱.۱۱.۳۴: سال ۰ یعنی «بدون سال» (کارت تولد فقط روز/ماه)
+     *  حریم خصوصی: فقط محلی — allowBackup=false است و هرگز به شبکه نمی‌رود */
+    val profileBirth: String = "",
+    // ---------- نسخهٔ ۱.۱۱.۳۴: بنرهای تبلیغاتی قابل حذف + کارت تولد ----------
+    /** سوئیچ کاربر «نمایش تبلیغات» (کنار کلید قطع اضطراری فید adsEnabled) */
+    val adsEnabled: Boolean = true,
+    /** نمایش کارت «روز تولد شما» در صفحه اصلی */
+    val birthdayCardVisible: Boolean = true
     // نسخهٔ ۱.۱۱.۳۰ (بازرسی امنیتی): adminPin و githubToken به AdminSecrets
     // (فلاور «admin») منتقل شدند — در APK عمومی نه فیلدی هست، نه کلید DataStore،
     // نه کد انتشار؛ پنل مدیریت اصلاً در نسخهٔ عمومی کامپایل نمی‌شود.
@@ -95,6 +106,9 @@ class SettingsRepository(private val context: Context) {
         val AZAN_AUTO_OPEN = booleanPreferencesKey("azan_auto_open_screen")
         val AZAN_ALWAYS_FULL = booleanPreferencesKey("azan_always_fullscreen")
         val AZAN_STOP_ON_EXIT = booleanPreferencesKey("azan_stop_on_exit")
+        // ---------- نسخهٔ ۱.۱۱.۳۴: تبلیغات + کارت تولد ----------
+        val ADS_ENABLED = booleanPreferencesKey("ads_enabled")
+        val BIRTHDAY_VISIBLE = booleanPreferencesKey("birthday_card_visible")
         // ---------- نسخه ۱.۳ ----------
         val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
         // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
@@ -117,13 +131,15 @@ class SettingsRepository(private val context: Context) {
             prayerNotifications = decodeMask(p[Keys.PRAYER_NOTIF] ?: (1 or 4 or 32)),
             useCurrentLocation = p[Keys.USE_LOCATION] ?: false,
             adhanSound = p[Keys.ADHAN_SOUND] ?: "moazenzadeh",
-            azanAutoOpenScreen = p[Keys.AZAN_AUTO_OPEN] ?: true,
+            azanAutoOpenScreen = p[Keys.AZAN_AUTO_OPEN] ?: false,
             azanAlwaysFullScreen = p[Keys.AZAN_ALWAYS_FULL] ?: false,
             azanStopOnExit = p[Keys.AZAN_STOP_ON_EXIT] ?: false,
             ongoingDateNotif = p[Keys.ONGOING_DATE] ?: true,
             onboardingDone = p[Keys.ONBOARDING_DONE] ?: false,
             profileGender = p[Keys.PROFILE_GENDER] ?: "",
-            profileBirth = p[Keys.PROFILE_BIRTH] ?: ""
+            profileBirth = p[Keys.PROFILE_BIRTH] ?: "",
+            adsEnabled = p[Keys.ADS_ENABLED] ?: true,
+            birthdayCardVisible = p[Keys.BIRTHDAY_VISIBLE] ?: true
         )
     }
 
@@ -188,6 +204,11 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setProfileBirth(jy: Int, jm: Int, jd: Int) =
         context.dataStore.edit { it[Keys.PROFILE_BIRTH] = "$jy/$jm/$jd" }
+
+    // ---------- نسخهٔ ۱.۱۱.۳۴: تبلیغات + کارت تولد ----------
+    suspend fun setAdsEnabled(b: Boolean) = context.dataStore.edit { it[Keys.ADS_ENABLED] = b }
+    suspend fun setBirthdayCardVisible(b: Boolean) =
+        context.dataStore.edit { it[Keys.BIRTHDAY_VISIBLE] = b }
 
 
     companion object {

@@ -59,7 +59,9 @@ fun JalaliDatePickerDialog(
     onSelected: (JalaliDate) -> Unit,
     minYear: Int = initial.year - 40,
     maxYear: Int = initial.year + 40,
-    title: String = "انتخاب تاریخ شمسی"
+    title: String = "انتخاب تاریخ شمسی",
+    // نسخهٔ ۱.۱۱.۳۴: محتوای اختیاری انتهای دیالوگ (مثلاً چک‌باکس «بدون سال» کارت تولد)
+    extraContent: (@Composable () -> Unit)? = null
 ) {
     var year by remember { mutableStateOf(initial.year.coerceIn(minYear, maxYear)) }
     var month by remember { mutableStateOf(initial.month) }
@@ -112,6 +114,10 @@ fun JalaliDatePickerDialog(
                     selectedIndex = (day - 1).coerceIn(0, daysCount - 1),
                     onSelected = { idx -> day = idx + 1 }
                 )
+            }
+            if (extraContent != null) {
+                Spacer(Modifier.height(8.dp))
+                extraContent()
             }
         }
     )

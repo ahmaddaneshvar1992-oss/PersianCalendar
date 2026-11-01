@@ -16,4 +16,26 @@
     <string name="azan_screen_stop_on_exit_desc">اگر خاموش باشد، با خروج از صفحهٔ اذان، صدا تا پایان ادامه می‌یابد</string>
     <string name="azan_screen_fsi_denied">دسترسی «نمایش تمام‌صفحه» در تنظیمات اعلان این برنامه خاموش است؛ برای باز شدن خودکار صفحهٔ اذان روی قفل صفحه، آن را روشن کنید</string>
     <string name="azan_screen_open_notif_settings">رفتن به تنظیمات اعلان</string>
+
+    <!-- بنرهای تبلیغاتی قابل حذف — نسخهٔ ۱.۱۱.۳۴ -->
+    <string name="ad_label">تبلیغ</string>
+    <string name="ad_dismiss_cd">بستن این تبلیغ</string>
+    <string name="ad_open_cd">تبلیغ: %1$s — برای باز کردن لمس کنید</string>
+    <string name="ads_enabled_title">نمایش تبلیغات</string>
+    <string name="ads_enabled_desc">بنرهای تبلیغاتی زیر تقویم نمایش داده شوند (حذف هر بنر با × تا مدت تعیین‌شده پنهان می‌ماند)</string>
+    <string name="ads_reshow_hidden">نمایش دوبارهٔ %1$s تبلیغ پنهان‌شده</string>
+
+    <!-- کارت «روز تولد شما» — نسخهٔ ۱.۱۱.۳۴ -->
+    <string name="birthday_title">روز تولد شما 🎂</string>
+    <string name="birthday_menu_cd">گزینه‌های کارت تولد</string>
+    <string name="birthday_edit">ویرایش تاریخ تولد</string>
+    <string name="birthday_hide">پنهان کردن کارت</string>
+    <string name="birthday_set_button">ثبت تاریخ تولد</string>
+    <string name="birthday_empty_desc">تاریخ تولدتان را ثبت کنید تا شمارش معکوس تولد بعدی این‌جا دیده شود؛ فقط روی همین گوشی ذخیره می‌شود و هرگز جایی فرستاده نمی‌شود</string>
+    <string name="birthday_today_msg">تولدتان مبارک! 🎉</string>
+    <string name="birthday_days">روز</string>
+    <string name="birthday_hours">ساعت</string>
+    <string name="birthday_minutes">دقیقه</string>
+    <string name="birthday_progress_fmt">%1$s٪ از راه تولد بعدی گذشته است</string>
+    <string name="birthday_no_year">بدون سال (فقط روز و ماه)</string>
 </resources>

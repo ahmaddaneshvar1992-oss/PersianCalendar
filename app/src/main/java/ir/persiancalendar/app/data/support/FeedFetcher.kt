@@ -43,6 +43,16 @@ object FeedFetcher {
     @Volatile private var cachedBase: String? = null
     @Volatile private var cachedBaseAt = 0L
 
+    /**
+     * کلید قطع اضطراری تبلیغات (adsEnabled در feed/config.json) — نسخهٔ ۱.۱۱.۳۴
+     * هر وقت مدیر خوراک آن را false کند، همهٔ بنرهای تبلیغاتی صفحه اصلی در
+     * همهٔ کاربران تا دریافت بعدی پنهان می‌شود (منبع کش‌شده هم همین مقدار را
+     * نگه می‌دارد). پیش‌فرض و حالتِ نامعلوم = true (نمایش مطابق فید بنرها).
+     */
+    @Volatile
+    var configAdsEnabled: Boolean = true
+        private set
+
     data class Result(
         val ok: Boolean,      // آیا محتوایی به دست آمد
         val body: String,     // متن JSON خوراک
@@ -154,6 +164,9 @@ object FeedFetcher {
      *
      * نسخهٔ ۱.۱۱.۳۰ — تنظیمات سرور هم مثل خوراک‌ها باید امضای معتبر داشته باشد؛
      * منبعی که config.json بدون امضا یا با امضای جعلی بدهد رد می‌شود.
+     *
+     * نسخهٔ ۱.۱۱.۳۴ — کلید adsEnabled (قطع اضطراری تبلیغات) از همین فایل
+     * خوانده و در configAdsEnabled منتشر می‌شود (از منبع زنده و کش هر دو).
      */
     private fun serverBase(repo: String, cache: File?): String {
         val now = System.currentTimeMillis()
@@ -169,12 +182,14 @@ object FeedFetcher {
             val text = runCatching { fetchSignedBody(url) }.getOrNull()
             if (!text.isNullOrBlank()) {
                 if (cfgFile != null) runCatching { cfgFile.writeText(text) }
-                base = parseBase(text)
+                base = parseConfig(text)
                 break
             }
         }
-        if (base.isBlank() && cfgFile != null)
-            base = runCatching { parseBase(cfgFile.readText()) }.getOrDefault("")
+        if (base.isBlank() && cfgFile != null) {
+            val cached = runCatching { cfgFile.readText() }.getOrDefault("")
+            if (cached.isNotBlank()) base = parseConfig(cached)
+        }
         cachedBase = base
         cachedBaseAt = now
         return base
@@ -184,9 +199,12 @@ object FeedFetcher {
      * اعتبارسنجی آدرس سرور: فقط https و بدون / انتهایی
      * (نسخهٔ ۱.۱۱.۲۹: http حذف شد — با networkSecurityConfig کلیرتکست مسدود است؛
      * برای سرور شخصی گواهی رایگان Let's Encrypt بگیرید)
+     * نسخهٔ ۱.۱۱.۳۴: کلید adsEnabled هم خوانده می‌شود (پیش‌فرض true).
      */
-    private fun parseBase(json: String): String = runCatching {
-        var b = JSONObject(json).optString("feedBaseUrl").trim()
+    private fun parseConfig(json: String): String = runCatching {
+        val o = JSONObject(json)
+        configAdsEnabled = o.optBoolean("adsEnabled", true)
+        var b = o.optString("feedBaseUrl").trim()
         if (b.endsWith("/")) b = b.dropLast(1)
         if (b.startsWith("https://")) b else ""
     }.getOrDefault("")

@@ -29,7 +29,13 @@ data class MainAd(
     val image: String = "",     // مسیر فایل داخلی یا URL تصویر — اختیاری
     val colorIndex: Int = 0,    // ایندکس پالت رنگ (۸ رنگ در AdBanners.kt)
     val on: Boolean = true,
-    val at: Long = System.currentTimeMillis()
+    val at: Long = System.currentTimeMillis(),
+    // ---------- نسخهٔ ۱.۱۱.۳۴: فیلدهای جدید بنرهای تبلیغاتی (همه اختیاری) ----------
+    val priority: Int = 0,          // اولویت نمایش — بزرگ‌تر اول (حداکثر ۲ بنر هم‌زمان)
+    val startAt: Long = 0L,         // epoch ms — شروع بازهٔ نمایش؛ ۰ = از همین حالا
+    val endAt: Long = 0L,           // epoch ms — پایان بازهٔ نمایش؛ ۰ = بدون پایان
+    val dismissDays: Int = 7,       // روزهای پنهانی پس از × — ۰ = برای همیشه
+    val minVersionCode: Int = 0     // فقط در نسخه‌های جدیدتر نمایش داده شود
 )
 
 object MainAdBox {
@@ -58,7 +64,12 @@ object MainAdBox {
                     image = o.optString("image"),
                     colorIndex = o.optInt("colorIndex", 0),
                     on = o.optBoolean("on", true),
-                    at = o.optLong("at", System.currentTimeMillis())
+                    at = o.optLong("at", System.currentTimeMillis()),
+                    priority = o.optInt("priority", 0),
+                    startAt = o.optLong("startAt", 0L),
+                    endAt = o.optLong("endAt", 0L),
+                    dismissDays = o.optInt("dismissDays", 7),
+                    minVersionCode = o.optInt("minVersionCode", 0)
                 )
             }
         }.getOrDefault(emptyList())
@@ -145,6 +156,12 @@ object MainAdBox {
                     .put("colorIndex", a.colorIndex)
                     .put("on", a.on)
                     .put("at", a.at)
+                    // نسخهٔ ۱.۱۱.۳۴: فیلدهای جدید در انتشار پنل هم حفظ می‌شوند (round-trip)
+                    .put("priority", a.priority)
+                    .put("startAt", a.startAt)
+                    .put("endAt", a.endAt)
+                    .put("dismissDays", a.dismissDays)
+                    .put("minVersionCode", a.minVersionCode)
             )
         }
         return arr.toString(2)

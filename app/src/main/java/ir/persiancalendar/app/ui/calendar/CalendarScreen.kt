@@ -51,6 +51,7 @@ import ir.persiancalendar.app.core.events.HolidayRepository
 import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.data.model.EventRepetition
 import ir.persiancalendar.app.data.prefs.AppSettings
+import ir.persiancalendar.app.ui.components.BirthdayCard
 import ir.persiancalendar.app.ui.components.JalaliDatePickerDialog
 import ir.persiancalendar.app.ui.components.MainAdsSection
 import ir.persiancalendar.app.ui.prayer.PrayerTimesCard
@@ -216,6 +217,25 @@ fun CalendarScreen(
 
         Spacer(Modifier.height(10.dp))
 
+        // ---------- بنرهای تبلیغاتی قابل حذف — نسخهٔ ۱.۱۱.۳۴ (درخواست کاربر) ----------
+        // جای قرارگیری جدید: زیر جدول تقویم، بالای کارت‌های «مناسبت‌های روز» و بقیهٔ کارت‌ها.
+        // حداکثر ۲ بنر (priority + بازهٔ زمانی)، دکمهٔ × با حذف انیمیشنی و پنهانی
+        // دائمی تا dismissDays، برچسب «تبلیغ»، کلید قطع اضطراری فید + سوئیچ کاربر.
+        MainAdsSection(
+            refreshKey = adsRefresh,
+            userAdsEnabled = settings.adsEnabled
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // ---------- کارت «روز تولد شما» — نسخهٔ ۱.۱۱.۳۴ (درخواست کاربر) ----------
+        // شمارش معکوس تولد بعدی (روز/ساعت/دقیقه با ارقام فارسی) + نوار پیشرفت؛
+        // قاعدهٔ ۳۰ اسفند و پیام ویژهٔ تولد؛ فقط دادهٔ محلی — هرگز به شبکه نمی‌رود.
+        if (settings.birthdayCardVisible) {
+            BirthdayCard(settings = settings)
+            Spacer(Modifier.height(10.dp))
+        }
+
         // ---------- مناسبت‌های روز انتخاب‌شده — نسخه ۱.۱۱.۷ (درخواست کاربر) ----------
         // با لمس هر روز تقویم، مناسبت‌های همان روز با همان فرم «مناسبت‌های این ماه»
         // (شماره روز + عنوان مناسبت‌ها) همین‌جا زیر تقویم دیده می‌شود.
@@ -225,13 +245,6 @@ fun CalendarScreen(
             holidayRepo = holidayRepo,
             persianDigits = persianDigits
         )
-
-        Spacer(Modifier.height(10.dp))
-
-        // ---------- بنرهای تبلیغات صفحه اصلی — نسخه ۱.۱۱.۶ (درخواست کاربر) ----------
-        // هر چند بنر که مدیر در «پنل مدیریت ← تبلیغات صفحه اصلی» ساخته باشد، همین‌جا
-        // به‌ترتیب از بالا به پایین نمایش داده می‌شود؛ اگر بنری نباشد این بخش کلاً حذف است.
-        MainAdsSection(refreshKey = adsRefresh)
 
         Spacer(Modifier.height(10.dp))
 

@@ -13,8 +13,8 @@ android {
         applicationId = "ir.persiancalendar.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 45
-        versionName = "1.11.33"
+        versionCode = 46
+        versionName = "1.11.34"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -145,4 +145,7 @@ dependencies {
     // نسخهٔ ۱.۱۱.۳۱ — تست خودکار تبدیل تاریخ (در CI پیش از ساخت اجرا می‌شود؛
     // فقط برای JVM تست — داخل APK نمی‌رود)
     testImplementation("junit:junit:4.13.2")
+    // نسخهٔ ۱.۱۱.۳۴ — org.json واقعی برای تست تجزیهٔ خوراک تبلیغ در JVM
+    // (android.jar تست فقط stub دارد که پرتاب خطا می‌کند؛ داخل APK نمی‌رود)
+    testImplementation("org.json:json:20240303")
 }
