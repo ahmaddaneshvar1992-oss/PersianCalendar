@@ -66,8 +66,8 @@ object AdsFeed {
         val enabled: Boolean,
         val title: String,
         val badge: String,               // اختیاری — مثلاً «جدید»
-        val iconUrl: String,             // فقط tile — https
-        val imageUrl: String,            // فقط banner — https
+        val iconUrl: String,             // فقط tile — https یا data:image درون‌خطی
+        val imageUrl: String,            // فقط banner — https یا data:image درون‌خطی
         val targetType: String,          // external | internal
         val target: String,              // https یا کلید لیست‌سفید
         val order: Int,
@@ -94,7 +94,7 @@ object AdsFeed {
     /**
      * پارس سند فید. خروجی null = ساختار کلاً نامعتبر (شیء نیست، sequence
      * ندارد یا items آرایه نیست) → کل فایل رد می‌شود.
-     * آیتم‌های نامعتبر (بدون id/title، URL ناامن، type ناشناس، مقصد داخلی
+     * آیتم‌های نامعتبر (بدون id/title، تصویر ناامن، type ناشناس، مقصد داخلی
      * خارج از لیست‌سفید) بی‌صدا حذف می‌شوند — فید خراب هرگز کرش نمی‌کند.
      */
     fun parseDoc(json: String): Doc? = runCatching {
@@ -125,11 +125,12 @@ object AdsFeed {
         val title = AdsFeedPolicy.clamp(o.optString("title"), AdsFeedPolicy.MAX_TITLE)
         if (title.isEmpty()) return null
 
-        // الزام امنیتی: فقط https — طرح‌های دیگر (http/intent/file/javascript/content/data) رد
-        val iconUrl = o.optString("iconUrl").trim().take(AdsFeedPolicy.MAX_URL)
-        val imageUrl = o.optString("imageUrl").trim().take(AdsFeedPolicy.MAX_URL)
-        if (type == AdsFeedPolicy.TYPE_TILE && !AdsFeedPolicy.isSafeHttpsUrl(iconUrl)) return null
-        if (type == AdsFeedPolicy.TYPE_BANNER && !AdsFeedPolicy.isSafeHttpsUrl(imageUrl)) return null
+        // الزام امنیتی — نسخهٔ ۱.۱۱.۳۶: تصویر https یا data:image رستری درون‌خطی
+        // (جاسازی اطلاعیه‌ها)؛ طرح‌های دیگر (http/intent/file/javascript/content) رد
+        val iconUrl = o.optString("iconUrl").trim().take(AdsFeedPolicy.MAX_DATAURI_CHARS)
+        val imageUrl = o.optString("imageUrl").trim().take(AdsFeedPolicy.MAX_DATAURI_CHARS)
+        if (type == AdsFeedPolicy.TYPE_TILE && !AdsFeedPolicy.isSafeFeedImage(iconUrl)) return null
+        if (type == AdsFeedPolicy.TYPE_BANNER && !AdsFeedPolicy.isSafeFeedImage(imageUrl)) return null
 
         // مقصد: external فقط https؛ internal فقط کلید لیست‌سفید؛ نامعتبر = بدون لمس
         val rawTargetType = o.optString("targetType").trim().lowercase()

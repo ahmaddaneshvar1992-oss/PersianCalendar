@@ -249,10 +249,25 @@ fun MainScreen(
     }
 
     // به‌روزرسانی اطلاعیه‌ها پس از بستن پنل مدیریت / شیت اطلاعیه (نسخه ۱.۶)
+    // نسخهٔ ۱.۱۱.۳۶ (گزارش کاربر: «تبلیغ که می‌ذارم نمایش داده نمی‌شود»):
+    // قبلاً بعد از بستن پنل فقط «کش» دوباره خوانده می‌شد و انتشار تازهٔ مدیر
+    // تا sync بعدی (باز شدن دوباره یا ۱۰ دقیقه) دیده نمی‌شد؛ اکنون بستن پنل
+    // یعنی همگام‌سازی فوری تبلیغات مدیریت‌شده — مدیر بلافاصله نتیجه را می‌بیند.
+    var wasDevPanelOpen by remember { mutableStateOf(false) }
     LaunchedEffect(devPanelVisible, annSheetVisible, supportVisible) {
         refreshAnnouncements()
-        // نسخهٔ ۱.۱۱.۲۱: بنرها هم بعد از بستن پنل مدیریت دوباره خوانده می‌شوند
-        adsVersion++
+        val panelJustClosed = wasDevPanelOpen && !devPanelVisible
+        wasDevPanelOpen = devPanelVisible
+        if (panelJustClosed) {
+            // همگام‌سازی فوری؛ چه فید تازه‌ای بگیرد چه نه، نمایش از کش دوباره خوانده می‌شود
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                ir.persiancalendar.app.data.support.AdsFeed.sync(context)
+            }
+            adsVersion++
+        } else {
+            // نسخهٔ ۱.۱۱.۲۱: بنرها هم بعد از بستن پنل مدیریت دوباره خوانده می‌شوند
+            adsVersion++
+        }
     }
 
     // ---------- نسخه ۱.۱۱.۳ (گزارش کاربر): دکمه برگشت گوشی ----------

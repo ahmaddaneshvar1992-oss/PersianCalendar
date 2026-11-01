@@ -114,6 +114,56 @@ class AdsFeedParseTest {
         """.trimIndent()
         val d = AdsFeed.parseDoc(doc(items = bad))
         assertEquals("", d!!.items[0].target)
+        // data هرگز مقصد لمس نیست (فقط تصویر درون‌خطی مجاز است)
+        val bad2 = """
+            [{"id":"t11","type":"tile","title":"x","iconUrl":"https://a.co/i.png",
+              "targetType":"external","target":"data:image/jpeg;base64,AAAA","order":1}]
+        """.trimIndent()
+        val d2 = AdsFeed.parseDoc(doc(items = bad2))
+        assertEquals("", d2!!.items[0].target)
+    }
+
+    // ---------- تصویر درون‌خطی (جاسازی اطلاعیه‌ها — ۱.۱۱.۳۶) ----------
+
+    @Test
+    fun `banner with embedded jpeg data uri is accepted`() {
+        val d = AdsFeed.parseDoc(
+            doc(items = """
+                [{"id":"b10","type":"banner","title":"بنر گالری",
+                  "imageUrl":"data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+                  "targetType":"internal","target":"announcements","order":1}]
+            """.trimIndent())
+        )
+        assertNotNull(d)
+        assertEquals(1, d!!.items.size)
+        assertTrue(d.items[0].imageUrl.startsWith("data:image/jpeg;base64,"))
+    }
+
+    @Test
+    fun `tile with embedded png icon is accepted`() {
+        val d = AdsFeed.parseDoc(
+            doc(items = """
+                [{"id":"t20","type":"tile","title":"کارت گالری",
+                  "iconUrl":"data:image/png;base64,iVBORw0KGgo=","order":1}]
+            """.trimIndent())
+        )
+        assertNotNull(d)
+        assertEquals("t20", d!!.items[0].id)
+    }
+
+    @Test
+    fun `svg data uri and other mimes are dropped`() {
+        val d = AdsFeed.parseDoc(
+            doc(items = """
+                [{"id":"b30","type":"banner","title":"svg جعلی",
+                  "imageUrl":"data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=","order":1},
+                 {"id":"b31","type":"banner","title":"html جعلی",
+                  "imageUrl":"data:text/html;base64,PGI+","order":2},
+                 ${banner(id = "b32")}]
+            """.trimIndent())
+        )
+        assertNotNull(d)
+        assertEquals(listOf("b32"), d!!.items.map { it.id })
     }
 
     @Test

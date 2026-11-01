@@ -18,6 +18,14 @@ package ir.persiancalendar.app.core.ads
  *  - مرتب‌سازی بر اساس order فید و سقف تعداد
  *  - تازگی کش: کش قدیمی‌تر از maxCacheDays (پیش‌فرض ۷) نمایش داده نمی‌شود
  *
+ * تصویر آیتم (iconUrl/imageUrl) — نسخهٔ ۱.۱۱.۳۶: علاوه بر https، «جاسازی
+ * درون‌خطی» data:image/jpeg|png|webp;base64 هم مجاز است (الگوی اطلاعیه‌ها از
+ * ۱.۱۱.۲۵) تا عکس گالریِ مدیر بدون هاست بیرونی به کاربران برسد. این گسترش
+ * سخت‌گیرانه است: فقط سه فرمت تصویری رستری، فقط base64، بدون فاصله، با سقف
+ * کاراکتر — svg/xml و هر MIME دیگری رد می‌شود و decode با BitmapFactory است
+ * (هیچ HTML/SVG/اسکریپتی اجرا نمی‌شود). مقصد لمس (target) همچنان فقط https یا
+ * کلید داخلی است و data هرگز مقصد نیست.
+ *
  * هیچ داده‌ای از کاربر (موقعیت، تاریخ تولد، رویدادها) به هیچ‌جا نمی‌رود؛
  * این کلاس فقط خواندنی است و هیچ خروجی شبکه‌ای ندارد.
  */
@@ -38,6 +46,20 @@ object AdsFeedPolicy {
 
     /** سقف معقول maxCacheDays (یک ماه) — مقادیر بزرگ‌تر بی‌معنا هستند */
     const val MAX_CACHE_DAYS = 30
+
+    /**
+     * سقف کاراکترِ data URI تصویر درون‌خطی فید — ۱.۱۱.۳۶.
+     * ImageEmbed حداکثر ۲۰۰ کیلوبایت JPEG جاسازی می‌کند ≈ ۲۷۲ هزار کاراکتر
+     * Base64؛ سقف با حاشیهٔ امنیت ۴۰۰ هزار کاراکتر است.
+     */
+    const val MAX_DATAURI_CHARS = 400_000
+
+    /** پیشوندهای مجاز تصویر درون‌خطی — فقط سه فرمت رستری؛ svg/xml هرگز */
+    private val DATA_IMAGE_PREFIXES = listOf(
+        "data:image/jpeg;base64,",
+        "data:image/png;base64,",
+        "data:image/webp;base64,"
+    )
 
     /**
      * گارد اولین پذیرش (نصب تازه بدون sequence ذخیره‌شده): فیدی که issuedAt آن
@@ -156,6 +178,24 @@ object AdsFeedPolicy {
         if (host.isBlank()) return false
         if (!host.contains('.') && host != "localhost") return false
         return true
+    }
+
+    /**
+     * تصویر مجاز فید — نسخهٔ ۱.۱۱.۳۶: https یا data:image/{jpeg,png,webp};base64
+     * سخت‌گیرانه. برخلاف isSafeHttpsUrl، این تابع برای «فیلدهای تصویر» است؛
+     * مقصد لمس همچنان فقط isSafeHttpsUrl یا کلید داخلی است.
+     */
+    fun isSafeFeedImage(url: String?): Boolean {
+        val s = (url ?: "").trim()
+        if (s.isEmpty()) return false
+        if (isSafeHttpsUrl(s)) return true
+        if (s.length > MAX_DATAURI_CHARS) return false
+        // هیچ فاصله‌ای در کل URI (base64 با wrap بلند عمداً رد می‌شود)
+        if (s.any { it.isWhitespace() }) return false
+        // فقط دقیقاً یکی از پیشوندهای مجاز — data:image/svg+xml و مانند آن رد
+        return DATA_IMAGE_PREFIXES.any { p ->
+            s.length > p.length && s.startsWith(p) && s.substring(p.length).isNotEmpty()
+        }
     }
 
     /** مقصد داخلی فقط با کلید لیست‌سفید — هیچ رشتهٔ دیگری اجرا نمی‌شود */

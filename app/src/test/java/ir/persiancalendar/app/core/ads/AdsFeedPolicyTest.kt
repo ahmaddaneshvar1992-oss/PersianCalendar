@@ -175,6 +175,41 @@ class AdsFeedPolicyTest {
         assertFalse(AdsFeedPolicy.isSafeHttpsUrl("https://" + "a".repeat(3000)))
     }
 
+    // ---------- تصویر درون‌خطی فید (نسخهٔ ۱.۱۱.۳۶) ----------
+
+    @Test
+    fun `feed image accepts https and strict raster data uris`() {
+        assertTrue(AdsFeedPolicy.isSafeFeedImage("https://cdn.example.com/a.png"))
+        assertTrue(AdsFeedPolicy.isSafeFeedImage("data:image/jpeg;base64,/9j/4AAQ"))
+        assertTrue(AdsFeedPolicy.isSafeFeedImage("data:image/png;base64,iVBORw0KGgo="))
+        assertTrue(AdsFeedPolicy.isSafeFeedImage("data:image/webp;base64,UklGRg=="))
+    }
+
+    @Test
+    fun `feed image rejects svg other mimes whitespace and oversize`() {
+        // svg می‌تواند اسکریپت داشته باشد — هرگز
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("data:image/svg+xml;base64,PHN2Zz4="))
+        // MIME دیگر و شکل‌های جعلی
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("data:text/html;base64,PGI+"))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("data:image/jpeg,raw-not-base64"))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("data:image/jpeg;utf8,abc"))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("DATA:IMAGE/JPEG;BASE64,AAAA")) // فقط حروف کوچک
+        // فاصله در base64 (wrap) رد می‌شود — هم‌قرارداد با ابزار پایتونی
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("data:image/jpeg;base64,AAAA BBBB"))
+        // سر‌خود یا فقط پیشوند
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("data:image/jpeg;base64,"))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("data:image/jpeg;base64"))
+        // طرح‌های ممنوعِ قبلی همچنان رد
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("http://a.co/i.png"))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("javascript:alert(1)"))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage("file:///x.jpg"))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage(""))
+        assertFalse(AdsFeedPolicy.isSafeFeedImage(null))
+        // سقف کاراکتر
+        val huge = "data:image/jpeg;base64," + "A".repeat(AdsFeedPolicy.MAX_DATAURI_CHARS)
+        assertFalse(AdsFeedPolicy.isSafeFeedImage(huge))
+    }
+
     // ---------- clamp متن ----------
 
     @Test

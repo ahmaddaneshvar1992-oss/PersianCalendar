@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ابزار مدیر فید تبلیغات بادخزان — نسخهٔ ۱.۱۱.۳۵ (کار ۱)
+ابزار مدیر فید تبلیغات بادخزان — نسخهٔ ۱.۱۱.۳۵ (کار ۱)، اصلاح ۱.۱۱.۳۶
 
 سه کار را با هم انجام می‌دهد:
-  ۱) اعتبارسنجی feed/main_ads.json (schema، https بودن همهٔ URLها، تاریخ‌ها،
-     کلیدهای لیست‌سفید داخلی، سقف متن‌ها)
+  ۱) اعتبارسنجی feed/main_ads.json (schema، تصویر https یا data:image درون‌خطی،
+     تاریخ‌ها، کلیدهای لیست‌سفید داخلی، سقف متن‌ها)
   ۲) افزایش یکی sequence (ضد بازپخش — اپ فید با sequence کوچک‌تر/مساوی را رد می‌کند)
   ۳) امضای Ed25519 فایل (فایل main_ads.json.sig کنار آن بازنویسی می‌شود)
 
@@ -45,6 +45,14 @@ MAX_BADGE = 12
 MAX_DESC = 80
 MAX_URL = 2048
 MAX_CACHE_DAYS = 30
+# نسخهٔ ۱.۱۱.۳۶: سقف کاراکتر تصویر درون‌خطی (هم‌قرارداد با AdsFeedPolicy)
+MAX_DATAURI_CHARS = 400_000
+# فقط سه فرمت رستری؛ svg/xml و هر MIME دیگری رد می‌شود (اپ با BitmapFactory decode می‌کند)
+DATA_IMAGE_PREFIXES = (
+    "data:image/jpeg;base64,",
+    "data:image/png;base64,",
+    "data:image/webp;base64,",
+)
 INTERNAL_TARGETS = {
     "calendar", "prayer", "qibla", "events", "reminders",
     "announcements", "support", "account",
@@ -64,6 +72,7 @@ def warn(msg: str):
 
 
 def check_https(url: str, field: str, idx: int) -> bool:
+    """مقصد لمس — فقط https (data هرگز مقصد لمس نیست)."""
     if not url or not isinstance(url, str):
         err(f"آیتم {idx}: «{field}» خالی است (برای tile باید iconUrl و برای banner باید imageUrl باشد)")
         return False
@@ -82,6 +91,30 @@ def check_https(url: str, field: str, idx: int) -> bool:
         err(f"آیتم {idx}: «{field}» host نامعتبر دارد")
         return False
     return True
+
+
+def check_image(url: str, field: str, idx: int) -> bool:
+    """
+    تصویر آیتم — نسخهٔ ۱.۱۱.۳۶: https یا data:image/{jpeg,png,webp};base64
+    درون‌خطی (جاسازی اطلاعیه‌ها — عکس گالری مدیر). svg/xml و هر MIME دیگری
+    و base64 با فاصله رد می‌شود؛ سقف کاراکتر هم‌قرارداد با AdsFeedPolicy است.
+    """
+    if not url or not isinstance(url, str):
+        err(f"آیتم {idx}: «{field}» خالی است (برای tile باید iconUrl و برای banner باید imageUrl باشد)")
+        return False
+    s = url.strip()
+    if s.startswith(DATA_IMAGE_PREFIXES):  # دقیقاً حروف کوچک — هم‌قرارداد با اپ
+        if len(s) > MAX_DATAURI_CHARS:
+            err(f"آیتم {idx}: «{field}» (data URI) بلندتر از سقف {MAX_DATAURI_CHARS} کاراکتر است")
+            return False
+        if any(c.isspace() for c in s):
+            err(f"آیتم {idx}: «{field}» (data URI) فاصله دارد — base64 باید یک‌تکه باشد")
+            return False
+        return True
+    if s.lower().startswith("data:image/"):
+        err(f"آیتم {idx}: «{field}» فقط data:image/jpeg|png|webp;base64 مجاز است (svg/xml و سایر MIMEها و حروف بزرگ رد می‌شوند)")
+        return False
+    return check_https(url, field, idx)
 
 
 def parse_when(raw, field: str, idx: int) -> int:
@@ -159,9 +192,9 @@ def validate(doc: dict) -> list:
         if len(str(it.get("description", ""))) > MAX_DESC:
             err(f"آیتم {idx} ({iid}): «description» بلندتر از {MAX_DESC} کاراکتر است")
         if typ == "tile":
-            check_https(it.get("iconUrl"), "iconUrl", idx)
+            check_image(it.get("iconUrl"), "iconUrl", idx)
         else:
-            check_https(it.get("imageUrl"), "imageUrl", idx)
+            check_image(it.get("imageUrl"), "imageUrl", idx)
         tt = str(it.get("targetType", "")).strip().lower()
         target = str(it.get("target", "")).strip()
         if tt == "internal":

@@ -79,14 +79,23 @@ object FeedPublisher {
     // ---------- انتشار فید تبلیغات مدیریت‌شده — نسخهٔ ۱.۱۱.۳۵ ----------
 
     /**
-     * انتشار فید «تبلیغات مدیریت‌شده» (tile + بنر بدون ×) — نسخهٔ ۱.۱۱.۳۵.
-     * از این نسخه feed/main_ads.json «شیء» است:
-     *   { sequence, issuedAt, adsEnabled, maxCacheDays, items[] }
+     * انتشار فید «تبلیغات مدیریت‌شده» (tile + بنر بدون ×) — نسخهٔ ۱.۱۱.۳۵،
+     * اصلاح ۱.۱۱.۳۶ (گزارش کاربر: «تبلیغ که می‌ذارم نمایش داده نمی‌شود»).
+     *
+     * علت گزارش (بازرسی): در ۱.۱۱.۳۵ هر بنری که تصویرش URL https نبود (یعنی
+     * همهٔ عکس‌های انتخابی گالری!) بی‌صدا حذف می‌شد و فید «خالی» منتشر می‌شد —
+     * sequence ۳ زندهٔ مخزن دقیقاً همین است: items: [].
+     *
+     * اصلاح:
+     *  - عکس گالری/فایل داخلی مثل اطلاعیه‌ها «جاسازی» می‌شود
+     *    (ImageEmbed.dataUriFromFile — فشردهٔ خودکار تا ۲۰۰ کیلوبایت JPEG)؛
+     *    اپ ۱.۱۱.۳۶ این تصویر درون‌خطی را محلی decode می‌کند (بدون شبکه).
+     *  - URL تصویر همچنان فقط https پذیرفته می‌شود.
+     *  - اگر «هیچ» آیتمی قابل انتشار نباشد، هیچ‌چیز منتشر نمی‌شود — پیام
+     *    روشن دلیل هر بنر ردشده را می‌گوید (نه فید خالیِ بی‌صدا).
+     *
      *  - sequence: از فید فعلی مخزن خوانده و یکی زیاد می‌شود (ضد rollback اپ
      *    فید با sequence کوچک‌تر یا مساوی را رد می‌کند)؛ فرمت آرایهٔ قدیمی = ۰.
-     *  - آیتم‌ها از پیش‌نویس پنل (MainAdBox) به‌صورت type=banner ساخته می‌شوند؛
-     *    تصویر فقط https پذیرفته می‌شود (الزام امنیتی فید جدید) — بنرهای با
-     *    عکس گالری/data محلی منتشر نمی‌شوند و تعدادشان در پیام اعلام می‌شود.
      *  - لینک https = external؛ کلید لیست‌سفید = internal؛ غیر از این = بدون لمس.
      */
     fun publishAdsFeed(context: Context, token: String, list: List<MainAd>): String {
@@ -97,15 +106,33 @@ object FeedPublisher {
         val currentSeq = current?.let { AdsFeed.parseDoc(it)?.sequence } ?: 0L
         if (current == null) return "فید فعلی مخزن خوانده نشد — sequence قابل تعیین نیست؛ اتصال اینترنت را بررسی کنید یا از رایانه با tools/ads_feed.py منتشر کنید"
 
-        // ۲) ساخت آیتم‌ها از پیش‌نویس پنل — فقط تصویر https
+        // ۲) ساخت آیتم‌ها از پیش‌نویس پنل — تصویر https یا جاسازی خودکار گالری
         val items = JSONArray()
-        var skippedImage = 0
+        val reasons = mutableListOf<String>() // دلیل ردشدن هر بنر — در پیام نهایی
+        var embeddedImages = 0
         list.forEachIndexed { idx, a ->
-            if (!AdPolicy.isSafeImage(a.image) || !a.image.startsWith("https://")) {
-                if (a.image.isNotBlank()) skippedImage++
-                // تصویر خالی هم برای banner مجاز نیست (پارس اپ آیتم را حذف می‌کند)
-                else skippedImage++
+            val name = a.title.ifBlank { "بدون عنوان" }
+            if (a.title.isBlank()) {
+                reasons.add("بنر ${idx + 1}: عنوان ندارد")
                 return@forEachIndexed
+            }
+            // تصویر: URL https → همان؛ فایل محلی (گالری) → جاسازی data URI
+            val image = when {
+                a.image.startsWith("https://") -> a.image.trim()
+                a.image.isNotBlank() -> {
+                    val uri = ImageEmbed.dataUriFromFile(a.image)
+                    if (uri.isNotBlank()) {
+                        embeddedImages++
+                        uri
+                    } else {
+                        reasons.add("«$name»: تصویرش خوانده نشد — دوباره از گالری انتخاب کنید")
+                        return@forEachIndexed
+                    }
+                }
+                else -> {
+                    reasons.add("«$name»: تصویر ندارد (بنر تبلیغاتی باید تصویر داشته باشد)")
+                    return@forEachIndexed
+                }
             }
             val (targetType, target) = when {
                 AdPolicy.isSafeLink(a.link) -> "external" to a.link.trim()
@@ -120,7 +147,7 @@ object FeedPublisher {
                     .put("type", "banner")
                     .put("enabled", true)
                     .put("title", AdsFeedPolicy.clamp(a.title, AdsFeedPolicy.MAX_TITLE))
-                    .put("imageUrl", a.image.trim())
+                    .put("imageUrl", image)
                     .put("targetType", targetType)
                     .put("target", target)
                     .put("order", idx)
@@ -129,6 +156,14 @@ object FeedPublisher {
                     .put("minVersionCode", a.minVersionCode)
                     .put("description", AdsFeedPolicy.clamp(a.body, AdsFeedPolicy.MAX_DESC))
             )
+        }
+
+        // ۳) گارد فید خالی — هیچ‌چیز منتشر نمی‌شود؛ دلیل‌ها روشن اعلام می‌شود.
+        // (رفع بی‌صدایی ۱.۱۱.۳۵ که فید items:[] را «موفق» جلوه می‌داد)
+        if (items.length() == 0) {
+            return "هیچ بنری قابل انتشار نبود و فید دست‌نخورده ماند:\n" +
+                    reasons.joinToString("\n") { "• $it" } +
+                    "\nتصویر گالری را دوباره انتخاب کنید یا URL تصویر https بدهید؛ توجه: بنرهای «خاموش» (کلید پایه) منتشر نمی‌شوند."
         }
 
         val doc = JSONObject()
@@ -145,10 +180,11 @@ object FeedPublisher {
             payload = doc.toString(2)
         )
         return if (msg.startsWith("✓")) {
-            val skip = if (skippedImage > 0)
-                " — $skippedImage بنرِ با تصویر غیرhttps (گالری/data) منتشر نشد؛ تصویر را در وب آپلود و URL https بدهید"
-            else ""
-            "فید تبلیغات (sequence ${currentSeq + 1}) با ${items.length()} آیتم برای همهٔ کاربران منتشر شد ✓$skip — امضای خوراک چند ثانیه بعد خودکار ساخته می‌شود"
+            val extra = buildString {
+                if (embeddedImages > 0) append(" — تصویر $embeddedImages بنر از گالری داخل فید جاسازی شد (مثل اطلاعیه‌ها)")
+                if (reasons.isNotEmpty()) append(" — ${reasons.size} بنر دیگر منتشر نشد: ${reasons.joinToString("؛ ")}")
+            }
+            "فید تبلیغات (sequence ${currentSeq + 1}) با ${items.length()} آیتم برای همهٔ کاربران منتشر شد ✓$extra — امضای خوراک چند ثانیه بعد خودکار ساخته می‌شود؛ برنامه را ببندید و دوباره باز کنید تا همین گوشی هم بگیرد"
         } else msg
     }
 
