@@ -30,7 +30,7 @@ class MainAdFeedParseTest {
         assertEquals(5, ad.priority)
         assertEquals(3, ad.dismissDays)
         assertEquals(46, ad.minVersionCode)
-        assertEquals(1_761_945_600_000L, ad.startAt) // 2026-11-01T00:00:00Z
+        assertEquals(1_793_491_200_000L, ad.startAt) // 2026-11-01T00:00:00Z
         assertTrue(ad.endAt > ad.startAt)
     }
 

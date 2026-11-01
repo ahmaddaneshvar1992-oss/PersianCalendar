@@ -45,7 +45,7 @@ class AdPolicyTest {
             rec(id = 4, priority = 5)
         )
         val picked = AdPolicy.select(ads, { it }, now, 46, true, true, emptyMap())
-        assertEquals(listOf(2L, 3L), picked.map { it.id }) // ۴ حذف: سقف ۲ — تساوی priority → id بزرگ‌تر
+        assertEquals(listOf(2L, 4L), picked.map { it.id }) // ۴ حذف: سقف ۲ — تساوی priority → جدیدتر (id بزرگ‌تر) اول
     }
 
     @Test

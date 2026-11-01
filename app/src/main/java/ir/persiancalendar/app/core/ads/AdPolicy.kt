@@ -116,8 +116,9 @@ object AdPolicy {
         return when {
             low.startsWith("https://") -> isSafeHttps(s)
             low.startsWith("data:image/") -> true
-            // مسیر داخلی دستگاه مدیر (filesDir) — نبودن scheme یعنی فایل محلی
-            !low.contains("://") -> true
+            // مسیر مطلق فایل داخلی دستگاه مدیر (filesDir) — باید با «/» شروع شود
+            // و هیچ «:» نداشته باشد تا شکل‌های «javascript:…» و «intent:…» رد شوند
+            s.startsWith("/") && !s.contains(":") -> true
             else -> false
         }
     }
