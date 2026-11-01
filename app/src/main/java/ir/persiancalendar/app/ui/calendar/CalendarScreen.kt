@@ -1,6 +1,5 @@
 package ir.persiancalendar.app.ui.calendar
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -288,7 +287,10 @@ fun CalendarScreen(
                     viewJy, viewJm, todayJ.year, todayJ.month
                 )
                 val todayFabCd = stringResource(R.string.today_fab_cd)
-                AnimatedVisibility(
+                // فراخوانی کاملاً مؤلف‌شده: این نقطه هم در محدودهٔ Column بیرونی است
+                // هم Box داخلی؛ Kotlin 2.0 در این حالت نسخهٔ ColumnScope را با
+                // implicit receiver غیرداخلی رد می‌کند — نسخهٔ سطح‌بالا فراخوانی می‌شود
+                androidx.compose.animation.AnimatedVisibility(
                     visible = showTodayFab,
                     enter = fadeIn() + slideInVertically { it / 2 },
                     exit = fadeOut() + slideOutVertically { it / 2 },

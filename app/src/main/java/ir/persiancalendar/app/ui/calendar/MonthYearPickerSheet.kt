@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +39,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TonalButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -237,7 +237,7 @@ fun MonthYearPickerSheet(
 
             // ---------- دکمهٔ «امروز» ----------
             Row(modifier = Modifier.fillMaxWidth()) {
-                TonalButton(
+                FilledTonalButton(
                     onClick = { onPick(todayJy, todayJm) },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.semantics {
