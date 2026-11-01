@@ -51,9 +51,9 @@ import ir.persiancalendar.app.core.events.HolidayRepository
 import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.data.model.EventRepetition
 import ir.persiancalendar.app.data.prefs.AppSettings
+import ir.persiancalendar.app.ui.components.AdsFeedSection
 import ir.persiancalendar.app.ui.components.BirthdayCard
 import ir.persiancalendar.app.ui.components.JalaliDatePickerDialog
-import ir.persiancalendar.app.ui.components.MainAdsSection
 import ir.persiancalendar.app.ui.prayer.PrayerTimesCard
 import ir.persiancalendar.app.ui.theme.EventDotColors
 import ir.persiancalendar.app.ui.theme.holidayColor
@@ -71,7 +71,10 @@ fun CalendarScreen(
     showHijri: Boolean,
     onOpenDay: (JalaliDate) -> Unit,
     onOpenPrayer: () -> Unit = {},
-    adsRefresh: Int = 0 // نسخهٔ ۱.۱۱.۲۱: بازسازی بنرها پس از sync خوراک راه‌دور/پنل مدیریت
+    adsRefresh: Int = 0, // نسخهٔ ۱.۱۱.۲۱: بازسازی کارت‌ها پس از sync خوراک راه‌دور/پنل مدیریت
+    // نسخهٔ ۱.۱۱.۳۵: مقصدهای داخلی آیتم‌های تبلیغ فید — فقط کلیدهای لیست‌سفید
+    // (AdsFeedPolicy.INTERNAL_TARGETS) از این مسیر به تب/صفحهٔ خودشان می‌روند
+    onOpenInternal: (String) -> Unit = {}
 ) {
     val todayG = LocalDate.now()
     val todayJ = CalendarConverter.gregorianToJalali(todayG.year, todayG.monthValue, todayG.dayOfMonth)
@@ -217,13 +220,14 @@ fun CalendarScreen(
 
         Spacer(Modifier.height(10.dp))
 
-        // ---------- بنرهای تبلیغاتی قابل حذف — نسخهٔ ۱.۱۱.۳۴ (درخواست کاربر) ----------
-        // جای قرارگیری جدید: زیر جدول تقویم، بالای کارت‌های «مناسبت‌های روز» و بقیهٔ کارت‌ها.
-        // حداکثر ۲ بنر (priority + بازهٔ زمانی)، دکمهٔ × با حذف انیمیشنی و پنهانی
-        // دائمی تا dismissDays، برچسب «تبلیغ»، کلید قطع اضطراری فید + سوئیچ کاربر.
-        MainAdsSection(
+        // ---------- تبلیغات مدیریت‌شده (tile + بنر بدون ×) — نسخهٔ ۱.۱۱.۳۵ (درخواست کاربر: کار ۱) ----------
+        // جای قرارگیری: زیر جدول تقویم، بالای کارت‌های «روز تولد/مناسبت‌های روز».
+        // کاربر هیچ راهی برای پنهان‌کردن ندارد (بدون × و بدون ⋮)؛ فقط مدیر با فید
+        // امضاشده (sequence بالاتر) آیتم‌ها را اضافه/ویرایش/حذف می‌کند و فهرست کامل
+        // جایگزین می‌شود. برچسب «تبلیغ» روی هر آیتم؛ لینک https/مقصد داخلی لیست‌سفید.
+        AdsFeedSection(
             refreshKey = adsRefresh,
-            userAdsEnabled = settings.adsEnabled
+            onOpenInternal = onOpenInternal
         )
 
         Spacer(Modifier.height(10.dp))

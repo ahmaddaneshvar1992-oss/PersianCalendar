@@ -339,6 +339,11 @@ class DailyTickReceiver : BroadcastReceiver() {
                 runCatching {
                     ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
                 }
+                // نسخهٔ ۱.۱۱.۳۵: فید تبلیغات مدیریت‌شده هم روزی یک بار تازه می‌شود
+                // (حذف آیتم از فید با sequence جدید در همین sync به همه می‌رسد)
+                runCatching {
+                    ir.persiancalendar.app.data.support.AdsFeed.sync(context)
+                }
             } finally {
                 pending.finish()
             }

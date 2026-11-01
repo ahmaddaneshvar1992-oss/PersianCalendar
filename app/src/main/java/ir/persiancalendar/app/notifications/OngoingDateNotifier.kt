@@ -4,10 +4,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
@@ -101,26 +97,26 @@ object OngoingDateNotifier {
     }
 
     /**
-     * آیکن «عدد روز ماه» برای نوار وضعیت — نسخه ۱.۱۱.۱۳.
-     * بیتمپ مربعی ۹۶×۹۶ با عدد فارسی روز در وسط؛ سیستم فقط کانال آلفا را
-     * با رنگ سفید رنگ‌آمیزی می‌کند، پس متن سفید روی زمینهٔ شفاف درست دیده می‌شود.
+     * آیکن «عدد روز ماه» برای نوار وضعیت — نسخهٔ ۱.۱۱.۳۵ (درخواست کاربر: کار ۲).
+     * نسخهٔ ۱.۱۱.۱۳: عدد فارسی روز ماه به‌صورت پویا رسم می‌شد.
+     * نسخهٔ ۱.۱۱.۳۵: پیش‌فرض «دایرهٔ پر سفید با عدد cutout» (فونت ضخیم وزیرمتن،
+     * حداکثر درشتی با اندازه‌گیری واقعی فونت) — سبک سادهٔ قبلی هم در تنظیمات هست
+     * (StatusBarDayIcon). در هر خطا فالبک به آیکون vector برنامه — بدون کرش.
      */
-    private fun dayIconBitmap(): Bitmap {
-        val today = LocalDate.now()
-        val j = CalendarConverter.gregorianToJalali(today.year, today.monthValue, today.dayOfMonth)
-        val text = PersianText.toPersianDigits(j.day.toString())
-        val size = 96
-        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bmp)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-            textSize = if (text.length <= 1) 74f else 60f
+    private fun dayIcon(context: Context): IconCompat {
+        val style = runCatching {
+            ir.persiancalendar.app.di.AppContainer.settingsRepo(context)
+                .settingsBlocking().statusBarIconStyle
+        }.getOrDefault(ir.persiancalendar.app.notifications.StatusBarDayIcon.STYLE_CIRCLE)
+        val bmp = runCatching {
+            ir.persiancalendar.app.notifications.StatusBarDayIcon.bitmapFor(context, style)
+        }.getOrNull()
+        return if (bmp != null) {
+            IconCompat.createWithBitmap(bmp)
+        } else {
+            // فالبک امن: آیکون برنامه (هیچ راهی برای کرش کردن اعلان همیشگی نیست)
+            IconCompat.createWithResource(context, ir.persiancalendar.app.R.mipmap.ic_launcher)
         }
-        val baseline = size / 2f - (paint.descent() + paint.ascent()) / 2f
-        canvas.drawText(text, size / 2f, baseline, paint)
-        return bmp
     }
 
     /** اینتنت باز کردن اپ روی تب مشخص (برای دکمه‌های اعلان) */
@@ -168,8 +164,8 @@ object OngoingDateNotifier {
         big.append("بادخزان — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
 
         return NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ONGOING)
-            // نسخه ۱.۱۱.۱۳: آیکن پویای «عدد روز» به‌جای لوگوی برنامه (درخواست کاربر)
-            .setSmallIcon(IconCompat.createWithBitmap(dayIconBitmap()))
+            // نسخهٔ ۱.۱۱.۳۵: آیکون دایرهٔ سفید درشت با عدد cutout (کار ۲) — فالبک vector
+            .setSmallIcon(dayIcon(context))
             .setContentTitle(title)
             .setContentText(sub)
             .setStyle(NotificationCompat.BigTextStyle().bigText(big))

@@ -25,25 +25,39 @@ object FeedSecurity {
     /** کلید عمومی Ed25519 (۳۲ بایت خام، Base64) — عمومی بودنش طبیعی و بی‌خطر است */
     const val PUBLIC_KEY_B64 = "lpVtz80eClDZSxdm+GmxmBXuu3VN7ObOvjuTpQiQ6HI="
 
-    @Volatile private var verifier: Ed25519Verify? = null
+    /**
+     * کلید عمومی دوم — چرخش ۲۰۲۶-۱۱-۰۱ (نسخهٔ ۱.۱۱.۳۵).
+     * بازرسی v1.11.34 نشان داد امضاهای Secret مخزن با هیچ‌کدام از کلیدهای داخل اپ
+     * تأیید نمی‌شوند و خوراک به کاربران نمی‌رسد. با این چرخش، اپ «هر دو» کلید
+     * عمومی را می‌پذیرد: امضای فعلی مخزن با کلید چرخش ساخته می‌شود و اگر مدیر بعداً
+     * Secret را به کلید اصلی برگرداند هم امضاها معتبر می‌مانند.
+     * پذیرش دو کلید سنجاق‌شده = روش استاندارد دورهٔ گذار چرخش کلید؛ هر کلید خصوصی
+     * بیرون از این دو، همچنان بی‌اعتبار است.
+     */
+    const val PUBLIC_KEY_B64_ROTATED = "Z5mIWsYEhgULQ6B3tGimJkkQCUNPN0ipslFBY8uArPw="
 
-    private fun getVerifier(): Ed25519Verify {
-        verifier?.let { return it }
+    @Volatile private var verifiers: List<Ed25519Verify>? = null
+
+    private fun getVerifiers(): List<Ed25519Verify> {
+        verifiers?.let { return it }
         synchronized(this) {
-            verifier?.let { return it }
-            val v = Ed25519Verify(Base64.decode(PUBLIC_KEY_B64, Base64.DEFAULT))
-            verifier = v
+            verifiers?.let { return it }
+            val v = listOf(
+                Ed25519Verify(Base64.decode(PUBLIC_KEY_B64, Base64.DEFAULT)),
+                Ed25519Verify(Base64.decode(PUBLIC_KEY_B64_ROTATED, Base64.DEFAULT))
+            )
+            verifiers = v
             return v
         }
     }
 
     /**
      * تأیید امضای خوراک: content باید «بایت‌های دقیق» فایل جیسون باشد و
-     * signatureB64 مقدار Base64 فایل .sig. خروجی true فقط وقتی امضا معتبر است.
+     * signatureB64 مقدار Base64 فایل .sig. خروجی true فقط وقتی امضا با یکی از
+     * کلیدهای عمومی سنجاق‌شده معتبر باشد.
      */
     fun verify(content: ByteArray, signatureB64: String): Boolean = runCatching {
         val sig = Base64.decode(signatureB64.trim(), Base64.DEFAULT)
-        getVerifier().verify(sig, content)
-        true
+        getVerifiers().any { runCatching { it.verify(sig, content) }.getOrDefault(false) }
     }.getOrDefault(false)
 }

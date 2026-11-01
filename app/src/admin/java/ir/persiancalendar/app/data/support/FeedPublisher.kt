@@ -2,6 +2,8 @@ package ir.persiancalendar.app.data.support
 
 import android.content.Context
 import android.util.Base64
+import ir.persiancalendar.app.core.ads.AdPolicy
+import ir.persiancalendar.app.core.ads.AdsFeedPolicy
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -60,7 +62,7 @@ object FeedPublisher {
             token = token,
             path = "feed/announcements.json",
             commitMessage = "اطلاعیه‌های بادخزان — انتشار از پنل مدیریت",
-            payload = payload
+            payload = payload.toString(2)
         )
         return if (msg.startsWith("✓")) {
             val img = when {
@@ -74,65 +76,113 @@ object FeedPublisher {
         } else msg
     }
 
-    // ---------- انتشار بنرها (از MainAdFeed.publish — ۱.۱۱.۳۰ منتقل شد) ----------
+    // ---------- انتشار فید تبلیغات مدیریت‌شده — نسخهٔ ۱.۱۱.۳۵ ----------
 
-    fun publishMainAds(context: Context, token: String, list: List<MainAd>): String {
+    /**
+     * انتشار فید «تبلیغات مدیریت‌شده» (tile + بنر بدون ×) — نسخهٔ ۱.۱۱.۳۵.
+     * از این نسخه feed/main_ads.json «شیء» است:
+     *   { sequence, issuedAt, adsEnabled, maxCacheDays, items[] }
+     *  - sequence: از فید فعلی مخزن خوانده و یکی زیاد می‌شود (ضد rollback اپ
+     *    فید با sequence کوچک‌تر یا مساوی را رد می‌کند)؛ فرمت آرایهٔ قدیمی = ۰.
+     *  - آیتم‌ها از پیش‌نویس پنل (MainAdBox) به‌صورت type=banner ساخته می‌شوند؛
+     *    تصویر فقط https پذیرفته می‌شود (الزام امنیتی فید جدید) — بنرهای با
+     *    عکس گالری/data محلی منتشر نمی‌شوند و تعدادشان در پیام اعلام می‌شود.
+     *  - لینک https = external؛ کلید لیست‌سفید = internal؛ غیر از این = بدون لمس.
+     */
+    fun publishAdsFeed(context: Context, token: String, list: List<MainAd>): String {
         if (token.isBlank()) return "اول توکن گیت‌هاب را وارد و ذخیره کنید"
 
-        val payload = JSONArray()
-        var embeddedImages = 0
-        var failedImages = 0
-        list.filter { it.on }.forEach { a ->
-            val image = when {
-                a.image.startsWith("http") -> a.image
-                a.image.isNotBlank() -> {
-                    val uri = ImageEmbed.dataUriFromFile(a.image)
-                    if (uri.isNotBlank()) embeddedImages++ else failedImages++
-                    uri
-                }
-                else -> ""
+        // ۱) فید فعلی مخزن — برای sequence (بدون این، انتشار عمدی انجام نمی‌شود)
+        val current = fetchFeedFile(token)
+        val currentSeq = current?.let { AdsFeed.parseDoc(it)?.sequence } ?: 0L
+        if (current == null) return "فید فعلی مخزن خوانده نشد — sequence قابل تعیین نیست؛ اتصال اینترنت را بررسی کنید یا از رایانه با tools/ads_feed.py منتشر کنید"
+
+        // ۲) ساخت آیتم‌ها از پیش‌نویس پنل — فقط تصویر https
+        val items = JSONArray()
+        var skippedImage = 0
+        list.forEachIndexed { idx, a ->
+            if (!AdPolicy.isSafeImage(a.image) || !a.image.startsWith("https://")) {
+                if (a.image.isNotBlank()) skippedImage++
+                // تصویر خالی هم برای banner مجاز نیست (پارس اپ آیتم را حذف می‌کند)
+                else skippedImage++
+                return@forEachIndexed
             }
-            payload.put(
+            val (targetType, target) = when {
+                AdPolicy.isSafeLink(a.link) -> "external" to a.link.trim()
+                AdsFeedPolicy.isSafeInternalTarget(a.link) -> "internal" to AdsFeedPolicy.clamp(
+                    a.link.trim(), AdsFeedPolicy.MAX_ID
+                )
+                else -> "" to "" // بدون مقصد معتبر = کارت فقط نمایشی
+            }
+            items.put(
                 JSONObject()
-                    .put("id", a.id)
-                    .put("title", a.title)
-                    .put("body", a.body)
-                    .put("cta", a.cta)
-                    .put("link", a.link)
-                    .put("image", image)
-                    .put("colorIndex", a.colorIndex)
-                    .put("on", true)
-                    .put("at", a.at)
+                    .put("id", "banner-${a.id}")
+                    .put("type", "banner")
+                    .put("enabled", true)
+                    .put("title", AdsFeedPolicy.clamp(a.title, AdsFeedPolicy.MAX_TITLE))
+                    .put("imageUrl", a.image.trim())
+                    .put("targetType", targetType)
+                    .put("target", target)
+                    .put("order", idx)
+                    .put("startAt", a.startAt)
+                    .put("endAt", a.endAt)
+                    .put("minVersionCode", a.minVersionCode)
+                    .put("description", AdsFeedPolicy.clamp(a.body, AdsFeedPolicy.MAX_DESC))
             )
         }
+
+        val doc = JSONObject()
+            .put("sequence", currentSeq + 1)
+            .put("issuedAt", java.time.Instant.now().toString())
+            .put("adsEnabled", true)
+            .put("maxCacheDays", AdsFeedPolicy.DEFAULT_MAX_CACHE_DAYS)
+            .put("items", items)
+
         val msg = publishJson(
             token = token,
             path = "feed/main_ads.json",
-            commitMessage = "بنرهای بادخزان — انتشار از پنل مدیریت",
-            payload = payload
+            commitMessage = "فید تبلیغات مدیریت‌شده (sequence ${currentSeq + 1}) — انتشار از پنل مدیریت",
+            payload = doc.toString(2)
         )
         return if (msg.startsWith("✓")) {
-            val img = when {
-                embeddedImages > 0 && failedImages == 0 ->
-                    " — تصویر $embeddedImages بنر داخل خوراک جاسازی شد"
-                embeddedImages > 0 ->
-                    " — تصویر $embeddedImages بنر جاسازی شد، $failedImages تصویر منتشر نشد"
-                else -> ""
-            }
-            "بنرها برای همهٔ کاربران منتشر شد ✓ (${payload.length()} بنر)$img — امضای خوراک چند ثانیه بعد خودکار ساخته می‌شود"
+            val skip = if (skippedImage > 0)
+                " — $skippedImage بنرِ با تصویر غیرhttps (گالری/data) منتشر نشد؛ تصویر را در وب آپلود و URL https بدهید"
+            else ""
+            "فید تبلیغات (sequence ${currentSeq + 1}) با ${items.length()} آیتم برای همهٔ کاربران منتشر شد ✓$skip — امضای خوراک چند ثانیه بعد خودکار ساخته می‌شود"
         } else msg
     }
+
+    /**
+     * خواندن متن فعلی feed/main_ads.json مخزن (Contents API) — برای sequence.
+     * خطا = null.
+     */
+    private fun fetchFeedFile(token: String): String? = runCatching {
+        val conn = URL("https://api.github.com/repos/$REPO/contents/feed/main_ads.json")
+            .openConnection() as HttpURLConnection
+        try {
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.setRequestProperty("Accept", "application/vnd.github+json")
+            conn.connectTimeout = 10_000
+            conn.readTimeout = 10_000
+            if (conn.responseCode != 200) return null
+            val o = JSONObject(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+            val b64 = o.optString("content").replace("\n", "").replace("\r", "")
+            String(Base64.decode(b64, Base64.DEFAULT), Charsets.UTF_8)
+        } finally {
+            conn.disconnect()
+        }
+    }.getOrNull()
 
     /**
      * PUT فایل جیسون در مخزن (Contents API) + پاک‌کردن کش jsDelivr + راه‌اندازی
      * وورکفلوی امضا. پیام موفقیت با «✓» شروع می‌شود تا تماس‌گیرنده پیام تکمیلی بگذارد.
      */
-    private fun publishJson(token: String, path: String, commitMessage: String, payload: JSONArray): String {
+    private fun publishJson(token: String, path: String, commitMessage: String, payload: String): String {
         val bodyJson = JSONObject()
             .put("message", commitMessage)
             .put(
                 "content",
-                Base64.encodeToString(payload.toString(2).toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                Base64.encodeToString(payload.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
             )
 
         // ۱) اگر فایل از قبل هست، sha آن لازم است (وگرنه فایل ساخته می‌شود)

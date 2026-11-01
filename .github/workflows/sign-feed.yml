@@ -36,10 +36,56 @@ jobs:
       - name: Install cryptography
         run: pip install cryptography
 
+      # نسخهٔ ۱.۱۱.۳۵ — اعتبارسنجی فید تبلیغات پیش از امضا (tools/ads_feed.py):
+      # schema، فقط https، تاریخ‌ها و لیست‌سفید داخلی؛ خرابی = قرمز شدن push
+      - name: Validate ads feed (اعتبارسنجی فید تبلیغات)
+        run: python3 tools/ads_feed.py --validate
+
       - name: Sign feed files (امضای Ed25519 روی بایت‌های دقیق)
         env:
           FEED_SIGNING_KEY: ${{ secrets.FEED_SIGNING_KEY }}
         run: python scripts/sign_feed.py
+
+      # نسخهٔ ۱.۱۱.۳۵ — راستی‌آزمایی امضای تازه با کلیدهای عمومی داخل اپ:
+      # اگر Secret با هیچ‌کدام از کلیدهای سنجاق‌شده جور نباشد، امضا commit
+      # نمی‌شود و این مرحله با پیام روشن قرمز می‌شود (تا تکرار «فید امضادار
+      # ولی بی‌اعتبار» که اطلاعیه/تبلیغ را به کاربران نمی‌رساند پیش نیاید).
+      - name: Verify signatures against app pinned keys
+        run: |
+          python3 - <<'PY'
+          import base64, sys
+          from pathlib import Path
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+          PINS = [
+              "lpVtz80eClDZSxdm+GmxmBXuu3VN7ObOvjuTpQiQ6HI=",  # FeedSecurity.PUBLIC_KEY_B64
+              "Z5mIWsYEhgULQ6B3tGimJkkQCUNPN0ipslFBY8uArPw=",  # FeedSecurity.PUBLIC_KEY_B64_ROTATED
+          ]
+          pubs = [Ed25519PublicKey.from_public_bytes(base64.b64decode(p)) for p in PINS]
+
+          def ok(pub, sig_bytes, data):
+              try:
+                  pub.verify(sig_bytes, data)
+                  return True
+              except Exception:
+                  return False
+
+          bad = []
+          for jf in sorted(Path("feed").glob("*.json")):
+              sig = Path(str(jf) + ".sig")
+              if not sig.exists():
+                  bad.append(jf.name + " (بدون .sig)")
+                  continue
+              s = base64.b64decode(sig.read_bytes())
+              if not any(ok(p, s, jf.read_bytes()) for p in pubs):
+                  bad.append(jf.name)
+          if bad:
+              print("⚠⚠ امضای تازه با هیچ‌کدام از کلیدهای عمومی داخل اپ تأیید نمی‌شود:", bad)
+              print("Secret «FEED_SIGNING_KEY» باید Base64 seed کلیدی باشد که کلید عمومی‌اش در FeedSecurity.kt هست.")
+              print("راهنما: tools/README-FA.md (بخش چرخش کلید). این امضا commit نمی‌شود.")
+              sys.exit(1)
+          print("همهٔ امضاها با کلیدهای داخل اپ تأیید شدند ✓")
+          PY
 
       - name: Commit signatures
         run: |

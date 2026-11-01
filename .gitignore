@@ -25,3 +25,9 @@ local.properties
 # نسخهٔ ۱.۱۱.۳۰ — کلید خصوصی امضای خوراک هرگز وارد مخزن نمی‌شود
 signing/feed-ed25519-private.b64
 *.private.b64
+# نسخهٔ ۱.۱۱.۳۵ — ابزار مدیر فید تبلیغات: کلید خصوصی فقط نزد مدیر
+tools/*.key
+tools/*.b64
+tools/keys/
+*feed-ed25519*.b64
+ads-feed-key*.b64

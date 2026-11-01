@@ -205,17 +205,18 @@ fun MainScreen(
     var lastFeedSyncAt by remember { mutableStateOf(System.currentTimeMillis()) }
 
     // بررسی خوراک اطلاعیه‌های همگانی مدیر — در هر باز شدن برنامه (نسخه ۱.۱۱.۱۶)
+    // نسخهٔ ۱.۱۱.۳۵: sync تبلیغات مدیریت‌شده (AdsFeed — ضد rollback) جای MainAdFeed شد
     LaunchedEffect(Unit) {
         lastFeedSyncAt = System.currentTimeMillis()
         // نسخهٔ ۱.۱۱.۲۸: خروجی sync کل تغییرهاست (افزودن/به‌روزرسانی/حذف) —
         // پس از حذف همگانی هم فهرست صفحهٔ اصلی بلافاصله تازه می‌شود
         val (annChanges, adChanges) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val a = ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
-            val b = ir.persiancalendar.app.data.support.MainAdFeed.sync(context)
+            val b = ir.persiancalendar.app.data.support.AdsFeed.sync(context)
             a to b
         }
         if (annChanges > 0) refreshAnnouncements()
-        if (adChanges > 0) adsVersion++
+        if (adChanges) adsVersion++
     }
 
     // ---------- نسخهٔ ۱.۱۱.۲۵ (گزارش کاربر: «تبلیغات دیر آپلود میشه») ----------
@@ -232,11 +233,12 @@ fun MainScreen(
                     lastFeedSyncAt = now
                     scope.launch(Dispatchers.IO) {
                         // نسخهٔ ۱.۱۱.۲۸: کل تغییرها (شامل حذف) → رفرش فوری فهرست
+                        // نسخهٔ ۱.۱۱.۳۵: AdsFeed (فید تبلیغات مدیریت‌شده) جای MainAdFeed
                         val a = ir.persiancalendar.app.data.support.AnnouncementFeed.sync(context)
-                        val b = ir.persiancalendar.app.data.support.MainAdFeed.sync(context)
+                        val b = ir.persiancalendar.app.data.support.AdsFeed.sync(context)
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                             if (a > 0) refreshAnnouncements()
-                            if (b > 0) adsVersion++
+                            if (b) adsVersion++
                         }
                     }
                 }
@@ -471,7 +473,26 @@ fun MainScreen(
                         showHijri = settings.showHijri,
                         onOpenDay = { dayDetail = it },
                         onOpenPrayer = { selectedTab = 1 },
-                        adsRefresh = adsVersion
+                        adsRefresh = adsVersion,
+                        // نسخهٔ ۱.۱۱.۳۵: مقصد داخلی آیتم‌های تبلیغ — فقط کلیدهای
+                        // لیست‌سفید AdsFeedPolicy؛ هر کلید به مقصد شناخته‌شدهٔ خود اپ می‌رود
+                        onOpenInternal = { key ->
+                            dayDetail = null
+                            when (key) {
+                                "calendar" -> selectedTab = 0
+                                "prayer" -> selectedTab = 1
+                                "qibla" -> selectedTab = 2
+                                "events" -> selectedTab = 3
+                                "reminders" -> selectedTab = 4
+                                "announcements" -> {
+                                    annSheetVisible = true
+                                    AnnouncementBox.markSeen(context)
+                                    annUnseen = 0
+                                }
+                                "support" -> supportVisible = true
+                                "account" -> accountVisible = true
+                            }
+                        }
                     )
 
                     1 -> PrayerScreen(

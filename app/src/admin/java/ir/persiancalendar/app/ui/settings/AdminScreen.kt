@@ -870,20 +870,21 @@ fun AdminScreen(onBack: () -> Unit) {
                     }
 
                     Spacer(Modifier.height(14.dp))
-                    // ---------- انتشار بنرهای صفحه اصلی — نسخهٔ ۱.۱۱.۲۱ (درخواست کاربر) ----------
-                    Text("بنرهای تبلیغات صفحه اصلی", style = MaterialTheme.typography.titleSmall)
+                    // ---------- انتشار فید تبلیغات مدیریت‌شده — نسخهٔ ۱.۱۱.۳۵ ----------
+                    Text("فید تبلیغات مدیریت‌شده (tile + بنر بدون ×)", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "بنرهایی که در بخش «تبلیغات صفحه اصلی» می‌سازید تا این نسخه فقط روی همین دستگاه دیده می‌شدند. " +
-                            "با این دکمه همهٔ بنرهای فعال برای همهٔ کاربران منتشر می‌شود؛ بعد از هر تغییر (افزودن، حذف، روشن/خاموش، ترتیب) " +
-                            "دوباره همین دکمه را بزنید تا به همه برسد. عکس گالری تا ۲۰۰ کیلوبایت داخل خوراک جاسازی می‌شود و عکس URL مستقیم منتشر می‌شود.",
+                        "از این نسخه تبلیغات صفحه اصلی «بدون ضربدر» است و کاربر هیچ راهی برای پنهان‌کردن آن ندارد؛ " +
+                            "فقط شما با این دکمه (یا فایل feed/main_ads.json با tools/ads_feed.py) آیتم‌ها را اضافه/حذف می‌کنید. " +
+                            "هر انتشار شمارهٔ sequence را یکی زیاد می‌کند و اپ‌های جدید فهرست را کامل جایگزین می‌کنند — " +
+                            "بنرهای با عکس گالری منتشر نمی‌شوند؛ تصویر باید URL مستقیم https باشد.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "نکتهٔ مهم: دریافت بنرها فقط در نسخهٔ ۱.۱۱.۲۱ به بعد برنامه وجود دارد؛ کاربران روی نسخه‌های قدیمی‌تر باید برنامه را به‌روز کنند. " +
-                            "از نسخهٔ ۱.۱۱.۲۲ دریافت از سه منبع (raw و jsDelivr و api.github) انجام می‌شود تا در شبکه‌های مختلف ایران هم باز شود.",
+                        "نکته: کارت‌های tile (شبکه‌ای) فعلاً فقط از فایل feed/main_ads.json با tools/ads_feed.py قابل افزودن‌اند؛ " +
+                            "از این پنل بنر تصویری منتشر می‌شود. لینک داخلی فقط با کلیدهای لیست‌سفید: calendar، prayer، qibla، events، reminders، announcements، support، account",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -891,33 +892,29 @@ fun AdminScreen(onBack: () -> Unit) {
                     OutlinedButton(
                         onClick = {
                             scope.launch(Dispatchers.IO) {
-                                // نسخهٔ ۱.۱۱.۲۷: خوراک خالی دیگر «ناموفق» نیست — چهار حالت جدا گزارش می‌شود
-                                val cr = ir.persiancalendar.app.data.support.MainAdFeed.check(context)
+                                // نسخهٔ ۱.۱۱.۳۵: بررسی فید جدید (سند sequence) به‌جای آرایهٔ قدیمی
+                                val cr = ir.persiancalendar.app.data.support.AdsFeed.check(context)
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                                     adPubStatus = when {
                                         !cr.ok ->
-                                            "دریافت خوراک ناموفق: ${cr.error.take(160)} — اتصال اینترنت را بررسی کنید؛ منابع به‌ترتیب آزموده می‌شوند: سرور شخصی، raw، jsDelivr، api.github"
-                                        cr.fromCache && cr.count > 0 ->
-                                            "الان به منبع زنده دسترسی نبود — آخرین نسخهٔ کش‌شدهٔ همین دستگاه: ${cr.count} بنر. جزئیات تلاش‌ها: ${cr.error.take(120)}"
-                                        cr.fromCache ->
-                                            "الان به منبع زنده دسترسی نبود و کش همین دستگاه هم خالی است (۰ بنر). با اینترنت وصل دوباره «بررسی خوراک بنرها» را بزنید. جزئیات: ${cr.error.take(120)}"
+                                            "دریافت فید ناموفق: ${cr.error.take(160)} — اتصال اینترنت را بررسی کنید؛ منابع به‌ترتیب آزموده می‌شوند: سرور شخصی، raw، jsDelivr، api.github"
                                         cr.count > 0 ->
-                                            "خوراک فعلی کاربران: ${cr.count} بنر — دریافت موفق از ${cr.source}"
+                                            "فید فعلی کاربران: ${cr.count} آیتم — ${cr.error} — دریافت موفق از ${cr.source}"
                                         else ->
-                                            "خوراک بنرهای کاربران در حال حاضر خالی است (۰ بنر) — دریافت موفق از ${cr.source}. یعنی فهرست خالی برای همه منتشر شده و مشکلی نیست؛ برای نمایش بنر تازه، آن را بسازید و دکمهٔ «انتشار بنرها برای کاربران» را بزنید. (تا نسخهٔ ۱.۱۱.۲۶ این حالت به‌اشتباه «دریافت خوراک ناموفق» نمایش داده می‌شد)"
+                                            "فید تبلیغات کاربران در حال حاضر خالی است (۰ آیتم) — ${cr.error} — دریافت موفق از ${cr.source}؛ برای نمایش تبلیغ تازه، آن را بسازید و «انتشار فید تبلیغات» را بزنید"
                                     }
                                 }
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("بررسی خوراک بنرهای کاربران") }
+                    ) { Text("بررسی فید تبلیغات کاربران") }
                     Spacer(Modifier.height(6.dp))
                     Button(
                         onClick = {
                             adPubBusy = true
                             scope.launch(Dispatchers.IO) {
                                 secrets.setGithubToken(ghToken)
-                                val msg = ir.persiancalendar.app.data.support.FeedPublisher.publishMainAds(
+                                val msg = ir.persiancalendar.app.data.support.FeedPublisher.publishAdsFeed(
                                     context, ghToken, MainAdBox.active(context)
                                 )
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -930,7 +927,7 @@ fun AdminScreen(onBack: () -> Unit) {
                         enabled = !adPubBusy,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (adPubBusy) "در حال انتشار بنرها…" else "انتشار بنرها برای کاربران")
+                        Text(if (adPubBusy) "در حال انتشار فید تبلیغات…" else "انتشار فید تبلیغات (sequence +۱)")
                     }
                     if (adPubStatus.isNotBlank()) {
                         Spacer(Modifier.height(6.dp))

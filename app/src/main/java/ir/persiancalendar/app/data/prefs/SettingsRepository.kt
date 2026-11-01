@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import ir.persiancalendar.app.core.prayer.Cities
 import ir.persiancalendar.app.core.prayer.PrayerMethod
+import ir.persiancalendar.app.notifications.StatusBarDayIcon
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -78,9 +79,10 @@ data class AppSettings(
      *  نسخهٔ ۱.۱۱.۳۴: سال ۰ یعنی «بدون سال» (کارت تولد فقط روز/ماه)
      *  حریم خصوصی: فقط محلی — allowBackup=false است و هرگز به شبکه نمی‌رود */
     val profileBirth: String = "",
-    // ---------- نسخهٔ ۱.۱۱.۳۴: بنرهای تبلیغاتی قابل حذف + کارت تولد ----------
-    /** سوئیچ کاربر «نمایش تبلیغات» (کنار کلید قطع اضطراری فید adsEnabled) */
-    val adsEnabled: Boolean = true,
+    // ---------- نسخهٔ ۱.۱۱.۳۵: تبلیغات مدیریت‌شده (بدون کنترل کاربر) + کارت تولد ----------
+    // (سوئیچ کاربر adsEnabled حذف شد — تبلیغات فقط با کلید adsEnabled فید امضاشده کنترل می‌شود)
+    /** سبک آیکون عدد روز در نوار وضعیت — ۰ = دایرهٔ درشت (پیش‌فرض)، ۱ = ساده */
+    val statusBarIconStyle: Int = StatusBarDayIcon.STYLE_CIRCLE,
     /** نمایش کارت «روز تولد شما» در صفحه اصلی */
     val birthdayCardVisible: Boolean = true
     // نسخهٔ ۱.۱۱.۳۰ (بازرسی امنیتی): adminPin و githubToken به AdminSecrets
@@ -106,8 +108,9 @@ class SettingsRepository(private val context: Context) {
         val AZAN_AUTO_OPEN = booleanPreferencesKey("azan_auto_open_screen")
         val AZAN_ALWAYS_FULL = booleanPreferencesKey("azan_always_fullscreen")
         val AZAN_STOP_ON_EXIT = booleanPreferencesKey("azan_stop_on_exit")
-        // ---------- نسخهٔ ۱.۱۱.۳۴: تبلیغات + کارت تولد ----------
-        val ADS_ENABLED = booleanPreferencesKey("ads_enabled")
+        // ---------- نسخهٔ ۱.۱۱.۳۵: سبک آیکون نوار وضعیت + کارت تولد ----------
+        // (کلید قدیمی ads_enabled در DataStore بی‌اثر مانده — تبلیغات فقط با فید کنترل می‌شود)
+        val STATUS_BAR_ICON_STYLE = intPreferencesKey("status_bar_icon_style")
         val BIRTHDAY_VISIBLE = booleanPreferencesKey("birthday_card_visible")
         // ---------- نسخه ۱.۳ ----------
         val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
@@ -138,7 +141,7 @@ class SettingsRepository(private val context: Context) {
             onboardingDone = p[Keys.ONBOARDING_DONE] ?: false,
             profileGender = p[Keys.PROFILE_GENDER] ?: "",
             profileBirth = p[Keys.PROFILE_BIRTH] ?: "",
-            adsEnabled = p[Keys.ADS_ENABLED] ?: true,
+            statusBarIconStyle = p[Keys.STATUS_BAR_ICON_STYLE] ?: StatusBarDayIcon.STYLE_CIRCLE,
             birthdayCardVisible = p[Keys.BIRTHDAY_VISIBLE] ?: true
         )
     }
@@ -205,8 +208,9 @@ class SettingsRepository(private val context: Context) {
     suspend fun setProfileBirth(jy: Int, jm: Int, jd: Int) =
         context.dataStore.edit { it[Keys.PROFILE_BIRTH] = "$jy/$jm/$jd" }
 
-    // ---------- نسخهٔ ۱.۱۱.۳۴: تبلیغات + کارت تولد ----------
-    suspend fun setAdsEnabled(b: Boolean) = context.dataStore.edit { it[Keys.ADS_ENABLED] = b }
+    // ---------- نسخهٔ ۱.۱۱.۳۵: سبک آیکون نوار وضعیت + کارت تولد ----------
+    suspend fun setStatusBarIconStyle(style: Int) =
+        context.dataStore.edit { it[Keys.STATUS_BAR_ICON_STYLE] = style }
     suspend fun setBirthdayCardVisible(b: Boolean) =
         context.dataStore.edit { it[Keys.BIRTHDAY_VISIBLE] = b }
 
