@@ -88,7 +88,9 @@ object MonthGridLogic {
     ): String {
         val fa = PersianText.toPersianDigits(day.toString())
         val parts = mutableListOf(monthName, fa, weekdayName)
-        if (isFriday) parts.add("جمعه")
+        // نام روز هفته از قبل بخش پایه است؛ «جمعه» فقط وقتی تکرار می‌شود که
+        // weekdayName آن را نگفته باشد (جلوگیری از «جمعه، جمعه» در TalkBack)
+        if (isFriday && weekdayName != "جمعه") parts.add("جمعه")
         if (isHoliday) parts.add("تعطیل رسمی")
         if (isToday) parts.add("امروز")
         if (isSelected && !isToday) parts.add("روز انتخاب‌شده")

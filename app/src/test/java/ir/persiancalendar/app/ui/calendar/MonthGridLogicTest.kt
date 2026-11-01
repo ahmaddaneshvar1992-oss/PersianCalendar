@@ -136,8 +136,9 @@ class MonthGridLogicTest {
     fun `esfand 30 of leap year 1403 exists and esfand 30 of 1405 does not`() {
         // ۳۰ اسفند ۱۴۰۳ = ۲۰ مارس ۲۰۲۵ (تقویم رسمی)
         assertEquals(Triple(2025, 3, 20), toTriple(CalendarConverter.jalaliToGregorian(1403, 12, 30)))
-        // آخرین روز اسفند ۱۴۰۵ (غیرکبیسه) = ۲۹ = ۲۰ مارس ۲۰۲۶
-        assertEquals(Triple(2026, 3, 20), toTriple(CalendarConverter.jalaliToGregorian(1405, 12, 29)))
+        // آخرین روز اسفند ۱۴۰۵ (غیرکبیسه) = ۲۹ = ۲۰ مارس ۲۰۲۷
+        // (۲۰ مارس ۲۰۲۶ آخرین روز سال ۱۴۰۴ است — ۲۹ اسفند ۱۴۰۴)
+        assertEquals(Triple(2027, 3, 20), toTriple(CalendarConverter.jalaliToGregorian(1405, 12, 29)))
     }
 
     @Test
