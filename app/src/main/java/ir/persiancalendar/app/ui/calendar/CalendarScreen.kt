@@ -1,6 +1,10 @@
 package ir.persiancalendar.app.ui.calendar
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,13 +14,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,8 +32,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,33 +45,55 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ir.persiancalendar.app.R
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
 import ir.persiancalendar.app.core.events.HolidayRepository
 import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.data.model.EventRepetition
+import ir.persiancalendar.app.data.model.RepeatType
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.ui.components.AdsFeedSection
 import ir.persiancalendar.app.ui.components.BirthdayCard
-import ir.persiancalendar.app.ui.components.JalaliDatePickerDialog
 import ir.persiancalendar.app.ui.prayer.PrayerTimesCard
-import ir.persiancalendar.app.ui.theme.EventDotColors
+import ir.persiancalendar.app.ui.theme.eventDotColor
 import ir.persiancalendar.app.ui.theme.holidayColor
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
  * صفحه تقویم: نمایش ماهانه و هفتگی شمسی.
+ *
+ * نسخهٔ ۱.۱۱.۳۹ (درخواست کاربر: «انتخابگر سریع سال و ماه» + «نمای ماهانهٔ بهبودیافته»):
+ *  - ضربه روی کارت سربرگ، bottom sheet انتخابگر سال و ماه را باز می‌کند
+ *    (MonthYearPickerSheet) — به‌جای دیالوگ قدیمی سه فهرستی که برای
+ *    یادآور/تولد/راه‌اندازی همچنان سر جایش است.
+ *  - نمای ماهانه روی HorizontalPager ماه‌ها سوار شد: کشیدن افقی نرم بین
+ *    ماه‌ها، بارگذاری تنبل ماه‌های مجاور با کش و ارتفاع ثابت ۶ ردیفه
+ *    (ماه‌های ۵ و ۶ ردیفی بدون پرش بصری).
+ *  - خانه‌های روز: عدد شمسی درشت، زیرعدد اختیاری میلادی/قمری (تنظیمات)،
+ *    حداکثر ۳ نقطهٔ رنگی رویداد، تعطیل قرمز، جمعه با رنگ تعطیلات،
+ *    امروز با حلقه، روز انتخاب‌شده با دایرهٔ پر و ناحیهٔ لمسی ≥۴۸dp.
+ *  - دکمهٔ شناور «امروز» فقط وقتی کاربر از ماه جاری دور شده دیده می‌شود.
+ * نمای هفتگی، پنل جزئیات روز و کارت‌های زیر تقویم دست‌نخورده ماندند.
  */
 @Composable
 fun CalendarScreen(
@@ -82,8 +115,41 @@ fun CalendarScreen(
     var viewJy by remember { mutableStateOf(todayJ.year) }
     var viewJm by remember { mutableStateOf(todayJ.month) }
     var mode by remember { mutableStateOf("ماه") }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showMonthPicker by remember { mutableStateOf(false) }
     var selectedJalali by remember { mutableStateOf(todayJ) }
+
+    // ---------- نمای ماهانهٔ بهبودیافته (۱.۱۱.۳۹): Pager ماه‌ها ----------
+    // هر ماه یک صفحه؛ صفحهٔ آغازین = ماه امروز؛ مجموع صفحات = بازهٔ موتور تقویم
+    val pagerState = rememberPagerState(
+        initialPage = MonthYearPickerLogic.pageOf(todayJ.year, todayJ.month)
+    ) { MonthYearPickerLogic.PAGE_COUNT }
+    val scope = rememberCoroutineScope()
+
+    // صفحهٔ تثبیت‌شدهٔ Pager → (سال، ماه) سربرگ و مناسبت‌های ماه
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            viewJy = MonthYearPickerLogic.yearOfPage(page)
+            viewJm = MonthYearPickerLogic.monthOfPage(page)
+        }
+    }
+
+    fun goToMonth(jy: Int, jm: Int) {
+        val target = MonthYearPickerLogic.pageOf(jy, jm)
+        scope.launch {
+            runCatching { pagerState.animateScrollToPage(target) }
+        }
+    }
+
+    fun goToPrevMonth() {
+        val page = (MonthYearPickerLogic.pageOf(viewJy, viewJm) - 1).coerceAtLeast(0)
+        goToMonth(MonthYearPickerLogic.yearOfPage(page), MonthYearPickerLogic.monthOfPage(page))
+    }
+
+    fun goToNextMonth() {
+        val page = (MonthYearPickerLogic.pageOf(viewJy, viewJm) + 1)
+            .coerceAtMost(MonthYearPickerLogic.PAGE_COUNT - 1)
+        goToMonth(MonthYearPickerLogic.yearOfPage(page), MonthYearPickerLogic.monthOfPage(page))
+    }
 
     Column(
         modifier = Modifier
@@ -103,20 +169,21 @@ fun CalendarScreen(
                 modifier = Modifier.padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {
-                    // ماه قبل
-                    if (viewJm == 1) { viewJm = 12; viewJy -= 1 } else viewJm -= 1
-                }) {
+                IconButton(
+                    onClick = { goToPrevMonth() },
+                    enabled = MonthYearPickerLogic.canGoToPrevMonth(viewJy, viewJm)
+                ) {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "ماه قبل",
+                        contentDescription = stringResource(R.string.picker_prev_month),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
+                val openPickerLabel = stringResource(R.string.header_open_picker_hint)
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { showDatePicker = true },
+                        .clickable(onClickLabel = openPickerLabel) { showMonthPicker = true },
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -130,12 +197,13 @@ fun CalendarScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }
-                IconButton(onClick = {
-                    if (viewJm == 12) { viewJm = 1; viewJy += 1 } else viewJm += 1
-                }) {
+                IconButton(
+                    onClick = { goToNextMonth() },
+                    enabled = MonthYearPickerLogic.canGoToNextMonth(viewJy, viewJm)
+                ) {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "ماه بعد",
+                        contentDescription = stringResource(R.string.picker_next_month),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -157,17 +225,18 @@ fun CalendarScreen(
                 label = { Text("هفتگی") }
             )
             Spacer(Modifier.weight(1f))
-            // ---------- دکمه بازگشت به امروز (نسخه ۱.۶) ----------
+            // ---------- دکمه بازگشت به امروز (نسخه ۱.۶) — فقط در نمای هفتگی ----------
+            // (در نمای ماهانه، دکمهٔ شناور «امروز» جای آن را گرفته — ۱.۱۱.۳۹)
             // فقط وقتی کاربر در ماه/روزی غیر از امروز است نمایان می‌شود و با رنگ پر و پالس نرم جلب توجه می‌کند
             val awayFromToday = viewJy != todayJ.year || viewJm != todayJ.month ||
                     selectedJalali != todayJ
-            if (awayFromToday) {
-                androidx.compose.material3.Button(
+            if (mode == "هفته" && awayFromToday) {
+                Button(
                     onClick = {
                         viewJy = todayJ.year; viewJm = todayJ.month; selectedJalali = todayJ
                     },
                     shape = RoundedCornerShape(14.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
@@ -187,23 +256,57 @@ fun CalendarScreen(
         Spacer(Modifier.height(8.dp))
 
         if (mode == "ماه") {
-            MonthGrid(
-                jy = viewJy, jm = viewJm,
-                todayG = todayG, todayJ = todayJ,
-                events = events,
-                holidayRepo = holidayRepo,
-                persianDigits = persianDigits,
-                selected = selectedJalali,
-                // نسخه ۱.۱۱.۳ (گزارش کاربر): لمس ساده روز فقط انتخاب می‌کند و هیچ صفحه‌ای باز نمی‌شود؛
-                // جزئیات روز فقط با نگه‌داشتن انگشت روی روز باز می‌شود
-                onDayClick = {
-                    selectedJalali = it
-                },
-                onDayLongClick = {
-                    selectedJalali = it
-                    onOpenDay(it)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                MonthPagerGrid(
+                    pagerState = pagerState,
+                    todayJ = todayJ,
+                    events = events,
+                    holidayRepo = holidayRepo,
+                    settings = settings,
+                    persianDigits = persianDigits,
+                    selected = selectedJalali,
+                    onDayClick = {
+                        // نسخه ۱.۱۱.۳ (گزارش کاربر): لمس ساده روز فقط انتخاب می‌کند
+                        selectedJalali = it
+                    },
+                    onDayLongClick = {
+                        selectedJalali = it
+                        onOpenDay(it)
+                    }
+                )
+                // ---------- دکمهٔ شناور «امروز» (۱.۱۱.۳۹) ----------
+                // فقط وقتی کاربر از ماه جاری دور شده نمایش داده می‌شود
+                val showTodayFab = MonthGridLogic.isAwayFromCurrentMonth(
+                    viewJy, viewJm, todayJ.year, todayJ.month
+                )
+                val todayFabCd = stringResource(R.string.today_fab_cd)
+                AnimatedVisibility(
+                    visible = showTodayFab,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 10.dp)
+                ) {
+                    ExtendedFloatingActionButton(
+                        text = { Text(stringResource(R.string.today_fab)) },
+                        icon = {
+                            Icon(
+                                Icons.Filled.Today,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        onClick = {
+                            goToMonth(todayJ.year, todayJ.month)
+                            selectedJalali = todayJ
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.semantics { contentDescription = todayFabCd }
+                    )
                 }
-            )
+            }
         } else {
             WeekStrip(
                 anchor = selectedJalali,
@@ -253,7 +356,7 @@ fun CalendarScreen(
         Spacer(Modifier.height(10.dp))
 
         // ---------- کارت اوقات شرعی — نسخه ۱.۱۰: پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه (مطابق عکس) ----------
-        // نسخه ۱.۱۱.۱۶ (درخواست کاربر): با لمس هر روز، اوقات شرعی همان روز نمایش داده می‌شود
+        // نسخهٔ ۱.۱۱.۱۶ (درخواست کاربر): با لمس هر روز، اوقات شرعی همان روز نمایش داده می‌شود
         PrayerTimesCard(
             settings = settings,
             persianDigits = persianDigits,
@@ -275,15 +378,18 @@ fun CalendarScreen(
         // نکته نسخه ۱.۱۰: کارت اوقات شرعی (نوار افقی ۸ وقت مطابق عکس) به پایین صفحه اصلی تقویم، پیش از مناسبت‌های ماه بازگشت
     }
 
-    if (showDatePicker) {
-        JalaliDatePickerDialog(
-            initial = JalaliDate(viewJy, viewJm, 1),
-            onDismiss = { showDatePicker = false },
-            onSelected = {
-                viewJy = it.year
-                viewJm = it.month
-                selectedJalali = it
-                showDatePicker = false
+    if (showMonthPicker) {
+        MonthYearPickerSheet(
+            viewJy = viewJy,
+            viewJm = viewJm,
+            todayJy = todayJ.year,
+            todayJm = todayJ.month,
+            persianDigits = persianDigits,
+            onDismiss = { showMonthPicker = false },
+            onPick = { jy, jm ->
+                showMonthPicker = false
+                // انتخاب ماه با انیمیشن کوتاه Pager به همان ماه می‌رود
+                goToMonth(jy, jm)
             }
         )
     }
@@ -295,28 +401,162 @@ internal fun eventOccursOn(event: EventEntity, g: LocalDate): Boolean {
     return EventRepetition.occursOn(
         LocalDate.of(event.gy, event.gm, event.gd),
         anchorJ,
-        ir.persiancalendar.app.data.model.RepeatType.fromOrdinal(event.repeatType),
+        RepeatType.fromOrdinal(event.repeatType),
         g
     )
 }
 
-// ---------------- نمایش ماهانه ----------------
+// ---------------- نمایش ماهانه بهبودیافته (۱.۱۱.۳۹) ----------------
 
-@Composable
-private fun MonthGrid(
-    jy: Int, jm: Int,
-    todayG: LocalDate, todayJ: JalaliDate,
+/**
+ * مدل آمادهٔ هر خانهٔ روز — یک بار برای کل صفحه محاسبه و کش می‌شود
+ * تا هنگام سوایپ هیچ محاسبهٔ سنگینی روی نخ اصلی رخ ندهد.
+ */
+internal data class MonthCellData(
+    val jalali: JalaliDate,
+    val gDate: LocalDate,
+    val isToday: Boolean,
+    val isSelected: Boolean,
+    val isHoliday: Boolean,
+    val isFriday: Boolean,
+    /** اندیس‌های رنگ دسته‌بندی رویدادهای این روز (متمایز) */
+    val eventColorIndices: List<Int>,
+    /** نقشهٔ نقطه‌ها (حداکثر ۳ نقطه، نقطهٔ سوم کم‌رنگ در ازدحام) */
+    val dotPlan: MonthGridLogic.EventDotPlan,
+    val eventCount: Int,
+    /** زیرعدد میلادی/قمری — فقط وقتی تنظیمات مربوطه روشن باشد */
+    val gregorianDayText: String?,
+    val gregorianA11y: String?,
+    val hijriDayText: String?,
+    val hijriA11y: String?
+)
+
+/** ساخت مدل‌های همهٔ روزهای ماه — تابع محض (بدون Compose) برای تست‌پذیری */
+internal fun buildMonthCells(
+    jy: Int,
+    jm: Int,
+    monthLen: Int,
+    firstDate: LocalDate,
+    todayJ: JalaliDate,
+    selected: JalaliDate,
     events: List<EventEntity>,
     holidayRepo: HolidayRepository,
+    showGregorian: Boolean,
+    showHijri: Boolean
+): List<MonthCellData> {
+    val out = ArrayList<MonthCellData>(monthLen)
+    for (dayOffset in 0 until monthLen) {
+        val dayNum = dayOffset + 1
+        val j = JalaliDate(jy, jm, dayNum)
+        val g = firstDate.plusDays(dayOffset.toLong())
+        val dayEvents = events.filter { eventOccursOn(it, g) }
+        val distinctColors = dayEvents.map { it.colorIndex }.distinct()
+        val gregorianDayText: String?
+        val gregorianA11y: String?
+        if (showGregorian) {
+            gregorianDayText = g.dayOfMonth.toString()
+            gregorianA11y = "${g.dayOfMonth} ${PersianText.gregorianMonthsFa.getOrElse(g.monthValue - 1) { "" }}"
+        } else {
+            gregorianDayText = null
+            gregorianA11y = null
+        }
+        val hijriDayText: String?
+        val hijriA11y: String?
+        if (showHijri) {
+            val h = CalendarConverter.hijriFromJalali(jy, jm, dayNum)
+            hijriDayText = h.day.toString()
+            hijriA11y = "${h.day} ${PersianText.hijriMonths.getOrElse(h.month - 1) { "" }}"
+        } else {
+            hijriDayText = null
+            hijriA11y = null
+        }
+        out.add(
+            MonthCellData(
+                jalali = j,
+                gDate = g,
+                isToday = j == todayJ,
+                isSelected = j == selected,
+                isHoliday = holidayRepo.isHoliday(j, g),
+                isFriday = PersianText.weekdayIndexSat0(g) == 6,
+                eventColorIndices = distinctColors.take(MonthGridLogic.MAX_EVENT_DOTS),
+                dotPlan = MonthGridLogic.eventDotPlan(distinctColors.size),
+                eventCount = dayEvents.size,
+                gregorianDayText = gregorianDayText,
+                gregorianA11y = gregorianA11y,
+                hijriDayText = hijriDayText,
+                hijriA11y = hijriA11y
+            )
+        )
+    }
+    return out
+}
+
+@Composable
+private fun MonthPagerGrid(
+    pagerState: androidx.compose.foundation.pager.PagerState,
+    todayJ: JalaliDate,
+    events: List<EventEntity>,
+    holidayRepo: HolidayRepository,
+    settings: AppSettings,
     persianDigits: Boolean,
     selected: JalaliDate,
     onDayClick: (JalaliDate) -> Unit,
     onDayLongClick: (JalaliDate) -> Unit
 ) {
-    val monthLen = CalendarConverter.jalaliMonthLength(jy, jm)
-    val firstG = CalendarConverter.jalaliToGregorian(jy, jm, 1)
-    val firstDate = LocalDate.of(firstG.year, firstG.month, firstG.day)
-    val firstIndex = PersianText.weekdayIndexSat0(firstDate) // ۰=شنبه
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxWidth(),
+        // ماه‌های مجاور به‌صورت تنبل و با کش از پیش ساخته می‌شوند تا سوایپ نرم باشد
+        beyondViewportPageCount = 1
+    ) { page ->
+        val jy = MonthYearPickerLogic.yearOfPage(page)
+        val jm = MonthYearPickerLogic.monthOfPage(page)
+        MonthPage(
+            jy = jy,
+            jm = jm,
+            todayJ = todayJ,
+            events = events,
+            holidayRepo = holidayRepo,
+            settings = settings,
+            persianDigits = persianDigits,
+            selected = selected,
+            onDayClick = onDayClick,
+            onDayLongClick = onDayLongClick
+        )
+    }
+}
+
+@Composable
+private fun MonthPage(
+    jy: Int,
+    jm: Int,
+    todayJ: JalaliDate,
+    events: List<EventEntity>,
+    holidayRepo: HolidayRepository,
+    settings: AppSettings,
+    persianDigits: Boolean,
+    selected: JalaliDate,
+    onDayClick: (JalaliDate) -> Unit,
+    onDayLongClick: (JalaliDate) -> Unit
+) {
+    val showGregorian = settings.showGregorianInCells
+    val showHijri = settings.showHijriInCells
+    val showWeekNumber = settings.showWeekNumber
+
+    val monthLen = remember(jy, jm) { CalendarConverter.jalaliMonthLength(jy, jm) }
+    val firstG = remember(jy, jm) { CalendarConverter.jalaliToGregorian(jy, jm, 1) }
+    val firstDate = remember(firstG) { LocalDate.of(firstG.year, firstG.month, firstG.day) }
+    val firstIndex = remember(firstDate) { PersianText.weekdayIndexSat0(firstDate) }
+
+    // مدل‌های خانه‌ها یک بار برای هر صفحه محاسبه و کش می‌شوند (سوایپ روان)
+    val cells = remember(
+        jy, jm, events, holidayRepo, selected, todayJ, showGregorian, showHijri
+    ) {
+        buildMonthCells(
+            jy, jm, monthLen, firstDate, todayJ, selected, events, holidayRepo,
+            showGregorian, showHijri
+        )
+    }
 
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -327,6 +567,9 @@ private fun MonthGrid(
         Column(modifier = Modifier.padding(8.dp)) {
             // روزهای هفته — با نام کامل (نسخه ۱.۱۱۷ به درخواست کاربر: شنبه، یکشنبه، …)
             Row(modifier = Modifier.fillMaxWidth()) {
+                if (showWeekNumber) {
+                    Spacer(Modifier.width(24.dp))
+                }
                 PersianText.weekDays.forEachIndexed { i, wd ->
                     Box(
                         modifier = Modifier.weight(1f),
@@ -345,34 +588,42 @@ private fun MonthGrid(
 
             Spacer(Modifier.height(4.dp))
 
-            // شش ردیف هفته
-            var cellIndex = 0
-            repeat(6) {
+            // شش ردیف ثابت — ماه‌های ۵ ردیفی ردیف خالی آخر را هم رزرو می‌کنند
+            // تا ارتفاع صفحه بین ماه‌ها بدون پرش ثابت بماند (۱.۱۱.۳۹)
+            repeat(MonthGridLogic.FIXED_ROW_COUNT) { row ->
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    repeat(7) {
-                        val dayOffset = cellIndex - firstIndex
-                        cellIndex++
+                    if (showWeekNumber) {
+                        val weekNo = MonthGridLogic.weekNumber(jy, jm, firstIndex, row)
+                        Text(
+                            text = if (persianDigits) PersianText.toPersianDigits(weekNo.toString())
+                            else weekNo.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .width(24.dp)
+                                .align(Alignment.CenterVertically)
+                        )
+                    }
+                    repeat(7) { col ->
+                        val idx = row * 7 + col
                         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            if (dayOffset in 0 until monthLen) {
-                                val dayNum = dayOffset + 1
-                                val j = JalaliDate(jy, jm, dayNum)
-                                val g = firstDate.plusDays(dayOffset.toLong())
+                            val cell = cells.getOrNull(idx)
+                            if (cell != null) {
                                 DayCell(
-                                    jalali = j,
-                                    gregorian = g,
-                                    isToday = j == todayJ,
-                                    isSelected = j == selected,
-                                    isHoliday = holidayRepo.isHoliday(j, g),
-                                    eventColors = events.filter { eventOccursOn(it, g) }
-                                        .map { EventDotColors[it.colorIndex % EventDotColors.size] }
-                                        .distinct()
-                                        .take(3),
+                                    data = cell,
                                     persianDigits = persianDigits,
-                                    onClick = { onDayClick(j) },
-                                    onLongClick = { onDayLongClick(j) }
+                                    onClick = { onDayClick(cell.jalali) },
+                                    onLongClick = { onDayLongClick(cell.jalali) }
                                 )
                             } else {
-                                Spacer(Modifier.aspectRatio(1f))
+                                Spacer(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = MonthGridLogic.MIN_CELL_HEIGHT_DP.dp)
+                                )
                             }
                         }
                     }
@@ -382,85 +633,133 @@ private fun MonthGrid(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DayCell(
-    jalali: JalaliDate,
-    gregorian: LocalDate,
-    isToday: Boolean,
-    isSelected: Boolean,
-    isHoliday: Boolean,
-    eventColors: List<androidx.compose.ui.graphics.Color>,
+    data: MonthCellData,
     persianDigits: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    val numText = if (persianDigits) PersianText.toPersianDigits(jalali.day.toString())
-    else jalali.day.toString()
+    val holiday = holidayColor()
+    val numText = if (persianDigits) PersianText.toPersianDigits(data.jalali.day.toString())
+    else data.jalali.day.toString()
 
-    // نسخه ۱.۱۱.۱۶ (درخواست کاربر): روز لمس‌شده با یک دایره دور آن مشخص می‌شود
-    // و تاریخ/مناسبت‌ها/اوقات شرعی با همان روز به‌روز می‌شوند؛ امروز همچنان پرشده است.
+    // متن TalkBack کامل — «آبان، ۱۰، یکشنبه، تعطیل رسمی، ۲ رویداد»
+    val cd = MonthGridLogic.dayContentDescription(
+        monthName = PersianText.jalaliMonths.getOrElse(data.jalali.month - 1) { "" },
+        day = data.jalali.day,
+        weekdayName = PersianText.weekDays.getOrElse(PersianText.weekdayIndexSat0(data.gDate)) { "" },
+        isHoliday = data.isHoliday,
+        isFriday = data.isFriday,
+        isToday = data.isToday,
+        isSelected = data.isSelected,
+        eventCount = data.eventCount,
+        gregorianLabel = data.gregorianA11y,
+        hijriLabel = data.hijriA11y
+    )
+
+    // روز انتخاب‌شده: دایرهٔ پر — امروز: حلقه دور عدد — هر دو: پر + حلقه
+    val circleFill = when {
+        data.isSelected -> MaterialTheme.colorScheme.primary
+        else -> androidx.compose.ui.graphics.Color.Transparent
+    }
+    val ringColor = if (data.isToday && !data.isSelected) MaterialTheme.colorScheme.primary
+    else androidx.compose.ui.graphics.Color.Transparent
+    val numColor = when {
+        data.isSelected -> MaterialTheme.colorScheme.onPrimary
+        data.isToday -> MaterialTheme.colorScheme.primary
+        data.isHoliday || data.isFriday -> holiday
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .aspectRatio(0.9f)
+            .fillMaxWidth()
+            .heightIn(min = MonthGridLogic.MIN_CELL_HEIGHT_DP.dp)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(1.dp),
-        verticalArrangement = Arrangement.Center
+            .semantics { contentDescription = cd }
+            .padding(vertical = 2.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
+            // دایرهٔ متن‌پیرو: با بزرگ‌شدن فونت تا ۲۰۰٪ هم عدد داخل دایره جا می‌شود
             modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .background(
-                    when {
-                        isToday -> MaterialTheme.colorScheme.primary
-                        isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
-                        else -> androidx.compose.ui.graphics.Color.Transparent
-                    },
-                    CircleShape
-                )
-                .border(
-                    width = if (isSelected && !isToday) 2.dp else 0.dp,
-                    color = if (isSelected && !isToday) MaterialTheme.colorScheme.primary
-                    else androidx.compose.ui.graphics.Color.Transparent,
-                    shape = CircleShape
-                )
+                .defaultMinSize(minWidth = 36.dp, minHeight = 36.dp)
+                .background(circleFill, CircleShape)
+                .border(width = if (data.isToday && !data.isSelected) 2.dp else 0.dp, ringColor, CircleShape)
+                .padding(horizontal = 6.dp, vertical = 1.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = numText,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
-                    color = when {
-                        isToday -> MaterialTheme.colorScheme.onPrimary
-                        isHoliday -> holidayColor()
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
+                    color = numColor
                 )
-                Spacer(Modifier.height(3.dp))
-                Row(horizontalArrangement = Arrangement.Center) {
-                    eventColors.forEach { c ->
+                // نقطه‌های رویداد — فضایشان همیشه رزرو می‌شود تا ارتفاع ثابت بماند
+                Row(
+                    modifier = Modifier.height(8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val plan = data.dotPlan
+                    data.eventColorIndices.forEachIndexed { i, colorIndex ->
+                        val dim = plan.lastDotDimmed && i == plan.dotCount - 1
                         Box(
                             modifier = Modifier
                                 .padding(horizontal = 1.dp)
                                 .size(5.dp)
-                                .background(c, CircleShape)
+                                .background(
+                                    eventDotColor(colorIndex).copy(alpha = if (dim) 0.45f else 1f),
+                                    CircleShape
+                                )
                         )
                     }
+                }
+            }
+        }
+        // زیرعدد اختیاری میلادی/قمری (تنظیمات — پیش‌فرض خاموش)
+        if (data.gregorianDayText != null || data.hijriDayText != null) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(13.dp)
+            ) {
+                data.gregorianDayText?.let { gTxt ->
+                    Text(
+                        text = if (persianDigits) PersianText.toPersianDigits(gTxt) else gTxt,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 8.5.sp,
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    )
+                }
+                data.hijriDayText?.let { hTxt ->
+                    Text(
+                        text = if (persianDigits) PersianText.toPersianDigits(hTxt)
+                        else PersianText.toArabicDigits(hTxt),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 8.5.sp,
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    )
                 }
             }
         }
     }
 }
 
-// ---------------- نمایش هفتگی ----------------
+// ---------------- نمایش هفتگی (دست‌نخورده) ----------------
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun WeekStrip(
     anchor: JalaliDate,

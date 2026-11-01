@@ -155,3 +155,14 @@ fun PersianCalendarTheme(
 @Composable
 fun holidayColor(): Color =
     if (MaterialTheme.colorScheme.background.luminance() < 0.5f) HolidayRedDark else HolidayRed
+
+/**
+ * رنگ نقطهٔ رویداد متناسب با روشنایی تم — نسخهٔ ۱.۱۱.۳۹
+ * (روی پس‌زمینهٔ تاریک نسخهٔ روشن‌تر پالت به کار می‌رود تا کنتراست WCAG AA حفظ شود)
+ */
+@Composable
+fun eventDotColor(colorIndex: Int): Color {
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val palette = if (dark) EventDotColorsDark else EventDotColors
+    return palette[colorIndex.coerceIn(0, palette.lastIndex)]
+}

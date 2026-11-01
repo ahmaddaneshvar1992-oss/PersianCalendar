@@ -44,4 +44,26 @@
     <string name="birthday_visible_title">نمایش کارت تولد</string>
     <string name="birthday_visible_desc">کارت «روز تولد شما» در صفحه اصلی تقویم دیده شود</string>
     <string name="birthday_no_year">بدون سال (فقط روز و ماه)</string>
+
+    <!-- انتخابگر سریع سال و ماه + نمای ماهانهٔ بهبودیافته — نسخهٔ ۱.۱۱.۳۹ -->
+    <string name="picker_prev_month">ماه قبل</string>
+    <string name="picker_next_month">ماه بعد</string>
+    <string name="picker_prev_year">سال قبل</string>
+    <string name="picker_next_year">سال بعد</string>
+    <string name="picker_today">امروز</string>
+    <string name="picker_year_cd">سال انتخابی؛ برای تایپ مستقیم یا انتخاب از فهرست، روی عدد لمس کنید</string>
+    <string name="picker_year_list_title">برای تایپ مستقیم یا انتخاب از فهرست لمس کنید</string>
+    <string name="picker_type_year_hint">تایپ مستقیم سال (مثلاً ۱۴۰۵)</string>
+    <string name="picker_year_submit">ثبت سال تایپ‌شده</string>
+    <string name="picker_year_invalid">سال خارج از بازهٔ پشتیبانی‌شدهٔ تقویم است (۱۱۷۸ تا ۱۴۳۴)</string>
+    <string name="picker_months_title">ماه‌های سال</string>
+    <string name="header_open_picker_hint">باز کردن انتخابگر سریع ماه و سال</string>
+    <string name="today_fab">امروز</string>
+    <string name="today_fab_cd">بازگشت به ماه جاری</string>
+    <string name="month_cell_show_gregorian_title">نمایش تاریخ میلادی در خانه‌ها</string>
+    <string name="month_cell_show_gregorian_desc">عدد کوچک میلادی زیر عدد شمسی هر روز در نمای ماهانه</string>
+    <string name="month_cell_show_hijri_title">نمایش تاریخ قمری در خانه‌ها</string>
+    <string name="month_cell_show_hijri_desc">عدد کوچک قمری زیر عدد شمسی هر روز در نمای ماهانه</string>
+    <string name="month_cell_show_week_number_title">نمایش شماره هفته سال</string>
+    <string name="month_cell_show_week_number_desc">ستون باریک شمارهٔ هفتهٔ سال کنار جدول ماهانه</string>
 </resources>

@@ -12,6 +12,15 @@ package ir.persiancalendar.app.core.calendar
  */
 object CalendarConverter {
 
+    /**
+     * بازهٔ سال جلالی که موتور برای آن به‌طور کامل آزموده شده است
+     * (پرت دقیق jalaali-js/Borkowski — مستند در سربرگ این فایل).
+     * انتخابگر سریع سال و ماه (نسخهٔ ۱.۱۱.۳۹) همین بازه را به کاربر می‌دهد و
+     * خارج از آن را غیرفعال می‌کند تا هیچ محاسبه‌ای بیرون از بازهٔ معتبر رخ ندهد.
+     */
+    const val MIN_SUPPORTED_JALALI_YEAR = 1178
+    const val MAX_SUPPORTED_JALALI_YEAR = 1434
+
     // سال‌های آغاز قاعده ۳۳ ساله
     private val breaks = intArrayOf(
         -61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181,

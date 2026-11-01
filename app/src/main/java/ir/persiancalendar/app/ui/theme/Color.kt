@@ -56,3 +56,17 @@ val EventDotColors = listOf(
     Color(0xFF00897B),
     Color(0xFF6D4C41)
 )
+
+/**
+ * نسخهٔ روشن‌تر نقطه‌های رویداد برای پس‌زمینهٔ تاریک — نسخهٔ ۱.۱۱.۳۹
+ * (الزام کنتراست WCAG AA: نقطه‌های تیرهٔ فعلی روی surface تاریک کم‌کنتراست بودند؛
+ *  ترتیب اندیس‌ها عین EventDotColors است تا رنگ دسته‌بندی حفظ شود)
+ */
+val EventDotColorsDark = listOf(
+    Color(0xFF66BB6A), // سبز
+    Color(0xFF64B5F6), // آبی
+    Color(0xFFFFB74D), // نارنجی
+    Color(0xFFCE93D8), // بنفش
+    Color(0xFF4DB6AC), // فیروزه‌ای
+    Color(0xFFBCAAA4)  // قهوه‌ای
+)

@@ -280,6 +280,63 @@ fun SettingsScreen(settings: AppSettings, onOpenAccount: () -> Unit, onDevPanel:
                         onCheckedChange = { scope.launch { repo.setShowHijri(it) } }
                     )
                 }
+                // ---------- نمای ماهانهٔ بهبودیافته — نسخهٔ ۱.۱۱.۳۹ ----------
+                // هر سوئیچ فوری اعمال می‌شود (جریان DataStore → بازسازی خودکار)
+                // و بعد از بستن اپ هم ماندگار است.
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(ir.persiancalendar.app.R.string.month_cell_show_gregorian_title),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            stringResource(ir.persiancalendar.app.R.string.month_cell_show_gregorian_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = settings.showGregorianInCells,
+                        onCheckedChange = { scope.launch { repo.setShowGregorianInCells(it) } }
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(ir.persiancalendar.app.R.string.month_cell_show_hijri_title),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            stringResource(ir.persiancalendar.app.R.string.month_cell_show_hijri_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = settings.showHijriInCells,
+                        onCheckedChange = { scope.launch { repo.setShowHijriInCells(it) } }
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(ir.persiancalendar.app.R.string.month_cell_show_week_number_title),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            stringResource(ir.persiancalendar.app.R.string.month_cell_show_week_number_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = settings.showWeekNumber,
+                        onCheckedChange = { scope.launch { repo.setShowWeekNumber(it) } }
+                    )
+                }
             }
         }
 
