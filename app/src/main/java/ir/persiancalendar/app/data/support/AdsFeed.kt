@@ -107,13 +107,14 @@ object AdsFeed {
         val maxCacheDays = o.optInt("maxCacheDays", AdsFeedPolicy.DEFAULT_MAX_CACHE_DAYS)
             .coerceIn(0, AdsFeedPolicy.MAX_CACHE_DAYS)
         val items = (0 until itemsArr.length())
-            .mapNotNull { parseItem(itemsArr.optJSONObject(it) ?: return@mapNotNull) }
+            .mapNotNull { idx -> parseItem(itemsArr.optJSONObject(idx)) }
             .take(AdsFeedPolicy.MAX_ITEMS)
         Doc(sequence, issuedAtMs, adsEnabled, maxCacheDays, items)
     }.getOrNull()
 
     /** پارس یک آیتم — نامعتبر = null (حذف از فهرست) */
-    fun parseItem(o: JSONObject): FeedItem? {
+    fun parseItem(o: JSONObject?): FeedItem? {
+        o ?: return null
         val id = AdsFeedPolicy.clamp(o.optString("id"), AdsFeedPolicy.MAX_ID)
         if (id.isEmpty()) return null
         val type = when (o.optString("type").trim()) {

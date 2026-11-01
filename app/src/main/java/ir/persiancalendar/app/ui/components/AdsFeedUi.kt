@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.dp
 import ir.persiancalendar.app.R
 import ir.persiancalendar.app.core.ads.AdsFeedPolicy
 import ir.persiancalendar.app.data.support.AdsFeed
-import ir.persiancalendar.app.data.support.FeedItem
+import ir.persiancalendar.app.data.support.AdsFeed.FeedItem
 import ir.persiancalendar.app.data.support.ImageLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

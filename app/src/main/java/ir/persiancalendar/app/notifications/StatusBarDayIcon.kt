@@ -86,13 +86,15 @@ object StatusBarDayIcon {
 
         val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
-        val typeface = boldTypeface(context) ?: Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        // نکتهٔ نام‌گذاری: داخل apply، نام ساده به متغیر محلیِ هم‌نامِ property
+        // حل می‌شود — پس متغیرهای محلی عمداً نامی غیر از propertyهای Paint دارند
+        val boldFace = boldTypeface(context) ?: Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
 
         if (style == STYLE_SIMPLE) {
             // ---------- سبک ساده (رفتار ۱.۱۱.۱۳): عدد سفید روی زمینهٔ شفاف ----------
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.WHITE
-                typeface = typeface
+                this.typeface = boldFace
                 textAlign = Paint.Align.CENTER
                 textSize = if (text.length <= 1) sizePx * 0.76f else sizePx * 0.62f
             }
@@ -107,15 +109,15 @@ object StatusBarDayIcon {
             // ۱) دایرهٔ پر سفید (آلفای کامل)
             val circle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.WHITE
-                style = Paint.Style.FILL
+                this.style = Paint.Style.FILL
             }
             canvas.drawCircle(cx, cy, diameter / 2f, circle)
 
             // ۲) اندازهٔ فونت عدد — با اندازه‌گیری واقعی این فونت، تا حداکثر درشتی
             val maxW = DayIconMath.glyphMaxWidth(diameter)
             val maxH = DayIconMath.glyphMaxHeight(diameter)
-            val probe = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = typeface }
-            val textSize = DayIconMath.fitFontSize(
+            val probe = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.typeface = boldFace }
+            val fittedSize = DayIconMath.fitFontSize(
                 text = text,
                 maxWidth = maxW,
                 maxHeight = maxH,
@@ -131,8 +133,8 @@ object StatusBarDayIcon {
 
             // ۳) حک کردن عدد به‌صورت شفاف (CLEAR روی کانال آلفا)
             val carve = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                typeface = typeface
-                textSize = textSize
+                this.typeface = boldFace
+                this.textSize = fittedSize
                 textAlign = Paint.Align.CENTER
                 xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
             }

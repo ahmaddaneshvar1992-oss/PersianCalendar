@@ -55,9 +55,11 @@ object FeedSecurity {
      * تأیید امضای خوراک: content باید «بایت‌های دقیق» فایل جیسون باشد و
      * signatureB64 مقدار Base64 فایل .sig. خروجی true فقط وقتی امضا با یکی از
      * کلیدهای عمومی سنجاق‌شده معتبر باشد.
+     * (Ed25519Verify.verify فقط در خطا استثنا پرتاب می‌کند و Unit برمی‌گرداند —
+     * پس معیار پذیرش، «نبودن استثنا» است.)
      */
     fun verify(content: ByteArray, signatureB64: String): Boolean = runCatching {
         val sig = Base64.decode(signatureB64.trim(), Base64.DEFAULT)
-        getVerifiers().any { runCatching { it.verify(sig, content) }.getOrDefault(false) }
+        getVerifiers().any { v -> runCatching { v.verify(sig, content) }.isSuccess }
     }.getOrDefault(false)
 }
