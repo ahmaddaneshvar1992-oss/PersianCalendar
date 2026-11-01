@@ -25,11 +25,11 @@ object DayIconMath {
 
     /**
      * انتخاب اندازهٔ فونت: بزرگ‌ترین textSize که عرض متن (با measure در همان
-     * سایز) و ارتفاع گلیف (شبیه‌سازی خطی ascent..descent) در جعبه جا شود.
-     * جست‌وجوی دودویی با ۲۴ تکرار — همگرایی به ۰٫۵٪؛ خروجی همیشه > 0.
+     * سایز) و ارتفاع گلیف در جعبه جا شود.
      *
-     * measureWidth(text, sizePx) = عرض متن در آن سایز (از Paint.measureText)
-     * measureHeight(sizePx)      = ارتفاع گلیف در آن سایز (|ascent|+descent)
+     * عرض متن و متریک‌های فونت هر دو نسبت به textSize «خطی» اند، پس جواب دقیق
+     * حل بسته است: سایز = min(بودجهٔ عرض ÷ عرضِ واحد، بودجهٔ ارتفاع ÷ ارتفاعِ واحد)
+     * (جست‌وجوی دودویی با شروعِ محتاط تا ۲۰٪ کوچک‌تر از بهینه می‌ماند — این‌جا حذف شد.)
      */
     fun fitFontSize(
         text: String,
@@ -39,23 +39,12 @@ object DayIconMath {
         measureHeight: (Float) -> Float
     ): Float {
         if (text.isEmpty() || maxWidth <= 0f || maxHeight <= 0f) return 1f
-        var lo = 1f
-        var hi = maxHeight * 1.6f // شروعِ بازه از بالاتر تا جست‌وجو همیشه پاسخ داشته باشد
-        // سقف اولیه: اگر در hi جا نشد، hi را تا جایی پایین بیاور که حتماً جا شود
-        var guard = 0
-        while (guard++ < 64 &&
-            (measureWidth(text, hi) > maxWidth || measureHeight(hi) > maxHeight)
-        ) {
-            val next = hi * 0.8f
-            if (next <= lo) break
-            hi = next
-        }
-        repeat(24) {
-            val mid = (lo + hi) / 2f
-            val fits = measureWidth(text, mid) <= maxWidth && measureHeight(mid) <= maxHeight
-            if (fits) lo = mid else hi = mid
-        }
-        return lo
+        val perUnitW = measureWidth(text, 1f)   // عرض متن در سایز ۱ — کسری از سایز
+        val perUnitH = measureHeight(1f)        // ارتفاع گلیف در سایز ۱
+        val capByW = if (perUnitW > 0f) maxWidth / perUnitW else Float.MAX_VALUE
+        val capByH = if (perUnitH > 0f) maxHeight / perUnitH else Float.MAX_VALUE
+        val best = minOf(capByW, capByH)
+        return if (best.isInfinite() || best.isNaN() || best <= 0f) 1f else best
     }
 
     /**
