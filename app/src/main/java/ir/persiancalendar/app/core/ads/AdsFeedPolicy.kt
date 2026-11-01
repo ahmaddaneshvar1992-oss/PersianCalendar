@@ -88,6 +88,43 @@ object AdsFeedPolicy {
     const val TYPE_TILE = "tile"
     const val TYPE_BANNER = "banner"
 
+    // ---------- هندسهٔ بنر تمام‌عرض — نسخهٔ ۱.۱۱.۳۷ ----------
+    //
+    // گزارش کاربر («بنر تبلیغات مشکل داره»): بنر ۱.۱۱.۳۵-۳۶ نسبت تصویر را به
+    // ۳:۱ ثابت می‌کرد و با Crop وسط تصویر را برش می‌زد — لوگوی عمودی مدیر
+    // (۷۸۴×۱۱۶۸) چنان بریده می‌شد که متن لوگو کلاً از کادر بیرون می‌افتاد.
+    //
+    // اصلاح: بنر ارتفاع را از «نسبت واقعی تصویر» می‌گیرد و هرگز برش نمی‌زند؛
+    // فقط ارتفاع در یک باند معقول سقف/کف می‌شود تا بنر نه کوتاه‌تر از قابل‌لمس
+    // باشد و نه نصف صفحه را ببلعد. توابع خالص‌اند تا با تست واحد (CI بدون
+    // دستگاه اندرویدی) راستی‌آزمایی شوند.
+
+    /** کف ارتفاع بنر (dp) — زیر این، بنر کوچک‌تر از ناحیهٔ لمس راحت است */
+    const val MIN_BANNER_HEIGHT_DP = 110
+
+    /** سقف ارتفاع بنر (dp) — بنر عمودی بیش از این بلند نمی‌شود (Fit، بدون برش) */
+    const val MAX_BANNER_HEIGHT_DP = 280
+
+    /**
+     * ارتفاع جعبهٔ بنر (dp) برای تصویری با ابعاد داده‌شده در پهنای کامل صفحه.
+     * ورودی صفر/منفی (تصویر نشده) → 0f یعنی فراخوان جای‌نگه‌دار ۳:۱ بگذارد.
+     */
+    fun bannerHeightDp(imageWidth: Int, imageHeight: Int, boxWidthDp: Float): Float {
+        if (imageWidth <= 0 || imageHeight <= 0 || boxWidthDp <= 0f) return 0f
+        val natural = boxWidthDp * imageHeight.toFloat() / imageWidth.toFloat()
+        return natural.coerceIn(MIN_BANNER_HEIGHT_DP.toFloat(), MAX_BANNER_HEIGHT_DP.toFloat())
+    }
+
+    /**
+     * آیا با این تصویر، جعبهٔ بنر «دقیقاً» پر می‌شود؟ (نسبت طبیعی داخل باند است)
+     * false = تصویر با Fit وسط‌چین می‌شود — کل تصویر دیده می‌شود، چیزی بریده نمی‌شود.
+     */
+    fun bannerFillsExactly(imageWidth: Int, imageHeight: Int, boxWidthDp: Float): Boolean {
+        if (imageWidth <= 0 || imageHeight <= 0 || boxWidthDp <= 0f) return false
+        val natural = boxWidthDp * imageHeight.toFloat() / imageWidth.toFloat()
+        return natural >= MIN_BANNER_HEIGHT_DP.toFloat() && natural <= MAX_BANNER_HEIGHT_DP.toFloat()
+    }
+
     /**
      * ضدمقاومت بازپخش: فید با sequence کوچک‌تر «یا مساوی» آخرین فید معتبر رد می‌شود.
      * stored = ۰ یعنی هنوز هیچ فیدی پذیرفته نشده (نخستین پذیرش هر عددی ≥ ۱ قبول است).

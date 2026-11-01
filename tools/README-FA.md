@@ -20,7 +20,7 @@
       "enabled": true,
       "title": "ختم قرآن",             ← حداکثر ۴۰ کاراکتر
       "iconUrl": "https://…",          ← فقط tile — https یا data:image/jpeg|png|webp;base64
-      "imageUrl": "https://…",         ← فقط banner — https یا data:image (جاسازی؛ نسبت ~۳:۱ بهترین است)
+      "imageUrl": "https://…",         ← فقط banner — https یا data:image (جاسازی). نسبت هر تصویری مجاز است و تصویر هرگز بریده نمی‌شود (۱.۱۱.۳۷): عریض ~۳:۱ لبه‌به‌لبه پر می‌شود؛ عمودی/لوگو کامل و وسط‌چین تا ارتفاع ۲۸۰dp
       "badge": "جدید",                 ← اختیاری، حداکثر ۱۲ کاراکتر (پیش‌فرض قرمز)
       "targetType": "external",        ← external یا internal
       "target": "https://…",           ← لینک https، یا کلید داخلی

@@ -218,4 +218,60 @@ class AdsFeedPolicyTest {
         assertEquals(40, AdsFeedPolicy.clamp("ع".repeat(100), 40).length)
         assertEquals("", AdsFeedPolicy.clamp("\n\r", 10))
     }
+
+    // ---------- هندسهٔ بنر — نسخهٔ ۱.۱۱.۳۷ (گزارش کاربر: «بنر مشکل داره») ----------
+
+    @Test
+    fun `classic 3x1 banner renders exactly like before`() {
+        // بنر عریض کلاسیک در پهنای ۳۶۰dp → ارتفاع طبیعی ۱۲۰dp داخل باند است
+        // → جعبه دقیقاً ۱۲۰dp و پرشدن لبه‌به‌لبه (رفتار قدیمی حفظ می‌شود)
+        val h = AdsFeedPolicy.bannerHeightDp(1200, 400, boxWidthDp = 360f)
+        assertEquals(120f, h, 0.001f)
+        assertTrue(AdsFeedPolicy.bannerFillsExactly(1200, 400, 360f))
+    }
+
+    @Test
+    fun `portrait logo is never cropped - height caps at max and fits`() {
+        // ابعاد واقعی لوگوی مدیر (۷۸۴×۱۱۶۸) در پهنای ۳۶۰dp → طبیعی ≈ ۵۳۶dp
+        // → جعبه روی سقف ۲۸۰dp و تصویر Fit — کل تصویر دیده می‌شود، هیچ برشی نیست
+        val h = AdsFeedPolicy.bannerHeightDp(784, 1168, boxWidthDp = 360f)
+        assertEquals(280f, h, 0.001f)
+        assertFalse(AdsFeedPolicy.bannerFillsExactly(784, 1168, 360f))
+    }
+
+    @Test
+    fun `ultra wide banner height floors at min`() {
+        // تصویر ۵:۱ در پهنای ۳۶۰dp → طبیعی ۷۲dp زیر کف → جعبه ۱۱۰dp و Fit
+        val h = AdsFeedPolicy.bannerHeightDp(1800, 360, boxWidthDp = 360f)
+        assertEquals(110f, h, 0.001f)
+        assertFalse(AdsFeedPolicy.bannerFillsExactly(1800, 360, 360f))
+    }
+
+    @Test
+    fun `square image height equals width and fills`() {
+        // مربع ۸۰۰×۸۰۰ در پهنای ۳۶۰dp → ۳۶۰dp بالای سقف → ۲۸۰dp و Fit
+        val h = AdsFeedPolicy.bannerHeightDp(800, 800, boxWidthDp = 360f)
+        assertEquals(280f, h, 0.001f)
+        // اما مربع کوچک‌نمایی‌شده داخل باند دقیقاً پر می‌کند: ۷۸۴px در پهنای ۲۸۰dp
+        val h2 = AdsFeedPolicy.bannerHeightDp(784, 784, boxWidthDp = 280f)
+        assertEquals(280f, h2, 0.001f)
+        assertTrue(AdsFeedPolicy.bannerFillsExactly(784, 784, 280f))
+    }
+
+    @Test
+    fun `degenerate image dims fall back to placeholder signal`() {
+        // ورودی بی‌معنا → 0f و false (فراخوان جای‌نگه‌دار ۳:۱ می‌گذارد)
+        assertEquals(0f, AdsFeedPolicy.bannerHeightDp(0, 100, 360f), 0.001f)
+        assertEquals(0f, AdsFeedPolicy.bannerHeightDp(100, 0, 360f), 0.001f)
+        assertEquals(0f, AdsFeedPolicy.bannerHeightDp(100, 100, 0f), 0.001f)
+        assertFalse(AdsFeedPolicy.bannerFillsExactly(0, 100, 360f))
+    }
+
+    @Test
+    fun `banner band constants are sane`() {
+        // کف باید دست‌کم ناحیهٔ لمسِ راحت (۴۸dp+) باشد و سقف کمتر از نیم صفحهٔ معمول
+        assertTrue(AdsFeedPolicy.MIN_BANNER_HEIGHT_DP >= 96)
+        assertTrue(AdsFeedPolicy.MAX_BANNER_HEIGHT_DP <= 320)
+        assertTrue(AdsFeedPolicy.MIN_BANNER_HEIGHT_DP < AdsFeedPolicy.MAX_BANNER_HEIGHT_DP)
+    }
 }

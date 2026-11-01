@@ -883,6 +883,15 @@ fun AdminScreen(onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(4.dp))
+                    // نسخهٔ ۱.۱۱.۳۷ (گزارش کاربر: «بنر تبلیغات مشکل داره»)
+                    Text(
+                        "نحوهٔ نمایش بنر (۱.۱۱.۳۷): تصویر بنر با «نسبت واقعی خودش» و بدون هیچ برشی نشان داده می‌شود — " +
+                            "تصویر عریض (مثل بنر ۳:۱) لبه‌به‌لبه پر می‌شود؛ عکس عمودی یا لوگو (مثل لوگوی بادخزان) در کارتی به ارتفاع حداکثر ۲۸۰dp وسط‌چین و کامل دیده می‌شود. " +
+                            "پس عکس عمودی هم مجاز است و چیزی از آن بریده نمی‌شود؛ برای بنر کوتاهِ تمام‌عرض، تصویر عریض (حدود ۳:۱) بسازید.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         "نکته: کارت‌های tile (شبکه‌ای) فعلاً فقط از فایل feed/main_ads.json با tools/ads_feed.py قابل افزودن‌اند؛ " +
                             "از این پنل بنر تصویری منتشر می‌شود. لینک داخلی فقط با کلیدهای لیست‌سفید: calendar، prayer، qibla، events، reminders، announcements، support، account",

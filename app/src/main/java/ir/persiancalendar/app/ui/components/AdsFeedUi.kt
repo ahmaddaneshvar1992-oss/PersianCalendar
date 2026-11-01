@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -277,7 +278,22 @@ private fun AdTileItem(
     }
 }
 
-/** بنر تصویری تمام‌عرض — مثل بنر قبلی ولی بدون × و بدون هیچ راه پنهانی */
+/**
+ * بنر تصویری تمام‌عرض — نسخهٔ ۱.۱۱.۳۷ (گزارش کاربر: «بنر تبلیغات مشکل داره»)
+ *
+ * قبلاً قاب بنر نسبت ۳:۱ ثابت داشت و با Crop «وسطِ» تصویر را برش می‌زد؛
+ * لوگوی عمودی مدیر (۷۸۴×۱۱۶۸) چنان بریده می‌شد که متن لوگو کلاً از کادر
+ * بیرون می‌افتاد — بنر «خراب» دیده می‌شد.
+ *
+ * اکنون ارتفاع بنر از نسبت واقعی تصویر می‌آید (AdsFeedPolicy.bannerHeightDp)
+ * و تصویر هرگز بریده نمی‌شود:
+ *  - نسبت طبیعی داخل باند [۱۱۰، ۲۸۰]dp → جعبه دقیقاً اندازهٔ تصویر؛ پرشدن
+ *    لبه‌به‌لبه (بنر عریض کلاسیک ۳:۱ عیناً مثل قبل دیده می‌شود).
+ *  - تصویر بلندتر (عمودی مثل لوگو) → جعبه ۲۸۰dp و تصویر Fit وسط‌چین —
+ *    کل تصویر (لوگو + متن) دیده می‌شود؛ زمینهٔ ملایم تم دو طرفش است.
+ *  - تصویر خیلی عریض‌تر از ۳٫۵:۱ → جعبه ۱۱۰dp و Fit.
+ *  - تا رسیدن تصویر → جای‌نگه‌دار ۳:۱ مثل قبل.
+ */
 @Composable
 private fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
     val context = LocalContext.current
@@ -295,31 +311,44 @@ private fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
         exit = shrinkVertically() + fadeOut(),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(3f)
-                .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(enabled = item.target.isNotBlank()) {
-                    openAdTarget(context, item, onOpenInternal)
-                }
-                .semantics { contentDescription = openCd }
-        ) {
-            when (val s = imageState) {
-                is AdImageState.Ready -> Image(
-                    bitmap = s.bitmap,
-                    contentDescription = null, // توضیح معنایی روی Box است
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                AdImageState.Loading -> {
-                    // در حال بارگذاری — فقط زمینهٔ ملایم؛ در خطا کل بنر پنهان می‌شود
-                }
-                AdImageState.Failed -> {
-                    // LaunchedEffect بالا بنر را جمع می‌کند
-                }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val ready = imageState as? AdImageState.Ready
+            // نسبت طبیعی داخل باند است؟ → پرشدن دقیق لبه‌به‌لبه (Crop = Fit = بدون برش)
+            val fillsEdgeToEdge = ready != null && AdsFeedPolicy.bannerFillsExactly(
+                ready.bitmap.width, ready.bitmap.height, maxWidth.value
+            )
+            val h = if (ready == null) 0.dp else AdsFeedPolicy.bannerHeightDp(
+                ready.bitmap.width, ready.bitmap.height, maxWidth.value
+            ).dp
+            val frameModifier = if (h > 0.dp) {
+                Modifier.fillMaxWidth().height(h)
+            } else {
+                // جای‌نگه‌دار تا رسیدن تصویر — همان قاب ۳:۱ قدیمی
+                Modifier.fillMaxWidth().aspectRatio(3f)
             }
+            Box(
+                modifier = frameModifier
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(enabled = item.target.isNotBlank()) {
+                        openAdTarget(context, item, onOpenInternal)
+                    }
+                    .semantics { contentDescription = openCd }
+            ) {
+                when (val s = imageState) {
+                    is AdImageState.Ready -> Image(
+                        bitmap = s.bitmap,
+                        contentDescription = null, // توضیح معنایی روی Box است
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = if (fillsEdgeToEdge) ContentScale.Crop else ContentScale.Fit
+                    )
+                    AdImageState.Loading -> {
+                        // در حال بارگذاری — فقط زمینهٔ ملایم؛ در خطا کل بنر پنهان می‌شود
+                    }
+                    AdImageState.Failed -> {
+                        // LaunchedEffect بالا بنر را جمع می‌کند
+                    }
+                }
             // نشان «تبلیغ» — گوشهٔ پایین-ابتدایی (RTL)
             Surface(
                 shape = RoundedCornerShape(20.dp),
@@ -334,6 +363,7 @@ private fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
                     color = Color.White,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                 )
+            }
             }
         }
     }
