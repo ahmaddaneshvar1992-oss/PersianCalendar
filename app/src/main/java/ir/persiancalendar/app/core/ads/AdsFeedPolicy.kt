@@ -88,6 +88,28 @@ object AdsFeedPolicy {
     const val TYPE_TILE = "tile"
     const val TYPE_BANNER = "banner"
 
+    // ---------- تصمیم انتشار از پنل مدیر — نسخهٔ ۱.۱۱.۳۸ ----------
+    //
+    // گزارش کاربر: «حذف که می‌کنم نه برای مدیر حذف می‌شود نه برای کاربر».
+    // گارد ۱.۱۱.۳۶ (رفع فید خالیِ بی‌صدای ۱.۱۱.۳۵) فیدِ بدون آیتم را همیشه رد
+    // می‌کرد — ولی «فید بدون آیتم» دقیقاً همان راهِ حذف عمدی تبلیغ‌هاست!
+    // نتیجه: حذف از پنل غیرممکن شده بود و فید قدیمی (با تبلیغ) سر جایش می‌ماند.
+    //
+    // تفکیک درست سه حالت دارد:
+    //   PUBLISH_ITEMS      — دست‌کم یک بنر سالم → فید با آیتم‌ها منتشر می‌شود
+    //   PUBLISH_EMPTY_CLEAR— پیش‌نویس خالی/خاموش → حذف عمدی؛ فید خالیِ معتبر با
+    //                        sequence بالاتر منتشر می‌شود و اپ‌ها با جایگزینی
+    //                        کامل، تبلیغ‌ها را از همهٔ دستگاه‌ها برمی‌دارند
+    //   REFUSE_ALL_FAILED  — پیش‌نویس پر ولی همهٔ بنرها ردشده (تصویر خراب و…)
+    //                        → هیچ‌چیز منتشر نمی‌شود؛ همان حفاظ ۱.۱۱.۳۶ با دلیل‌ها
+    enum class PublishDecision { PUBLISH_ITEMS, PUBLISH_EMPTY_CLEAR, REFUSE_ALL_FAILED }
+
+    fun publishDecision(draftCount: Int, publishableCount: Int): PublishDecision = when {
+        publishableCount > 0 -> PublishDecision.PUBLISH_ITEMS
+        draftCount <= 0 -> PublishDecision.PUBLISH_EMPTY_CLEAR
+        else -> PublishDecision.REFUSE_ALL_FAILED
+    }
+
     // ---------- هندسهٔ بنر تمام‌عرض — نسخهٔ ۱.۱۱.۳۷ ----------
     //
     // گزارش کاربر («بنر تبلیغات مشکل داره»): بنر ۱.۱۱.۳۵-۳۶ نسبت تصویر را به

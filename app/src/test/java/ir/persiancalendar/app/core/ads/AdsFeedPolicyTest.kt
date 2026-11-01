@@ -274,4 +274,43 @@ class AdsFeedPolicyTest {
         assertTrue(AdsFeedPolicy.MAX_BANNER_HEIGHT_DP <= 320)
         assertTrue(AdsFeedPolicy.MIN_BANNER_HEIGHT_DP < AdsFeedPolicy.MAX_BANNER_HEIGHT_DP)
     }
+
+    // ---------- تصمیم انتشار پنل — نسخهٔ ۱.۱۱.۳۸ (گزارش کاربر: حذف کار نمی‌کرد) ----------
+
+    @Test
+    fun `publish decision - items present publishes items`() {
+        assertEquals(
+            AdsFeedPolicy.PublishDecision.PUBLISH_ITEMS,
+            AdsFeedPolicy.publishDecision(draftCount = 2, publishableCount = 2)
+        )
+        // یکی رد شده ولی دیگری سالم است → باز هم انتشار با آیتم‌های سالم
+        assertEquals(
+            AdsFeedPolicy.PublishDecision.PUBLISH_ITEMS,
+            AdsFeedPolicy.publishDecision(draftCount = 2, publishableCount = 1)
+        )
+    }
+
+    @Test
+    fun `publish decision - empty or all-off draft is an intentional clear`() {
+        // گزارش کاربر: قبلاً گارد ۱.۱۱.۳۶ حذف عمدی را هم مسدود می‌کرد —
+        // فید خالی = حذف همهٔ تبلیغ‌ها و باید منتشر شود (با sequence بالاتر)
+        assertEquals(
+            AdsFeedPolicy.PublishDecision.PUBLISH_EMPTY_CLEAR,
+            AdsFeedPolicy.publishDecision(draftCount = 0, publishableCount = 0)
+        )
+    }
+
+    @Test
+    fun `publish decision - all drafts failed validation is refused`() {
+        // حفاظ ۱.۱۱.۳۶ فقط برای «رد شدن تصادفی همهٔ بنرها» می‌ماند
+        // (مثلاً تصویر گالری خوانده نشد) — حذف بی‌صدا ممنوع
+        assertEquals(
+            AdsFeedPolicy.PublishDecision.REFUSE_ALL_FAILED,
+            AdsFeedPolicy.publishDecision(draftCount = 3, publishableCount = 0)
+        )
+        assertEquals(
+            AdsFeedPolicy.PublishDecision.REFUSE_ALL_FAILED,
+            AdsFeedPolicy.publishDecision(draftCount = 1, publishableCount = 0)
+        )
+    }
 }

@@ -158,12 +158,39 @@ object FeedPublisher {
             )
         }
 
-        // ۳) گارد فید خالی — هیچ‌چیز منتشر نمی‌شود؛ دلیل‌ها روشن اعلام می‌شود.
-        // (رفع بی‌صدایی ۱.۱۱.۳۵ که فید items:[] را «موفق» جلوه می‌داد)
-        if (items.length() == 0) {
-            return "هیچ بنری قابل انتشار نبود و فید دست‌نخورده ماند:\n" +
-                    reasons.joinToString("\n") { "• $it" } +
-                    "\nتصویر گالری را دوباره انتخاب کنید یا URL تصویر https بدهید؛ توجه: بنرهای «خاموش» (کلید پایه) منتشر نمی‌شوند."
+        // ۳) تصمیم انتشار — نسخهٔ ۱.۱۱.۳۸ (گزارش کاربر: «حذف که می‌کنم نه برای
+        // مدیر حذف می‌شود نه برای کاربر»): گارد ۱.۱۱.۳۶ فیدِ بدون آیتم را همیشه
+        // رد می‌کرد و «حذف عمدی» را هم غیرممکن کرده بود — فید بدون آیتم یعنی
+        // حذف همهٔ تبلیغ‌ها. اکنون سه حالت تفکیک می‌شود (AdsFeedPolicy.publishDecision):
+        //   • پیش‌نویس خالی/خاموش → فید خالیِ معتبر با sequence بالاتر منتشر می‌شود (حذف عمدی)
+        //   • پیش‌نویس پر ولی همهٔ بنرها ردشده → هیچ‌چیز منتشر نمی‌شود + دلیل‌ها
+        //     (همان حفاظ ۱.۱۱.۳۶ برابر حذف بی‌صدای تصادفی)
+        when (AdsFeedPolicy.publishDecision(draftCount = list.size, publishableCount = items.length())) {
+            AdsFeedPolicy.PublishDecision.PUBLISH_EMPTY_CLEAR -> {
+                val doc = JSONObject()
+                    .put("sequence", currentSeq + 1)
+                    .put("issuedAt", java.time.Instant.now().toString())
+                    .put("adsEnabled", true)
+                    .put("maxCacheDays", AdsFeedPolicy.DEFAULT_MAX_CACHE_DAYS)
+                    .put("items", JSONArray())
+                val msg = publishJson(
+                    token = token,
+                    path = "feed/main_ads.json",
+                    commitMessage = "فید تبلیغات مدیریت‌شده (sequence ${currentSeq + 1}) — حذف همهٔ تبلیغ‌ها — انتشار از پنل مدیریت",
+                    payload = doc.toString(2)
+                )
+                return if (msg.startsWith("✓")) {
+                    "فید خالی منتشر شد (sequence ${currentSeq + 1}) — همهٔ تبلیغ‌ها برای همهٔ کاربران و خود شما حذف شد ✓ — " +
+                            "امضای خوراک حدود ۱ تا ۳ دقیقه بعد خودکار ساخته می‌شود؛ پنل را ببندید و چند دقیقه صبر کنید " +
+                            "(اپ تا ~۸ دقیقه خودش چند بار بررسی می‌کند و حذف همین‌جا هم اعمال می‌شود)"
+                } else msg
+            }
+            AdsFeedPolicy.PublishDecision.REFUSE_ALL_FAILED ->
+                return "هیچ بنری قابل انتشار نبود و فید دست‌نخورده ماند:\n" +
+                        reasons.joinToString("\n") { "• $it" } +
+                        "\nتصویر گالری را دوباره انتخاب کنید یا URL تصویر https بدهید؛ " +
+                        "اگر می‌خواهید همهٔ تبلیغ‌ها حذف شوند، بنرها را از فهرست بالا پاک یا خاموش کنید و دوباره انتشار بزنید."
+            AdsFeedPolicy.PublishDecision.PUBLISH_ITEMS -> Unit // پایین منتشر می‌شود
         }
 
         val doc = JSONObject()
@@ -184,7 +211,9 @@ object FeedPublisher {
                 if (embeddedImages > 0) append(" — تصویر $embeddedImages بنر از گالری داخل فید جاسازی شد (مثل اطلاعیه‌ها)")
                 if (reasons.isNotEmpty()) append(" — ${reasons.size} بنر دیگر منتشر نشد: ${reasons.joinToString("؛ ")}")
             }
-            "فید تبلیغات (sequence ${currentSeq + 1}) با ${items.length()} آیتم برای همهٔ کاربران منتشر شد ✓$extra — امضای خوراک چند ثانیه بعد خودکار ساخته می‌شود؛ برنامه را ببندید و دوباره باز کنید تا همین گوشی هم بگیرد"
+            "فید تبلیغات (sequence ${currentSeq + 1}) با ${items.length()} آیتم برای همهٔ کاربران منتشر شد ✓$extra — " +
+                    "امضای خوراک حدود ۱ تا ۳ دقیقه بعد خودکار ساخته می‌شود؛ پنل را ببندید و چند دقیقه صبر کنید " +
+                    "(اپ تا ~۸ دقیقه خودش چند بار بررسی می‌کند و تبلیغ تازه همین‌جا هم اعمال می‌شود)"
         } else msg
     }
 

@@ -254,17 +254,37 @@ fun MainScreen(
     // تا sync بعدی (باز شدن دوباره یا ۱۰ دقیقه) دیده نمی‌شد؛ اکنون بستن پنل
     // یعنی همگام‌سازی فوری تبلیغات مدیریت‌شده — مدیر بلافاصله نتیجه را می‌بیند.
     var wasDevPanelOpen by remember { mutableStateOf(false) }
+    // نسخهٔ ۱.۱۱.۳۸ (گزارش کاربر: «وقتی تبلیغ می‌ذارم خیلی دیر بالا میاد»):
+    // بستن پنل فقط یک‌بار sync می‌زد و چون امضای CI خوراک حدود ۱ تا ۳ دقیقه بعد
+    // آماده می‌شود، همان sync معمولاً مردود می‌شد و تبلیغ تا sync بعدی (باز شدن
+    // دوباره یا ۱۰ دقیقه) دیر می‌رسید. اکنون بستن پنل یک حلقهٔ بازآزمون کوتاه
+    // راه می‌اندازد: هر ۴۰ ثانیه، حداکثر ۱۲ بار (~۸ دقیقه — پوشش امضای CI و
+    // کش ۵ دقیقه‌ای raw)؛ به‌محض پذیرفته‌شدن فید تازه، نمایش همان لحظه رفرش و
+    // حلقه متوقف می‌شود. باز شدن دوبارهٔ پنل حلقهٔ قبلی را لغو می‌کند.
+    var adsSyncJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     LaunchedEffect(devPanelVisible, annSheetVisible, supportVisible) {
         refreshAnnouncements()
         val panelJustClosed = wasDevPanelOpen && !devPanelVisible
         wasDevPanelOpen = devPanelVisible
         if (panelJustClosed) {
-            // همگام‌سازی فوری؛ چه فید تازه‌ای بگیرد چه نه، نمایش از کش دوباره خوانده می‌شود
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                ir.persiancalendar.app.data.support.AdsFeed.sync(context)
+            adsSyncJob?.cancel()
+            adsSyncJob = scope.launch {
+                var attempts = 0
+                while (attempts < 12) {
+                    attempts++
+                    val b = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        ir.persiancalendar.app.data.support.AdsFeed.sync(context)
+                    }
+                    if (b) {
+                        adsVersion++
+                        break
+                    }
+                    kotlinx.coroutines.delay(40_000L)
+                }
             }
-            adsVersion++
         } else {
+            // باز شدن دوبارهٔ پنل: حلقهٔ قبلی بی‌معناست (انتشار تازه در راه است)
+            adsSyncJob?.cancel()
             // نسخهٔ ۱.۱۱.۲۱: بنرها هم بعد از بستن پنل مدیریت دوباره خوانده می‌شوند
             adsVersion++
         }
