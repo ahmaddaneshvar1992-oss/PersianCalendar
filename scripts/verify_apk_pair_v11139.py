@@ -40,43 +40,52 @@ def parse_axml(data: bytes):
 
             for o in offs:
                 if utf8:
-                    _, p = read_len(base + o)
-                    n, p = read_len(p)
-                    strings.append(data[p: p + n].decode("utf-8", "replace"))
+                    _, p = read_len(base + o)      # تعداد کاراکتر
+                    blen, p = read_len(p)          # تعداد بایت
+                    strings.append(data[p:p + blen].decode("utf-8", "replace"))
                 else:
-                    n, p = read_len(base + o)
-                    strings.append(data[p: p + 2 * n].decode("utf-16-le", "replace"))
-        elif ctype == 0x0003:  # XML_RESOURCE_MAP
-            pass
-        elif ctype == 0x0100:  # START_NAMESPACE
-            pass
-        elif ctype == 0x0101:  # END_NAMESPACE
-            pass
+                    ln = struct.unpack_from("<H", data, base + o)[0]
+                    if ln & 0x8000:
+                        ln = ((ln & 0x7FFF) << 16) | struct.unpack_from("<H", data, base + o + 2)[0]
+                        p = base + o + 4
+                    else:
+                        p = base + o + 2
+                    strings.append(data[p:p + ln * 2].decode("utf-16-le", "replace"))
         elif ctype == 0x0102:  # START_ELEMENT
-            name_i = struct.unpack_from("<I", data, off + 20)[0]
-            name = strings[name_i] if name_i < len(strings) else ""
-            if name == "uses-permission":
-                out["permissions"].append(name)
-            if name in ("activity", "service", "receiver", "provider"):
+            name = struct.unpack_from("<i", data, off + 20)[0]
+            astart, asize, acount = struct.unpack_from("<HHH", data, off + 24)
+            name_s = strings[name] if 0 <= name < len(strings) else "?"
+            attrs = {}
+            for i in range(acount):
+                base = off + 16 + astart + i * (asize if asize else 20)
+                ns_, nm, raw, atype, adata = struct.unpack_from("<iiIIi", data, base)
+                av = None
+                if (atype >> 24) == 0x03:  # string
+                    av = strings[adata] if 0 <= adata < len(strings) else None
+                elif (atype >> 24) == 0x10:  # int
+                    av = adata
+                elif (atype >> 24) == 0x12:  # bool
+                    av = bool(adata)
+                attrs[strings[nm] if 0 <= nm < len(strings) else str(i)] = av
+            if name_s == "manifest":
+                for k, v in attrs.items():
+                    if k and k.endswith("versionName"):
+                        out["versionName"] = v
+                    elif k and k.endswith("versionCode"):
+                        out["versionCode"] = v
+            elif name_s == "uses-permission":
+                n = attrs.get("name")
+                if n:
+                    out["permissions"].append(n)
+            elif name_s in ("activity", "service", "receiver", "provider"):
                 out["components"] += 1
-            # attributeها بعد از header 20 بایتی + 20 بایتی fixed
-            attr_count = struct.unpack_from("<H", data, off + 32)[0]
-            for a in range(attr_count):
-                aoff = off + 36 + a * 20
-                ns_i, an_i, raw_i = struct.unpack_from("<III", data, aoff)
-                if an_i < len(strings):
-                    an = strings[an_i]
-                    if an == "exported":
-                        vtype = data[aoff + 15]
-                        vdata = struct.unpack_from("<I", data, aoff + 16)[0]
-                        out["exported"].append((name, bool(vdata)))
-        elif ctype == 0x0103:  # END_ELEMENT
-            pass
-        elif ctype == 0x0104:  # TEXT
-            pass
-        off += size
+                if attrs.get("exported") is True:
+                    out["exported"].append(attrs.get("name") or "?")
+        off += size if size else 8
     return out
 
+
+# ---------------- APK v2: گواهی امضا ----------------
 
 def signing_cert_sha256(path: Path) -> str:
     """گام‌روی درست APK Signing Block v2 → sha256 گواهی (نکتهٔ ۱.۱۱.۳۰b)"""
