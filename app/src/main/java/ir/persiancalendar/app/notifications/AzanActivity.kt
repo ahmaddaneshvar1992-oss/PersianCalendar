@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -560,7 +562,7 @@ private fun formatHours(v: Double): String {
 /** پالس درخشش متن وضعیت پخش */
 @Composable
 private fun rememberInfiniteTransitionPulse(): Float =
-    androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse").animateFloat(
+    rememberInfiniteTransition(label = "pulse").animateFloat(
         initialValue = 0.35f,
         targetValue = 1f,
         animationSpec = androidx.compose.animation.core.infiniteRepeatable(

@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  * کلاس اپلیکیشن: راه‌اندازی کانال‌های اعلان، Billing و زمان‌بندی‌های اولیه.
  * (نسخه ۱.۱۱.۵: راه‌اندازی AdMob حذف شد — تبلیغات کامل از برنامه برداشته شدند)
  */
-class PersianCalendarApp : Application(), ActivityLifecycleCallbacks {
+class PersianCalendarApp : Application(), Application.ActivityLifecycleCallbacks {
 
     override fun onCreate() {
         super.onCreate()
