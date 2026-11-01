@@ -50,6 +50,7 @@ import ir.persiancalendar.app.R
 import ir.persiancalendar.app.core.ads.AdPolicy
 import ir.persiancalendar.app.data.support.AdDismissStore
 import ir.persiancalendar.app.data.support.FeedFetcher
+import ir.persiancalendar.app.data.support.MainAdBox
 import ir.persiancalendar.app.data.support.ImageLoader
 import ir.persiancalendar.app.data.support.MainAd
 import kotlinx.coroutines.Dispatchers
@@ -196,7 +197,7 @@ private fun MainAdCard(ad: MainAd, onDismiss: () -> Unit, onHide: () -> Unit) {
     if (ad.image.isNotBlank() && AdPolicy.isSafeImage(ad.image) && !ad.image.startsWith("data:")) {
         // ---------- بنر تصویری: تصویر تمام‌عرض ~۳:۱ + نشان «تبلیغ» + × ----------
         // تک‌بارگذاری با حالت صریح؛ خطا = پنهان‌شدن کامل بنر (جای خالی نمی‌ماند)
-        var state by produceState<ImageResult>(ImageResult.Loading, ad.image) {
+        val state by produceState<ImageResult>(ImageResult.Loading, ad.image) {
             value = withContext(Dispatchers.IO) {
                 val bytes = when {
                     ad.image.startsWith("https://") ->

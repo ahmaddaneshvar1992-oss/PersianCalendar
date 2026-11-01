@@ -37,5 +37,7 @@
     <string name="birthday_hours">ساعت</string>
     <string name="birthday_minutes">دقیقه</string>
     <string name="birthday_progress_fmt">%1$s٪ از راه تولد بعدی گذشته است</string>
+    <string name="birthday_visible_title">نمایش کارت تولد</string>
+    <string name="birthday_visible_desc">کارت «روز تولد شما» در صفحه اصلی تقویم دیده شود</string>
     <string name="birthday_no_year">بدون سال (فقط روز و ماه)</string>
 </resources>

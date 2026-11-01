@@ -88,7 +88,7 @@ object BirthdayCalculator {
         val progress = when {
             isToday -> 1f
             remaining.isNegative -> 1f
-            else -> (((nowInstant.toEpochMilli() - start).toDouble() / total).coerceIn(0.0, 1.0)).toFloat()
+            else -> (((nowInstant.toEpochMilli() - start.toEpochMilli()).toDouble() / total).coerceIn(0.0, 1.0)).toFloat()
         }
         val remMs = if (remaining.isNegative) 0L else remaining.toMillis()
         val days = remMs / 86_400_000L

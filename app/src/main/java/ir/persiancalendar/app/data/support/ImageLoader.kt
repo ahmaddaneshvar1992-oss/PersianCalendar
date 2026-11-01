@@ -30,7 +30,8 @@ object ImageLoader {
             val declared = conn.contentLengthLong // -1 = نامعلوم
             if (declared > maxBytes) return null
             val stream: InputStream = conn.inputStream
-            val out = ByteArrayOutputStream(minOf(declared.takeIf { it > 0 } ?: 64 * 1024, maxBytes))
+            val initial = minOf(declared.takeIf { it > 0 } ?: 64_000L, maxBytes.toLong()).toInt()
+            val out = ByteArrayOutputStream(initial)
             val buf = ByteArray(16 * 1024)
             var total = 0L
             while (true) {
