@@ -112,7 +112,7 @@ fun AdsFeedSection(
         }
         // ---------- بنرهای تمام‌عرض در پایین شبکه ----------
         banners.forEachIndexed { idx, item ->
-            AdBannerItem(item = item)
+            AdBannerItem(item = item, onOpenInternal = onOpenInternal)
             if (idx < banners.lastIndex) Spacer(Modifier.height(8.dp))
         }
     }
@@ -279,7 +279,7 @@ private fun AdTileItem(
 
 /** بنر تصویری تمام‌عرض — مثل بنر قبلی ولی بدون × و بدون هیچ راه پنهانی */
 @Composable
-private fun AdBannerItem(item: FeedItem) {
+private fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
     val context = LocalContext.current
     val adLabel = stringResource(R.string.ad_label)
     val openCd = adOpenText(item)
