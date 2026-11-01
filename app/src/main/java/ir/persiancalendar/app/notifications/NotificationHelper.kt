@@ -115,6 +115,37 @@ object NotificationHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+    /**
+     * آیا اعلان اجازهٔ fullScreenIntent دارد؟ (اندروید ۱۴ به بعد کاربر یا
+     * گوگل‌پلی می‌تواند این دسترسی را محدود کند — معیار پذیرش ۴: بدون کرش،
+     * فقط heads-up نمایش داده شود.) قبل از اندروید ۱۴ مجوز manifest کافی است.
+     */
+    fun canUseFullScreenIntent(context: Context): Boolean = runCatching {
+        if (android.os.Build.VERSION.SDK_INT >= 34)
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .canUseFullScreenIntent()
+        else true
+    }.getOrDefault(false)
+
+    /**
+     * Intent صفحهٔ تمام‌صفحهٔ اذان (سبک صفحهٔ اوقات شرعی — نسخهٔ ۱.۱۱.۳۳)؛
+     * fromAlarm=true فقط برای fullScreenIntent (پس از پایان خودکار بسته می‌شود)
+     */
+    private fun azanScreenIntent(context: Context, prayerIndex: Int, fromAlarm: Boolean): PendingIntent {
+        val intent = Intent(context, AzanActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            if (PrayerSlot.fromIndex(prayerIndex) != null)
+                putExtra(AzanActivity.EXTRA_PRAYER_INDEX, prayerIndex)
+            putExtra(AzanActivity.EXTRA_FROM_ALARM, fromAlarm)
+        }
+        return PendingIntent.getActivity(
+            context,
+            if (fromAlarm) 9100 else 9101,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
+
     /** دکمهٔ «توقف صدا» اعلان اوقات شرعی — نسخه ۱.۱۱.۱۴ (گزارش: «اذان توقف نداره») */
     private fun azanStopIntent(context: Context): PendingIntent =
         PendingIntent.getService(
@@ -225,7 +256,9 @@ object NotificationHelper {
         context: Context,
         label: String,
         timeText: String,
-        fullScreen: Boolean = true
+        fullScreen: Boolean = true,
+        silent: Boolean = false,
+        prayerIndex: Int = -1
     ) {
         val builder = NotificationCompat.Builder(context, CHANNEL_PRAYERS)
             .setSmallIcon(R.drawable.ic_notification)
@@ -234,25 +267,23 @@ object NotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText("$label — $timeText"))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVibrate(longArrayOf(0, 400, 250, 400))
             .setAutoCancel(true)
-            .setContentIntent(openAppIntent(context))
+            // لمس اعلان → صفحهٔ اوقات شرعی در حالت اذان (نسخهٔ ۱.۱۱.۳۳)
+            .setContentIntent(azanScreenIntent(context, prayerIndex, fromAlarm = false))
+            // اکشن «باز کردن» — در حالت heads-up (گوشی روشن و باز) راه اصلی است
+            .addAction(0, "باز کردن", azanScreenIntent(context, prayerIndex, fromAlarm = false))
             .addAction(0, "توقف صدا", azanStopIntent(context))
             // نسخهٔ ۱.۱۱.۱۹: رد کردن/پاک کردن اعلان = توقف صدای اذان
             .setDeleteIntent(azanStopIntent(context))
-        if (fullScreen) {
-            // نسخه ۱.۱۱.۱۵: صفحهٔ تمام‌صفحهٔ اذان با تصویر مسجد — حتی روی قفل صفحه
-            builder.setFullScreenIntent(
-                PendingIntent.getActivity(
-                    context, 9100,
-                    Intent(context, AzanActivity::class.java).apply {
-                        putExtra(AzanActivity.EXTRA_LABEL, label)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    },
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                ),
-                true
-            ).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        if (!silent) {
+            // در حالت بی‌صدا/DND اعلان بدون لرزش و صدا نمایش داده می‌شود (معیار پذیرش ۳)
+            builder.setVibrate(longArrayOf(0, 400, 250, 400))
+        }
+        // محافظ اندروید ۱۴ (معیار پذیرش ۴): بدون دسترسی، setFullScreenIntent صدا زده نمی‌شود
+        if (fullScreen && canUseFullScreenIntent(context)) {
+            // صفحهٔ تمام‌صفحهٔ اذان (سبک صفحهٔ اوقات شرعی) — حتی روی قفل صفحه
+            builder.setFullScreenIntent(azanScreenIntent(context, prayerIndex, fromAlarm = true), true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         }
         val notification = builder.build()
         runCatching {

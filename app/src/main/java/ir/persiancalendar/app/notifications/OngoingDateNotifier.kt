@@ -62,6 +62,7 @@ object OngoingDateNotifier {
     const val TAB_EVENTS = "events"
     const val TAB_PRAYER = "prayer"
     const val TAB_REMINDERS = "reminders" // موتور یادآور عمومی — نسخه ۱.۱۱
+    const val TAB_QIBLA = "qibla" // نسخهٔ ۱.۱۱.۳۳ — ابزارهای صفحهٔ اذان
     const val NOTIF_ID_ONGOING = 19998
 
     private val weekDayNames = mapOf(

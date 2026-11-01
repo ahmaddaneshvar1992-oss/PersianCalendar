@@ -6,6 +6,8 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
@@ -46,6 +48,11 @@ class AzanPlaybackService : Service() {
 
     private var player: MediaPlayer? = null
     private var currentKey: String = "none"
+
+    // ---------- Audio Focus — نسخهٔ ۱.۱۱.۳۳ ----------
+    // AudioFocusRequest از API ۲۶؛ فیلد به‌صورت Any? نگه داشته می‌شود تا
+    // لود شدن کلاس روی اندروید ۷ (API ۲۴/۲۵) به مشکل نخورد
+    private var focusRequest26: Any? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -88,6 +95,12 @@ class AzanPlaybackService : Service() {
             return START_NOT_STICKY
         }
 
+        // نسخهٔ ۱.۱۱.۳۳: درخواست Audio Focus (USAGE_MEDIA — استریم رسانه، مطابق
+        // تنظیم فعلی اپ)؛ اگر تماس یا پخش دیگری جا را گرفت، اذان متوقف می‌شود
+        if (!requestAudioFocus()) {
+            stopPlayback()
+            return START_NOT_STICKY
+        }
         // اگر پخش قبلی هنوز در جریان است، قطعش کن و از نو شروع کن
         AdhanSounds.release()
         player = runCatching {
@@ -113,12 +126,16 @@ class AzanPlaybackService : Service() {
         super.onDestroy()
     }
 
-    /** توقف کامل: قطع صدا، برداشتن اعلان سرویس و توقف خود سرویس */
+    /** توقف کامل: قطع صدا، آزادکردن فوکوس، برداشتن اعلان‌ها و توقف خود سرویس */
     private fun stopPlayback() {
         isPlaying = false
         runCatching { player?.release() }
         player = null
         AdhanSounds.release()
+        abandonAudioFocus()
+        // نسخهٔ ۱.۱۱.۳۳ (الزام کاربر): وقتی «توقف» زده شود یا اذان تمام شود،
+        // نوتیفیکیشن اوقات شرعی هم حذف شود — نه فقط اعلان سرویس
+        NotificationHelper.cancelPrayer(this)
         runCatching {
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         }
@@ -129,6 +146,45 @@ class AzanPlaybackService : Service() {
         if (Build.VERSION.SDK_INT >= 29)
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
         else 0
+
+    // ---------- Audio Focus (نسخهٔ ۱.۱۱.۳۳) ----------
+
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        // از دست دادن فوکوس (تماس ورودی، پخش دیگر) = توقف اذان
+        if (change == AudioManager.AUDIOFOCUS_LOSS ||
+            change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT ||
+            change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK
+        ) stopPlayback()
+    }
+
+    private fun requestAudioFocus(): Boolean = runCatching {
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA) // مطابق تنظیم فعلی اپ (استریم رسانه)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+        val granted = if (Build.VERSION.SDK_INT >= 26) {
+            val req = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(attrs)
+                .setOnAudioFocusChangeListener(focusListener)
+                .build()
+            focusRequest26 = req
+            am.requestAudioFocus(req as android.media.AudioFocusRequest)
+        } else {
+            @Suppress("DEPRECATION")
+            am.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
+        }
+        granted == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }.getOrDefault(false)
+
+    private fun abandonAudioFocus() = runCatching {
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val req = focusRequest26
+        if (Build.VERSION.SDK_INT >= 26 && req != null)
+            am.abandonAudioFocusRequest(req as android.media.AudioFocusRequest)
+        else @Suppress("DEPRECATION") am.abandonAudioFocus(focusListener)
+        focusRequest26 = null
+    }
 
     /** اعلان «در حال پخش اذان» با دکمهٔ «توقف اذان» (نسخه ۱.۱۱.۱۴) */
     private fun playingNotification(key: String): Notification {
@@ -154,6 +210,9 @@ class AzanPlaybackService : Service() {
     companion object {
         const val EXTRA_SOUND_KEY = "sound_key"
 
+        /** اندیس وعدهٔ در حال اذان (۰ تا ۷) — برای صفحهٔ اذان و اعلان — نسخهٔ ۱.۱۱.۳۳ */
+        const val EXTRA_PRAYER_INDEX = "azan_prayer_index"
+
         /** اکشن توقف پخش اذان — نسخه ۱.۱۱.۱۴ */
         const val ACTION_STOP = "ir.persiancalendar.app.action.AZAN_STOP"
         private const val REQUEST_STOP = 9002
@@ -164,15 +223,20 @@ class AzanPlaybackService : Service() {
             private set
 
         /** راه‌اندازی امن سرویس پخش اذان از هر جای برنامه/گیرنده */
-        fun start(context: Context, soundKey: String) {
+        fun start(context: Context, soundKey: String, prayerIndex: Int = -1) {
             val intent = Intent(context, AzanPlaybackService::class.java)
                 .putExtra(EXTRA_SOUND_KEY, soundKey)
+                .putExtra(EXTRA_PRAYER_INDEX, prayerIndex)
             runCatching {
                 androidx.core.content.ContextCompat.startForegroundService(context, intent)
             }
         }
 
-        /** توقف پخش اذان — از دکمهٔ اعلان یا باز شدن برنامه (نسخه ۱.۱۱.۱۴) */
+        /**
+         * توقف پخش اذان — از دکمهٔ اعلان/صفحهٔ اذان (نسخه ۱.۱۱.۱۴).
+         * نسخهٔ ۱.۱۱.۳۳: باز شدن خود برنامه دیگر اذان را قطع نمی‌کند؛
+         * اذان تا پایان یا تا لمس «توقف» ادامه دارد (الزام کاربر).
+         */
         fun stop(context: Context) {
             val app = context.applicationContext
             isPlaying = false

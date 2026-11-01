@@ -1,5 +1,6 @@
 package ir.persiancalendar.app
 
+import android.app.Activity
 import android.app.Application
 import ir.persiancalendar.app.billing.BillingManager
 import ir.persiancalendar.app.di.AppContainer
@@ -16,13 +17,17 @@ import kotlinx.coroutines.launch
  * کلاس اپلیکیشن: راه‌اندازی کانال‌های اعلان، Billing و زمان‌بندی‌های اولیه.
  * (نسخه ۱.۱۱.۵: راه‌اندازی AdMob حذف شد — تبلیغات کامل از برنامه برداشته شدند)
  */
-class PersianCalendarApp : Application() {
+class PersianCalendarApp : Application(), ActivityLifecycleCallbacks {
 
     override fun onCreate() {
         super.onCreate()
 
         AppContainer.init(this)
         NotificationHelper.createChannels(this)
+
+        // ردیابی وضعیت پیش‌زمینه — نسخهٔ ۱.۱۱.۳۳: تصمیم fullScreenIntent اذان
+        // («اپ دیگری روی صفحه است؟») به آن نیاز دارد
+        registerActivityLifecycleCallbacks(this)
 
         // اتصال به فروشگاه برای خرید/بازگردانی «عضویت ویژه»
         // (هیچ‌وقت استثنا نمی‌فرستد — روی گوشی‌های بدون گوگل‌پلی هم امن است)
@@ -47,4 +52,28 @@ class PersianCalendarApp : Application() {
             }
         }
     }
+
+    // ---------- وضعیت پیش‌زمینه (نسخهٔ ۱.۱۱.۳۳) ----------
+
+    companion object {
+        @Volatile
+        private var foregroundActivities: Int = 0
+
+        /** آیا خود برنامه جلوی صفحه است؟ (تصمیم fullScreenIntent اذان) */
+        val isForeground: Boolean get() = foregroundActivities > 0
+    }
+
+    override fun onActivityStarted(activity: Activity) {
+        foregroundActivities++
+    }
+
+    override fun onActivityStopped(activity: Activity) {
+        foregroundActivities = (foregroundActivities - 1).coerceAtLeast(0)
+    }
+
+    override fun onActivityCreated(activity: Activity, savedInstanceState: android.os.Bundle?) {}
+    override fun onActivityResumed(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivitySaveInstanceState(activity: Activity, outState: android.os.Bundle) {}
+    override fun onActivityDestroyed(activity: Activity) {}
 }

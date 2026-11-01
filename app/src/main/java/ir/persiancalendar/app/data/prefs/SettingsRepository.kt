@@ -54,6 +54,13 @@ data class AppSettings(
     // ---------- نسخه ۱.۲: اذان دلخواه + پنل مدیریت (۱.۱۱.۸: اذان‌های واقعی) ----------
     /** صدای اذان: moazenzadeh / rezayian / none (کلیدهای قدیمی در AdhanSounds نرمال می‌شوند) */
     val adhanSound: String = "moazenzadeh",
+    // ---------- نسخهٔ ۱.۱۱.۳۳: صفحهٔ خودکار اذان ----------
+    /** باز شدن خودکار صفحهٔ اوقات شرعی هنگام رسیدن وقت اذان */
+    val azanAutoOpenScreen: Boolean = true,
+    /** نمایش تمام‌صفحه حتی وقتی گوشی روشن و باز است و اپ دیگری جلوی صفحه است */
+    val azanAlwaysFullScreen: Boolean = false,
+    /** با خروج از صفحهٔ اذان، پخش هم متوقف شود؟ */
+    val azanStopOnExit: Boolean = false,
     /** رمز پنل مدیریت — نسخهٔ ۱.۱۱.۳۰ به AdminSecrets (فلاور admin) منتقل شد */
     /** اعلان همیشگی تاریخ امروز در نوار وضعیت */
     val ongoingDateNotif: Boolean = true,
@@ -84,6 +91,10 @@ class SettingsRepository(private val context: Context) {
         val USE_LOCATION = booleanPreferencesKey("use_current_location")
         // ---------- نسخه ۱.۲ ----------
         val ADHAN_SOUND = stringPreferencesKey("adhan_sound")
+        // ---------- نسخهٔ ۱.۱۱.۳۳: صفحهٔ خودکار اذان ----------
+        val AZAN_AUTO_OPEN = booleanPreferencesKey("azan_auto_open_screen")
+        val AZAN_ALWAYS_FULL = booleanPreferencesKey("azan_always_fullscreen")
+        val AZAN_STOP_ON_EXIT = booleanPreferencesKey("azan_stop_on_exit")
         // ---------- نسخه ۱.۳ ----------
         val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
         // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
@@ -106,6 +117,9 @@ class SettingsRepository(private val context: Context) {
             prayerNotifications = decodeMask(p[Keys.PRAYER_NOTIF] ?: (1 or 4 or 32)),
             useCurrentLocation = p[Keys.USE_LOCATION] ?: false,
             adhanSound = p[Keys.ADHAN_SOUND] ?: "moazenzadeh",
+            azanAutoOpenScreen = p[Keys.AZAN_AUTO_OPEN] ?: true,
+            azanAlwaysFullScreen = p[Keys.AZAN_ALWAYS_FULL] ?: false,
+            azanStopOnExit = p[Keys.AZAN_STOP_ON_EXIT] ?: false,
             ongoingDateNotif = p[Keys.ONGOING_DATE] ?: true,
             onboardingDone = p[Keys.ONBOARDING_DONE] ?: false,
             profileGender = p[Keys.PROFILE_GENDER] ?: "",
@@ -127,14 +141,38 @@ class SettingsRepository(private val context: Context) {
         // ویجت هواشناسی — نسخه ۱.۱۱.۱۳: با تغییر شهر، کش باطل و ویجت تازه شود
         // (هرگز نباید ذخیره‌سازی تنظیمات را مختل کند)
         runCatching { ir.persiancalendar.app.widget.WeatherWidgetProvider.onCityChanged(context) }
+        reschedulePrayerAlarms()
     }
-    suspend fun setPrayerMethod(m: PrayerMethod) = context.dataStore.edit { it[Keys.PRAYER_METHOD] = m.ordinal }
-    suspend fun setPrayerNotifications(s: Set<Int>) =
+
+    /**
+     * زمان‌بندی مجدد اذان‌ها پس از تغییر شهر یا روش محاسبه — نسخهٔ ۱.۱۱.۳۳
+     * (الزام: «تغییر شهر یا روش محاسبه، همه alarmها را دوباره برنامه‌ریزی کن»)
+     */
+    private suspend fun reschedulePrayerAlarms() {
+        runCatching {
+            val s = settings.first()
+            ir.persiancalendar.app.notifications.AlarmScheduler.schedulePrayerAlarms(
+                context, s.prayerNotifications, cityIndex = s.cityIndex, method = s.prayerMethod
+            )
+        }
+    }
+    suspend fun setPrayerMethod(m: PrayerMethod) {
+        context.dataStore.edit { it[Keys.PRAYER_METHOD] = m.ordinal }
+        reschedulePrayerAlarms()
+    }
+    suspend fun setPrayerNotifications(s: Set<Int>) {
         context.dataStore.edit { it[Keys.PRAYER_NOTIF] = encodeMask(s) }
+        reschedulePrayerAlarms()
+    }
     suspend fun setUseCurrentLocation(b: Boolean) = context.dataStore.edit { it[Keys.USE_LOCATION] = b }
 
     // ---------- نسخه ۱.۲: اذان دلخواه + پنل مدیریت ----------
     suspend fun setAdhanSound(key: String) = context.dataStore.edit { it[Keys.ADHAN_SOUND] = key }
+
+    // ---------- نسخهٔ ۱.۱۱.۳۳: صفحهٔ خودکار اذان ----------
+    suspend fun setAzanAutoOpenScreen(b: Boolean) = context.dataStore.edit { it[Keys.AZAN_AUTO_OPEN] = b }
+    suspend fun setAzanAlwaysFullScreen(b: Boolean) = context.dataStore.edit { it[Keys.AZAN_ALWAYS_FULL] = b }
+    suspend fun setAzanStopOnExit(b: Boolean) = context.dataStore.edit { it[Keys.AZAN_STOP_ON_EXIT] = b }
 
     // ---------- نسخه ۱.۳: اعلان همیشگی ----------
     suspend fun setOngoingDateNotif(b: Boolean) =

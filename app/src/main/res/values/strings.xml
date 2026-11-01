@@ -7,4 +7,13 @@
     <string name="widget_weather_description">هوای امروز شهر انتخابی شما: دما، وضعیت، بیشترین و کمترین</string>
     <string name="channel_events">یادآوری رویدادها</string>
     <string name="channel_prayers">اوقات شرعی</string>
+    <!-- صفحهٔ خودکار اذان — نسخهٔ ۱.۱۱.۳۳ -->
+    <string name="azan_screen_auto_open_title">باز شدن خودکار صفحه اذان</string>
+    <string name="azan_screen_auto_open_desc">وقتی وقت اذان برسد، صفحه اوقات شرعی به‌صورت تمام‌صفحه و هم‌زمان با پخش اذان باز شود</string>
+    <string name="azan_screen_always_full_title">نمایش تمام‌صفحه حتی در حین کار با گوشی</string>
+    <string name="azan_screen_always_full_desc">حتی اگر اپ دیگری جلوی صفحه باشد، صفحه اذان بالا بیاید (برای گوشی روشن و باز، پیش‌فرض فقط اعلان سرصفحه‌ای با دکمهٔ «باز کردن» می‌آید)</string>
+    <string name="azan_screen_stop_on_exit_title">توقف اذان با خروج از صفحه</string>
+    <string name="azan_screen_stop_on_exit_desc">اگر خاموش باشد، با خروج از صفحهٔ اذان، صدا تا پایان ادامه می‌یابد</string>
+    <string name="azan_screen_fsi_denied">دسترسی «نمایش تمام‌صفحه» در تنظیمات اعلان این برنامه خاموش است؛ برای باز شدن خودکار صفحهٔ اذان روی قفل صفحه، آن را روشن کنید</string>
+    <string name="azan_screen_open_notif_settings">رفتن به تنظیمات اعلان</string>
 </resources>

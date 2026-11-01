@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,9 +38,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import ir.persiancalendar.app.R
 import ir.persiancalendar.app.core.calendar.PersianText
 import ir.persiancalendar.app.core.location.LocationHelper
 import ir.persiancalendar.app.core.prayer.Cities
@@ -48,6 +51,7 @@ import ir.persiancalendar.app.core.prayer.PrayerTimesCalculator
 import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.di.AppContainer
 import ir.persiancalendar.app.notifications.AlarmScheduler
+import ir.persiancalendar.app.notifications.NotificationHelper
 import ir.persiancalendar.app.ui.components.CityPickerDialog
 import ir.persiancalendar.app.ui.components.SectionCard
 import ir.persiancalendar.app.ui.components.SimpleDropdown
@@ -419,6 +423,65 @@ fun PrayerScreen(
 
         Spacer(Modifier.height(10.dp))
 
+        // ---------- صفحهٔ اذان (نسخهٔ ۱.۱۱.۳۳) — تنظیمات باز شدن خودکار ----------
+        SectionCard {
+            Column(Modifier.padding(14.dp)) {
+                Text("صفحهٔ اذان", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.azan_screen_auto_open_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+                azanSettingRow(
+                    title = stringResource(R.string.azan_screen_auto_open_title),
+                    checked = settings.azanAutoOpenScreen
+                ) { on ->
+                    scope.launch { AppContainer.settingsRepo(context).setAzanAutoOpenScreen(on) }
+                    onSettingsChange()
+                }
+                azanSettingRow(
+                    title = stringResource(R.string.azan_screen_always_full_title),
+                    subtitle = stringResource(R.string.azan_screen_always_full_desc),
+                    checked = settings.azanAlwaysFullScreen
+                ) { on ->
+                    scope.launch { AppContainer.settingsRepo(context).setAzanAlwaysFullScreen(on) }
+                    onSettingsChange()
+                }
+                azanSettingRow(
+                    title = stringResource(R.string.azan_screen_stop_on_exit_title),
+                    subtitle = stringResource(R.string.azan_screen_stop_on_exit_desc),
+                    checked = settings.azanStopOnExit
+                ) { on ->
+                    scope.launch { AppContainer.settingsRepo(context).setAzanStopOnExit(on) }
+                    onSettingsChange()
+                }
+                // راهنمای دسترسی Full-Screen Intent — اندروید ۱۴ به بعد کاربر/گوگل‌پلی
+                // می‌تواند این دسترسی را بگیرد؛ راهنما + دکمهٔ رفتن به تنظیمات
+                if (!NotificationHelper.canUseFullScreenIntent(context)) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.azan_screen_fsi_denied),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    androidx.compose.material3.TextButton(onClick = {
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            )
+                        }
+                    }) {
+                        Text(stringResource(R.string.azan_screen_open_notif_settings))
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
         // ---------- قبله ----------
         SectionCard {
             Column(Modifier.padding(14.dp)) {
@@ -479,4 +542,26 @@ private fun locateNearestCity(context: Context, onResult: (Double, Double) -> Un
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
     )
+}
+
+/** ردیف تنظیم صفحهٔ اذان: برچسب + توضیح اختیاری + سوئیچ — نسخهٔ ۱.۱۱.۳۳ */
+@Composable
+private fun azanSettingRow(
+    title: String,
+    subtitle: String = "",
+    checked: Boolean,
+    onChange: (Boolean) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            if (subtitle.isNotBlank())
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
 }

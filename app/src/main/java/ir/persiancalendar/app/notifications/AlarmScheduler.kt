@@ -232,33 +232,58 @@ class ReminderReceiver : BroadcastReceiver() {
  * قبلاً MediaPlayer داخل همین گیرنده بود و اندروید پردازه را می‌کشت و
  * صدای اذان پخش نمی‌شد؛ اکنون AzanPlaybackService پخش را کامل می‌کند.
  * اگر کاربر «بدون صدا» انتخاب کرده باشد فقط اعلان نمایش داده می‌شود.
+ *
+ * نسخهٔ ۱.۱۱.۳۳ (درخواست کاربر: «هم‌زمان با شروع اذان، صفحهٔ اوقات شرعی
+ * تمام‌صفحه بالا بیاید حتی با اپ بسته/گوشی قفل») — تصمیم‌ها با AzanPolicy:
+ *  - بی‌صدا/ویبره/DND → بدون صدا، فقط اعلانِ بی‌صدا؛
+ *  - صفحهٔ خاموش یا قفل، یا خود اپ جلوی صفحه، یا تنظیم «نمایش تمام‌صفحه» →
+ *    fullScreenIntent صفحهٔ «اوقات شرعی» (AzanActivity) بالای قفل باز می‌شود؛
+ *  - گوشی روشن و باز و اپ دیگری جلوی صفحه → فقط heads-up با اکشن «باز کردن»؛
+ *  - بدون دسترسی Full-Screen Intent (اندروید ۱۴+) → به heads-up برمی‌گردیم
+ *    و هیچ کرشی رخ نمی‌دهد (معیار پذیرش ۴).
  */
 class PrayerAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val index = intent.getIntExtra(AlarmScheduler.EXTRA_PRAYER_INDEX, -1)
-        if (index !in 0..7) return
-        val labels = arrayOf(
-            "اذان صبح", "طلوع آفتاب", "اذان ظهر", "اذان عصر",
-            "غروب آفتاب", "اذان مغرب", "اذان عشاء", "نیمه‌شب شرعی"
-        )
+        // فقط اندیس‌های مجاز ۰ تا ۷ پذیرفته می‌شوند (اعتبارسنجی extra)
+        val slot = PrayerSlot.fromIndex(intent.getIntExtra(AlarmScheduler.EXTRA_PRAYER_INDEX, -1))
+            ?: return
 
-        // نسخه ۱.۱۱.۱۵: ابتدا تنظیمات خوانده می‌شود تا مشخص شود صدا پخش می‌شود یا نه؛
-        // اعلان فقط در صورت پخش صدا، صفحهٔ تمام‌صفحهٔ اذان را باز می‌کند
-        // (برای «بدون صدا» فقط اعلان معمولی می‌آید)
         val appContext = context.applicationContext
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val s = AppContainer.settingsRepo(appContext).settings.first()
-                val withSound = AdhanSounds.resIdFor(s.adhanSound) != null
-                NotificationHelper.notifyPrayer(
-                    appContext, labels[index],
-                    "اوقات شرعی امروز — ${labels[index]} (با صدای اذان دلخواه شما)",
-                    fullScreen = withSound
+                val soundAllowed = AdhanSounds.resIdFor(s.adhanSound) != null &&
+                    AzanPolicy.shouldPlaySound(ringerKind(appContext), dndFilter(appContext))
+
+                val fullscreen = soundAllowed && AzanPolicy.shouldUseFullScreen(
+                    autoOpen = s.azanAutoOpenScreen,
+                    alwaysFullScreen = s.azanAlwaysFullScreen,
+                    fsiAllowed = NotificationHelper.canUseFullScreenIntent(appContext),
+                    screenOn = runCatching {
+                        (appContext.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
+                    }.getOrDefault(true),
+                    deviceLocked = runCatching {
+                        (appContext.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked
+                    }.getOrDefault(false),
+                    ourAppForeground = ir.persiancalendar.app.PersianCalendarApp.isForeground
                 )
-                if (withSound) {
+                val subtitle = buildString {
+                    append("اوقات شرعی امروز — ${slot.label}")
+                    when {
+                        !soundAllowed -> append(" (حالت بی‌صدا — بدون پخش صدا)")
+                        else -> append(" (با صدای اذان دلخواه شما)")
+                    }
+                }
+                NotificationHelper.notifyPrayer(
+                    appContext, slot.label, subtitle,
+                    fullScreen = fullscreen,
+                    silent = !soundAllowed,
+                    prayerIndex = slot.ordinal
+                )
+                if (soundAllowed) {
                     // پخش صدای اذان انتخابی کاربر با سرویس Foreground (نسخه ۱.۱۱.۷)
-                    AzanPlaybackService.start(appContext, s.adhanSound)
+                    AzanPlaybackService.start(appContext, s.adhanSound, slot.ordinal)
                 }
             } catch (e: Exception) {
                 // پخش صدا هرگز نباید اپ را منفجر کند
@@ -267,6 +292,22 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             }
         }
     }
+
+    /** حالت زنگ سیستم → RingerKind (برای AzanPolicy) */
+    private fun ringerKind(context: Context): RingerKind = runCatching {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        when (am.ringerMode) {
+            android.media.AudioManager.RINGER_MODE_SILENT -> RingerKind.SILENT
+            android.media.AudioManager.RINGER_MODE_VIBRATE -> RingerKind.VIBRATE
+            else -> RingerKind.NORMAL
+        }
+    }.getOrDefault(RingerKind.NORMAL)
+
+    /** فیلتر مزاحم نشوید (DND) — در خطا حالت عادی فرض می‌شود */
+    private fun dndFilter(context: Context): Int = runCatching {
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
+            .currentInterruptionFilter
+    }.getOrDefault(AzanPolicy.DND_ALL)
 }
 
 /**

@@ -126,12 +126,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // نسخه ۱.۱۱.۱۴: اگر اذان در حال پخش است، با باز شدن اپ متوقف شود —
-        // دیگر لازم نیست کاربر برنامه را بکشد تا صدا قطع شود
-        if (ir.persiancalendar.app.notifications.AzanPlaybackService.isPlaying) {
-            ir.persiancalendar.app.notifications.AzanPlaybackService.stop(this)
-            Toast.makeText(this, "پخش اذان متوقف شد", Toast.LENGTH_SHORT).show()
-        }
+        // نسخهٔ ۱.۱۱.۳۳ (الزام کاربر): باز شدن اپ دیگر اذان را قطع نمی‌کند؛
+        // اذان تا پایان خودش یا لمس «توقف» ادامه دارد (تنظیم «توقف اذان با
+        // خروج از صفحه» فقط برای خروج از صفحهٔ اذان است، نه کل برنامه)
         // نسخه ۱.۱۱.۱۴: اعلان همیشگی تاریخ با هر باز شدن اپ دوباره راه می‌افتد
         // (سرویس Foreground — مثل برنامه‌های ADM/VPN همیشه در نوار وضعیت می‌ماند)
         runCatching { OngoingDateNotifier.update(this) }
@@ -143,6 +140,7 @@ class MainActivity : ComponentActivity() {
         OngoingDateNotifier.TAB_EVENTS -> 3 // ترتیب تب‌ها از نسخه ۱.۱۱: ۰=تقویم ۱=اوقات ۲=قبله ۳=رویدادها ۴=یادآورها ۵=تنظیمات
         OngoingDateNotifier.TAB_PRAYER -> 1
         OngoingDateNotifier.TAB_REMINDERS -> 4
+        OngoingDateNotifier.TAB_QIBLA -> 2
         else -> -1
     }
 }
