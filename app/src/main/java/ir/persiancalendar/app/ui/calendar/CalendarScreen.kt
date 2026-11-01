@@ -136,7 +136,15 @@ fun CalendarScreen(
     fun goToMonth(jy: Int, jm: Int) {
         val target = MonthYearPickerLogic.pageOf(jy, jm)
         scope.launch {
-            runCatching { pagerState.animateScrollToPage(target) }
+            runCatching {
+                // پرش‌های همسایه با انیمیشن کوتاه؛ پرش‌های بزرگِ انتخابگر (مثلاً
+                // چند ده ماه) بدون انیمیشن طولانی و در همان لحظه
+                if (kotlin.math.abs(target - pagerState.currentPage) > 3) {
+                    pagerState.scrollToPage(target)
+                } else {
+                    pagerState.animateScrollToPage(target)
+                }
+            }
         }
     }
 

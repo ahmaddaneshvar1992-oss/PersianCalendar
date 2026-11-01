@@ -207,8 +207,9 @@ def main():
         # — تصویر درون‌خطی فید (۱.۱۱.۳۶، حفظ‌شده) —
         "data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,",
         # — جدید ۱.۱۱.۳۹: نمای ماهانهٔ بهبودیافته (در هر دو فلاور) —
+        # (نکته: نام کلاس‌ها با R8 مبهم می‌شوند؛ literalهای رشته‌ای زمان‌اجرا سالم می‌مانند)
         "cell_show_gregorian", "cell_show_hijri", "cell_show_week_number",
-        "MonthGridLogic", "MonthYearPickerLogic",
+        "تعطیل رسمی", "روز انتخاب‌شده", "بدون رویداد",
     ]
     must_not_public = ["admin_pin", "github_token", "FeedPublisher", "publishAdsFeed",
                        "AdminScreen", "DevGate",
