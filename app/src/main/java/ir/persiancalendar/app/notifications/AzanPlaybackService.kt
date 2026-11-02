@@ -43,6 +43,18 @@ import ir.persiancalendar.app.R
  * صدای انتخابی کاربر راه می‌اندازد؛ سرویس یک اعلان کوچک «در حال پخش اذان»
  * نشان می‌دهد و پس از پایان اذان خودش می‌ایستد. اگر کاربر «بدون صدا» انتخاب
  * کرده باشد، سرویس بلافاصله بدون پخش متوقف می‌شود (فقط اعلان).
+ *
+ * نسخهٔ ۱.۱۱.۴۰ (گزارش کاربر: «نوفیکیشن اذان بالا می‌آید ولی صدای اذان پخش
+ * نمی‌شود») — دو ریشهٔ واقعی و رفع هر دو:
+ *  ۱) صدای اذان قبلاً روی استریم «رسانه» (USAGE_MEDIA) پخش می‌شد؛ اگر ولوم
+ *     رسانهٔ گوشی صفر/م‌لود باشد (خیلی رایج است) نوتیف می‌آید ولی هیچ صدایی
+ *     شنیده نمی‌شود — اذان حالا مثل زنگ ساعت روی استریم «هشدار»
+ *     (USAGE_ALARM) پخش می‌شود که ولوم مستقل خودش را دارد و با ولوم رسانه
+ *     کاری ندارد.
+ *  ۲) اگر سیستم شروع سرویس Foreground را در پس‌زمینه مسدود کند
+ *     (ForegroundServiceStartNotAllowedException روی بعضی لایه‌های اندروید)،
+ *     خطا بی‌صدا قورت داده می‌شد و هیچ صدایی پخش نمی‌شد — حالا در این حالت
+ *     پخش فالبکی داخل خود گیرنده آغاز می‌شود تا حداقل شروع اذان شنیده شود.
  */
 class AzanPlaybackService : Service() {
 
@@ -103,20 +115,36 @@ class AzanPlaybackService : Service() {
         }
         // اگر پخش قبلی هنوز در جریان است، قطعش کن و از نو شروع کن
         AdhanSounds.release()
-        player = runCatching {
-            // MediaPlayer.create خودش آماده‌سازی (prepare) را انجام می‌دهد؛
-            // بعد از آن نباید setAudioAttributes صدا زده شود
-            MediaPlayer.create(this, resId)?.apply {
-                setOnCompletionListener { stopPlayback() }
-                start()
-            }
-        }.getOrNull()
+        player = buildAlarmStreamPlayer(resId)
 
         isPlaying = player != null && runCatching { player?.isPlaying == true }.getOrDefault(false)
 
         if (player == null) stopPlayback()
         return START_NOT_STICKY
     }
+
+    /**
+     * ساخت پلیر با استریم «هشدار» (USAGE_ALARM) — نسخهٔ ۱.۱۱.۴۰.
+     * MediaPlayer.create اجازهٔ ست‌کردن AudioAttributes نمی‌دهد (بعد از prepare
+     * ممنوع است)؛ پس پلیر دستی ساخته می‌شود: attributes → dataSource → prepare.
+     * صدای اذان حالا از ولوم «هشدار» گوشی می‌آید نه «رسانه» — حتی با ولوم رسانهٔ
+ * صفر هم اذان شنیده می‌شود (ریشهٔ اصلی گزارش کاربر).
+     */
+    private fun buildAlarmStreamPlayer(resId: Int): MediaPlayer? = runCatching {
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM) // استریم هشدار — مثل زنگ ساعت
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+        val p = MediaPlayer()
+        p.setAudioAttributes(attrs)
+        val afd = resources.openRawResourceFd(resId)
+        p.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+        afd.close()
+        p.prepare()
+        p.setOnCompletionListener { stopPlayback() }
+        p.start()
+        p
+    }.getOrNull()
 
     override fun onDestroy() {
         isPlaying = false
@@ -160,7 +188,7 @@ class AzanPlaybackService : Service() {
     private fun requestAudioFocus(): Boolean = runCatching {
         val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val attrs = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA) // مطابق تنظیم فعلی اپ (استریم رسانه)
+            .setUsage(AudioAttributes.USAGE_ALARM) // هم‌استریم با پخش اذان — نسخهٔ ۱.۱۱.۴۰
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
         val granted = if (Build.VERSION.SDK_INT >= 26) {
@@ -172,7 +200,7 @@ class AzanPlaybackService : Service() {
             am.requestAudioFocus(req as android.media.AudioFocusRequest)
         } else {
             @Suppress("DEPRECATION")
-            am.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
+            am.requestAudioFocus(focusListener, AudioManager.STREAM_ALARM, AudioManager.AUDIOFOCUS_GAIN)
         }
         granted == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }.getOrDefault(false)
@@ -222,13 +250,24 @@ class AzanPlaybackService : Service() {
         var isPlaying: Boolean = false
             private set
 
-        /** راه‌اندازی امن سرویس پخش اذان از هر جای برنامه/گیرنده */
+        /** راه‌اندازی امن سرویس پخش اذان از هر جای برنامه/گیرنده —
+         *  نسخهٔ ۱.۱۱.۴۰: اگر سیستم شروع سرویس در پس‌زمینه را مسدود کند
+         *  (ForegroundServiceStartNotAllowedException — بعضی لایه‌ها/ROMها)،
+         *  پخش فالبکی با AdhanSounds داخل خود گیرنده آغاز می‌شود تا اذان
+         *  به‌جای سکوت کامل، حداقل شروعش شنیده شود (goAsync فرصت ~۱۰ ثانیه‌ای
+         *  به گیرنده می‌دهد — برای شروع پخش کافی است).
+         */
         fun start(context: Context, soundKey: String, prayerIndex: Int = -1) {
             val intent = Intent(context, AzanPlaybackService::class.java)
                 .putExtra(EXTRA_SOUND_KEY, soundKey)
                 .putExtra(EXTRA_PRAYER_INDEX, prayerIndex)
-            runCatching {
+            val delivered = runCatching {
                 androidx.core.content.ContextCompat.startForegroundService(context, intent)
+                true
+            }.getOrDefault(false)
+            if (!delivered) {
+                // فالبک: پخش مستقیم در پردازهٔ گیرنده — بهتر از هیچ صدایی
+                runCatching { AdhanSounds.play(context, soundKey) }
             }
         }
 

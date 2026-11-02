@@ -53,12 +53,15 @@ class AzanPolicyTest {
         assertEquals("طلوع آفتاب به افق تهران", PrayerSlot.SUNRISE.skyLabel("تهران"))
     }
 
-    // ---------- بی‌صدا/ویبره/DND (معیار پذیرش ۳) ----------
+    // ---------- بی‌صدا/ویبره/DND — نسخهٔ ۱.۱۱.۴۰ (رفع «نوتیف می‌آید ولی صدا پخش نمی‌شود») ----------
 
     @Test
-    fun `silent and vibrate modes never play sound`() {
+    fun `only silent mode blocks sound — vibrate plays like alarm clock`() {
+        // نسخهٔ ۱.۱۱.۴۰: اذان روی استریم هشدار (USAGE_ALARM) پخش می‌شود —
+        // مثل زنگ ساعت؛ ویبره دیگر نباید صدای اذان را ببندد
         assertFalse(AzanPolicy.shouldPlaySound(RingerKind.SILENT, AzanPolicy.DND_ALL))
-        assertFalse(AzanPolicy.shouldPlaySound(RingerKind.VIBRATE, AzanPolicy.DND_ALL))
+        assertTrue(AzanPolicy.shouldPlaySound(RingerKind.VIBRATE, AzanPolicy.DND_ALL))
+        assertTrue(AzanPolicy.shouldPlaySound(RingerKind.NORMAL, AzanPolicy.DND_ALL))
     }
 
     @Test
@@ -67,10 +70,17 @@ class AzanPolicyTest {
         assertTrue(AzanPolicy.shouldPlaySound(r, AzanPolicy.DND_ALL))
         // وضعیت ناخوانا (خطا در خواندن) — محافظه‌کارانه اجازهٔ پخش
         assertTrue(AzanPolicy.shouldPlaySound(r, AzanPolicy.DND_UNKNOWN))
-        // حالت‌های مزاحم نشوید — بدون صدا
+        // «فقط هشدارها» — کاربر صریحاً هشدارها را مجاز کرده است → با صدا (۱.۱۱.۴۰)
+        assertTrue(AzanPolicy.shouldPlaySound(r, AzanPolicy.DND_ALARMS))
+        // حالت‌های «فقط اولویت» و «کامل ساکت» — بدون صدا
         assertFalse(AzanPolicy.shouldPlaySound(r, AzanPolicy.DND_PRIORITY))
         assertFalse(AzanPolicy.shouldPlaySound(r, AzanPolicy.DND_NONE))
-        assertFalse(AzanPolicy.shouldPlaySound(r, AzanPolicy.DND_ALARMS))
+        // در حالت ویبره هم همین قاعدهٔ DND برقرار است
+        assertTrue(AzanPolicy.shouldPlaySound(RingerKind.VIBRATE, AzanPolicy.DND_ALARMS))
+        assertFalse(AzanPolicy.shouldPlaySound(RingerKind.VIBRATE, AzanPolicy.DND_NONE))
+        // و در حالت بی‌صدا هیچ فیلتری صدا نمی‌دهد
+        assertFalse(AzanPolicy.shouldPlaySound(RingerKind.SILENT, AzanPolicy.DND_ALL))
+        assertFalse(AzanPolicy.shouldPlaySound(RingerKind.SILENT, AzanPolicy.DND_ALARMS))
     }
 
     // ---------- تصمیم fullScreenIntent (معیارهای پذیرش ۱ و ۴) ----------
