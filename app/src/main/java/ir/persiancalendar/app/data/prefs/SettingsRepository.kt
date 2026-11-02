@@ -91,7 +91,12 @@ data class AppSettings(
     /** عدد کوچک قمری زیر عدد شمسی در خانه‌های نمای ماهانه */
     val showHijriInCells: Boolean = false,
     /** ستون باریک شمارهٔ هفتهٔ سال کنار جدول ماهانه */
-    val showWeekNumber: Boolean = false
+    val showWeekNumber: Boolean = false,
+    // ---------- نسخهٔ ۱.۱۱.۴۰: نمای هفتگی + حالت تراکم ----------
+    /** شروع هفته در نمای هفتگی — شنبه (پیش‌فرض) یا یکشنبه */
+    val weekStartSaturday: Boolean = true,
+    /** حالت تراکم: رنگ پس‌زمینهٔ روزها بر اساس تعداد رویدادها (۴ سطح) */
+    val densityMode: Boolean = false
     // نسخهٔ ۱.۱۱.۳۰ (بازرسی امنیتی): adminPin و githubToken به AdminSecrets
     // (فلاور «admin») منتقل شدند — در APK عمومی نه فیلدی هست، نه کلید DataStore،
     // نه کد انتشار؛ پنل مدیریت اصلاً در نسخهٔ عمومی کامپایل نمی‌شود.
@@ -123,6 +128,9 @@ class SettingsRepository(private val context: Context) {
         val SHOW_GREGORIAN_IN_CELLS = booleanPreferencesKey("cell_show_gregorian")
         val SHOW_HIJRI_IN_CELLS = booleanPreferencesKey("cell_show_hijri")
         val SHOW_WEEK_NUMBER = booleanPreferencesKey("cell_show_week_number")
+        // ---------- نسخهٔ ۱.۱۱.۴۰: شروع هفته + حالت تراکم ----------
+        val WEEK_START_SATURDAY = booleanPreferencesKey("week_start_saturday")
+        val DENSITY_MODE = booleanPreferencesKey("cell_density_mode")
         // ---------- نسخه ۱.۳ ----------
         val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
         // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
@@ -156,7 +164,9 @@ class SettingsRepository(private val context: Context) {
             birthdayCardVisible = p[Keys.BIRTHDAY_VISIBLE] ?: true,
             showGregorianInCells = p[Keys.SHOW_GREGORIAN_IN_CELLS] ?: false,
             showHijriInCells = p[Keys.SHOW_HIJRI_IN_CELLS] ?: false,
-            showWeekNumber = p[Keys.SHOW_WEEK_NUMBER] ?: false
+            showWeekNumber = p[Keys.SHOW_WEEK_NUMBER] ?: false,
+            weekStartSaturday = p[Keys.WEEK_START_SATURDAY] ?: true,
+            densityMode = p[Keys.DENSITY_MODE] ?: false
         )
     }
 
@@ -235,6 +245,12 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.SHOW_HIJRI_IN_CELLS] = b }
     suspend fun setShowWeekNumber(b: Boolean) =
         context.dataStore.edit { it[Keys.SHOW_WEEK_NUMBER] = b }
+
+    // ---------- نسخهٔ ۱.۱۱.۴۰: شروع هفته + حالت تراکم — اعمال فوری و ماندگار ----------
+    suspend fun setWeekStartSaturday(b: Boolean) =
+        context.dataStore.edit { it[Keys.WEEK_START_SATURDAY] = b }
+    suspend fun setDensityMode(b: Boolean) =
+        context.dataStore.edit { it[Keys.DENSITY_MODE] = b }
 
 
     companion object {

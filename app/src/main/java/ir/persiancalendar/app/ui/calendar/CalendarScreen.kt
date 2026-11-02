@@ -101,12 +101,16 @@ fun CalendarScreen(
     settings: AppSettings,
     persianDigits: Boolean,
     showHijri: Boolean,
-    onOpenDay: (JalaliDate) -> Unit,
     onOpenPrayer: () -> Unit = {},
     adsRefresh: Int = 0, // نسخهٔ ۱.۱۱.۲۱: بازسازی کارت‌ها پس از sync خوراک راه‌دور/پنل مدیریت
     // نسخهٔ ۱.۱۱.۳۵: مقصدهای داخلی آیتم‌های تبلیغ فید — فقط کلیدهای لیست‌سفید
     // (AdsFeedPolicy.INTERNAL_TARGETS) از این مسیر به تب/صفحهٔ خودشان می‌روند
-    onOpenInternal: (String) -> Unit = {}
+    onOpenInternal: (String) -> Unit = {},
+    // ---------- نسخهٔ ۱.۱۱.۴۰ (کار ۳): پنل جزئیات روز ----------
+    // ضربه روی روز → انتخاب + پنل پایین‌کش؛ نگه‌داشتن روز → مستقیم «رویداد جدید»
+    // با همان تاریخ؛ ویرایش رویداد از داخل پنل/agenda هم به همین‌ها می‌رسد
+    onAddEvent: (JalaliDate) -> Unit = {},
+    onEditEvent: (EventEntity) -> Unit = {}
 ) {
     val todayG = LocalDate.now()
     val todayJ = CalendarConverter.gregorianToJalali(todayG.year, todayG.monthValue, todayG.dayOfMonth)
@@ -116,6 +120,8 @@ fun CalendarScreen(
     var mode by remember { mutableStateOf("ماه") }
     var showMonthPicker by remember { mutableStateOf(false) }
     var selectedJalali by remember { mutableStateOf(todayJ) }
+    // ---------- پنل جزئیات روز (۱.۱۱.۴۰ — کار ۳) ----------
+    var daySheetFor by remember { mutableStateOf<JalaliDate?>(null) }
 
     // ---------- نمای ماهانهٔ بهبودیافته (۱.۱۱.۳۹): Pager ماه‌ها ----------
     // هر ماه یک صفحه؛ صفحهٔ آغازین = ماه امروز؛ مجموع صفحات = بازهٔ موتور تقویم
@@ -273,12 +279,16 @@ fun CalendarScreen(
                     persianDigits = persianDigits,
                     selected = selectedJalali,
                     onDayClick = {
-                        // نسخه ۱.۱۱.۳ (گزارش کاربر): لمس ساده روز فقط انتخاب می‌کند
+                        // نسخهٔ ۱.۱۱.۴۰ (درخواست کاربر — کار ۳): ضربه روز را انتخاب
+                        // می‌کند و پنل جزئیات همان روز را از پایین باز می‌کند
                         selectedJalali = it
+                        daySheetFor = it
                     },
                     onDayLongClick = {
+                        // نسخهٔ ۱.۱۱.۴۰ (درخواست کاربر): نگه‌داشتن روز، مستقیم
+                        // صفحهٔ «رویداد جدید» با همان تاریخ را باز می‌کند
                         selectedJalali = it
-                        onOpenDay(it)
+                        onAddEvent(it)
                     }
                 )
                 // ---------- دکمهٔ شناور «امروز» (۱.۱۱.۳۹) ----------
@@ -318,16 +328,25 @@ fun CalendarScreen(
                 }
             }
         } else {
-            WeekStrip(
-                anchor = selectedJalali,
-                todayG = todayG,
+            // ---------- نمای هفتگی بهبودیافته — نسخهٔ ۱.۱۱.۴۰ (کار ۴) ----------
+            WeekAgendaView(
                 todayJ = todayJ,
                 events = events,
                 holidayRepo = holidayRepo,
+                settings = settings,
                 persianDigits = persianDigits,
+                selected = selectedJalali,
                 onDaySelect = { selectedJalali = it },
-                onDayLongClick = { selectedJalali = it; onOpenDay(it) },
-                selected = selectedJalali
+                onDayTap = {
+                    // ضربه روی روز نوار هفته → انتخاب + پنل جزئیات (هماهنگ با ماه)
+                    selectedJalali = it
+                    daySheetFor = it
+                },
+                onDayLongClick = {
+                    selectedJalali = it
+                    onAddEvent(it)
+                },
+                onEditEvent = onEditEvent
             )
         }
 
@@ -403,6 +422,30 @@ fun CalendarScreen(
             }
         )
     }
+
+    // ---------- پنل جزئیات روز — نسخهٔ ۱.۱۱.۴۰ (کار ۳) ----------
+    // نیمه‌باز باز می‌شود؛ کشیدن به بالا تمام‌صفحه و کشیدن به پایین می‌بندد.
+    // «افزودن رویداد»/«ویرایش» پنل را می‌بندد و ویرایشگر رویداد (در MainScreen) باز می‌شود.
+    daySheetFor?.let { sheetDate ->
+        DayDetailSheet(
+            jalali = sheetDate,
+            events = events,
+            holidayRepo = holidayRepo,
+            persianDigits = persianDigits,
+            showHijri = settings.showHijri,
+            cityIndex = settings.cityIndex,
+            prayerMethod = settings.prayerMethod,
+            onDismiss = { daySheetFor = null },
+            onAddEvent = { d ->
+                daySheetFor = null
+                onAddEvent(d)
+            },
+            onEditEvent = { e ->
+                daySheetFor = null
+                onEditEvent(e)
+            }
+        )
+    }
 }
 
 /** مشترک: آیا رویداد در این روز رخ می‌دهد؟ */
@@ -434,6 +477,8 @@ internal data class MonthCellData(
     /** نقشهٔ نقطه‌ها (حداکثر ۳ نقطه، نقطهٔ سوم کم‌رنگ در ازدحام) */
     val dotPlan: MonthGridLogic.EventDotPlan,
     val eventCount: Int,
+    /** سطح تراکم روز (۰..۳) — فقط وقتی تنظیم «حالت تراکم» روشن باشد رنگ می‌گیرد */
+    val densityLevel: Int,
     /** زیرعدد میلادی/قمری — فقط وقتی تنظیمات مربوطه روشن باشد */
     val gregorianDayText: String?,
     val gregorianA11y: String?,
@@ -491,6 +536,7 @@ internal fun buildMonthCells(
                 eventColorIndices = distinctColors.take(MonthGridLogic.MAX_EVENT_DOTS),
                 dotPlan = MonthGridLogic.eventDotPlan(distinctColors.size),
                 eventCount = dayEvents.size,
+                densityLevel = MonthGridLogic.densityLevel(dayEvents.size),
                 gregorianDayText = gregorianDayText,
                 gregorianA11y = gregorianA11y,
                 hijriDayText = hijriDayText,
@@ -625,6 +671,7 @@ private fun MonthPage(
                                 DayCell(
                                     data = cell,
                                     persianDigits = persianDigits,
+                                    densityEnabled = settings.densityMode,
                                     onClick = { onDayClick(cell.jalali) },
                                     onLongClick = { onDayLongClick(cell.jalali) }
                                 )
@@ -648,6 +695,7 @@ private fun MonthPage(
 private fun DayCell(
     data: MonthCellData,
     persianDigits: Boolean,
+    densityEnabled: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -674,6 +722,12 @@ private fun DayCell(
         data.isSelected -> MaterialTheme.colorScheme.primary
         else -> androidx.compose.ui.graphics.Color.Transparent
     }
+    // ---------- حالت تراکم — نسخهٔ ۱.۱۱.۴۰ (کار ۵) ----------
+    // پس‌زمینهٔ دایرهٔ عدد بر اساس تعداد رویدادها رنگ می‌گیرد (۴ سطح)؛
+    // رنگ عدد و نقطه‌ها تغییری نمی‌کند تا خوانایی حفظ شود؛
+    // برای امروز/انتخاب‌شده که ظاهر مخصوص خودشان را دارند رنگ تراکم اعمال نمی‌شود.
+    val densityAlpha = if (densityEnabled && !data.isSelected && !data.isToday)
+        MonthGridLogic.densityAlpha(data.densityLevel) else 0f
     val ringColor = if (data.isToday && !data.isSelected) MaterialTheme.colorScheme.primary
     else androidx.compose.ui.graphics.Color.Transparent
     val numColor = when {
@@ -701,6 +755,11 @@ private fun DayCell(
             modifier = Modifier
                 .defaultMinSize(minWidth = 36.dp, minHeight = 36.dp)
                 .background(circleFill, CircleShape)
+                .background(
+                    if (densityAlpha > 0f) MaterialTheme.colorScheme.primary.copy(alpha = densityAlpha)
+                    else androidx.compose.ui.graphics.Color.Transparent,
+                    CircleShape
+                )
                 .border(width = if (data.isToday && !data.isSelected) 2.dp else 0.dp, ringColor, CircleShape)
                 .padding(horizontal = 6.dp, vertical = 1.dp)
         ) {
@@ -767,107 +826,310 @@ private fun DayCell(
     }
 }
 
-// ---------------- نمایش هفتگی (دست‌نخورده) ----------------
+// ---------------- نمای هفتگی بهبودیافته — نسخهٔ ۱.۱۱.۴۰ (کار ۴) ----------------
 
+/**
+ * نمای هفتگی: نوار ۷ روزه در بالا (شنبه تا جمعه یا طبق تنظیم «شروع هفته»)
+ * و زیر آن agenda رویدادها برای روز انتخاب‌شده یا کل هفته؛ رویدادهای
+ * تمام‌روز بالای فهرست و بعد از آن‌ها رویدادهای زمان‌دار به ترتیب ساعت.
+ * کشیدن افقی هفتهٔ قبل/بعد می‌رود (HorizontalPager — جدول ۷ ستونه نیست؛
+ * موبایل‌محور). ضربه روی روز = انتخاب + پنل جزئیات؛ نگه‌داشتن = رویداد جدید.
+ */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun WeekStrip(
-    anchor: JalaliDate,
-    todayG: LocalDate,
+private fun WeekAgendaView(
     todayJ: JalaliDate,
     events: List<EventEntity>,
     holidayRepo: HolidayRepository,
+    settings: AppSettings,
     persianDigits: Boolean,
+    selected: JalaliDate,
     onDaySelect: (JalaliDate) -> Unit,
+    onDayTap: (JalaliDate) -> Unit,
     onDayLongClick: (JalaliDate) -> Unit,
-    selected: JalaliDate
+    onEditEvent: (EventEntity) -> Unit
 ) {
-    val anchorG = CalendarConverter.jalaliToGregorian(anchor.year, anchor.month, anchor.day)
-    val anchorDate = LocalDate.of(anchorG.year, anchorG.month, anchorG.day)
-    val satIndex = PersianText.weekdayIndexSat0(anchorDate)
-    val weekStart = anchorDate.minusDays(satIndex.toLong())
+    val startSaturday = settings.weekStartSaturday
+    // دامنهٔ agenda: روز انتخاب‌شده (پیش‌فرض) یا کل هفته
+    var agendaWholeWeek by remember { mutableStateOf(false) }
+    // صفحهٔ آغازین = هفتهٔ امروز؛ با تغییر تنظیم شروع هفته، Pager تازه ساخته می‌شود
+    val weekPagerState = remember(startSaturday) {
+        androidx.compose.foundation.pager.PagerState(
+            currentPage = WeekAgendaLogic.pageOf(
+                todayJ.year, todayJ.month, todayJ.day, startSaturday
+            ).coerceIn(0, WeekAgendaLogic.pageCount(startSaturday) - 1)
+        ) { WeekAgendaLogic.pageCount(startSaturday) }
+    }
+
+    // هماهنگی روز انتخاب‌شده با Pager:
+    //  - اگر روز انتخاب‌شده بیرون هفتهٔ تثبیت‌شده باشد (سوایپ)، روز هم‌موقعیت
+    //    در هفتهٔ جدید انتخاب می‌شود
+    LaunchedEffect(weekPagerState) {
+        snapshotFlow { weekPagerState.settledPage }.collect { page ->
+            val days = WeekAgendaLogic.daysOfPage(page, startSaturday)
+            val selG = CalendarConverter.jalaliToGregorian(
+                selected.year, selected.month, selected.day
+            )
+            val selDate = LocalDate.of(selG.year, selG.month, selG.day)
+            val selJdn = WeekAgendaLogic.jdnOf(selected.year, selected.month, selected.day)
+            if (!WeekAgendaLogic.isJdnInPage(selJdn, page, startSaturday)) {
+                val sameWeekday = days
+                    .getOrElse(PersianText.weekdayIndexSat0(selDate)) { days.first() }
+                val j = CalendarConverter.gregorianToJalali(
+                    sameWeekday.year, sameWeekday.monthValue, sameWeekday.dayOfMonth
+                )
+                onDaySelect(j)
+            }
+        }
+    }
+
+    // اگر روز انتخاب‌شده از بیرون (مثلاً دکمهٔ «برو به امروز» یا ماه) عوض شود،
+    // Pager هفته هم به هفتهٔ همان روز می‌رود
+    LaunchedEffect(selected) {
+        val target = WeekAgendaLogic.pageOf(
+            selected.year, selected.month, selected.day, startSaturday
+        )
+        if (weekPagerState.currentPage != target && target in 0 until WeekAgendaLogic.pageCount(startSaturday)) {
+            runCatching { weekPagerState.animateScrollToPage(target) }
+        }
+    }
 
     Column {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(7) { i ->
-                val g = weekStart.plusDays(i.toLong())
-                val j = CalendarConverter.gregorianToJalali(g.year, g.monthValue, g.dayOfMonth)
-                val isSel = j == selected
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (isSel) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surface
-                        )
-                        .combinedClickable(
-                            onClick = { onDaySelect(j) },
-                            onLongClick = { onDayLongClick(j) }
-                        )
-                        .padding(vertical = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+        HorizontalPager(
+            state = weekPagerState,
+            modifier = Modifier.fillMaxWidth(),
+            beyondViewportPageCount = 1
+        ) { page ->
+            val days = WeekAgendaLogic.daysOfPage(page, startSaturday)
+            WeekStripRow(
+                days = days,
+                todayJ = todayJ,
+                holidayRepo = holidayRepo,
+                events = events,
+                persianDigits = persianDigits,
+                selected = selected,
+                densityEnabled = settings.densityMode,
+                onDayTap = onDayTap,
+                onDayLongClick = onDayLongClick
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // ---------- دامنهٔ agenda: روز انتخاب‌شده یا کل هفته ----------
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = !agendaWholeWeek,
+                onClick = { agendaWholeWeek = false },
+                label = { Text(stringResource(R.string.week_agenda_scope_day)) }
+            )
+            FilterChip(
+                selected = agendaWholeWeek,
+                onClick = { agendaWholeWeek = true },
+                label = { Text(stringResource(R.string.week_agenda_scope_week)) }
+            )
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        if (agendaWholeWeek) {
+            WeekAgendaList(
+                days = WeekAgendaLogic.daysOfPage(weekPagerState.currentPage, startSaturday),
+                events = events,
+                holidayRepo = holidayRepo,
+                persianDigits = persianDigits,
+                onEditEvent = onEditEvent
+            )
+        } else {
+            val selG = CalendarConverter.jalaliToGregorian(
+                selected.year, selected.month, selected.day
+            )
+            WeekAgendaList(
+                days = listOf(LocalDate.of(selG.year, selG.month, selG.day)),
+                events = events,
+                holidayRepo = holidayRepo,
+                persianDigits = persianDigits,
+                onEditEvent = onEditEvent
+            )
+        }
+    }
+}
+
+/** نوار هفت روزهٔ هر صفحهٔ Pager — هر خانه ناحیهٔ لمسی بلند و رنگ تراکم دارد */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun WeekStripRow(
+    days: List<LocalDate>,
+    todayJ: JalaliDate,
+    holidayRepo: HolidayRepository,
+    events: List<EventEntity>,
+    persianDigits: Boolean,
+    selected: JalaliDate,
+    densityEnabled: Boolean,
+    onDayTap: (JalaliDate) -> Unit,
+    onDayLongClick: (JalaliDate) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        days.forEach { g ->
+            val j = CalendarConverter.gregorianToJalali(g.year, g.monthValue, g.dayOfMonth)
+            val isSel = j == selected
+            val isFriday = PersianText.weekdayIndexSat0(g) == 6
+            val dayEvents = events.filter { eventOccursOn(it, g) }
+            val densityAlpha = if (densityEnabled && !isSel)
+                MonthGridLogic.densityAlpha(MonthGridLogic.densityLevel(dayEvents.size)) else 0f
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = MonthGridLogic.MIN_CELL_HEIGHT_DP.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (isSel) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surface
+                    )
+                    .background(
+                        if (densityAlpha > 0f && !isSel)
+                            MaterialTheme.colorScheme.primary.copy(alpha = densityAlpha)
+                        else androidx.compose.ui.graphics.Color.Transparent
+                    )
+                    .combinedClickable(
+                        onClick = { onDayTap(j) },
+                        onLongClick = { onDayLongClick(j) }
+                    )
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = PersianText.weekDays[PersianText.weekdayIndexSat0(g)],
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    color = if (isSel) MaterialTheme.colorScheme.onPrimary
+                    else if (isFriday) holidayColor()
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (persianDigits) PersianText.toPersianDigits(j.day.toString())
+                    else j.day.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = when {
+                        isSel -> MaterialTheme.colorScheme.onPrimary
+                        j == todayJ -> MaterialTheme.colorScheme.primary
+                        holidayRepo.isHoliday(j, g) -> holidayColor()
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                )
+                // نقطه‌های رویداد — هماهنگ با نمای ماهانه
+                Row(
+                    modifier = Modifier.height(8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = PersianText.weekDays[i],
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                        color = if (isSel) MaterialTheme.colorScheme.onPrimary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    val plan = MonthGridLogic.eventDotPlan(
+                        dayEvents.map { it.colorIndex }.distinct().size
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (persianDigits) PersianText.toPersianDigits(j.day.toString()) else j.day.toString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = when {
-                            isSel -> MaterialTheme.colorScheme.onPrimary
-                            j == todayJ -> MaterialTheme.colorScheme.primary
-                            holidayRepo.isHoliday(j, g) -> holidayColor()
-                            else -> MaterialTheme.colorScheme.onSurface
+                    dayEvents.map { it.colorIndex }.distinct()
+                        .take(MonthGridLogic.MAX_EVENT_DOTS)
+                        .forEachIndexed { i, colorIndex ->
+                            val dim = plan.lastDotDimmed && i == plan.dotCount - 1
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 1.dp)
+                                    .size(5.dp)
+                                    .background(
+                                        eventDotColor(colorIndex)
+                                            .copy(alpha = if (dim) 0.45f else 1f),
+                                        CircleShape
+                                    )
+                            )
                         }
-                    )
                 }
             }
         }
+    }
+}
 
-        Spacer(Modifier.height(10.dp))
-
-        // خلاصه هر روز هفته
-        repeat(7) { i ->
-            val g = weekStart.plusDays(i.toLong())
+/** فهرست agenda — برای یک روز یا کل هفته؛ تمام‌روزها بالا (WeekAgendaLogic.sortForAgenda) */
+@Composable
+private fun WeekAgendaList(
+    days: List<LocalDate>,
+    events: List<EventEntity>,
+    holidayRepo: HolidayRepository,
+    persianDigits: Boolean,
+    onEditEvent: (EventEntity) -> Unit
+) {
+    val anyEvent = days.any { g ->
+        val j = CalendarConverter.gregorianToJalali(g.year, g.monthValue, g.dayOfMonth)
+        holidayRepo.occasionsFor(j, g).isNotEmpty() ||
+                events.any { eventOccursOn(it, g) }
+    }
+    if (!anyEvent) {
+        Text(
+            text = stringResource(
+                if (days.size > 1) R.string.week_agenda_empty_week
+                else R.string.week_agenda_empty_day
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
+    Column {
+        days.forEach { g ->
             val j = CalendarConverter.gregorianToJalali(g.year, g.monthValue, g.dayOfMonth)
-            val occasions = holidayRepo.occasionsFor(j, g)
-            val dayEvents = events.filter { eventOccursOn(it, g) }
-            if (occasions.isNotEmpty() || dayEvents.isNotEmpty()) {
-                // نسخه ۱.۱۱.۳: خلاصه روزها فقط نمایشی است — لمس آن هیچ صفحه‌ای باز نمی‌کند
+            val occ = holidayRepo.occasionsFor(j, g)
+            val dayEvents = WeekAgendaLogic.sortForAgenda(events.filter { eventOccursOn(it, g) })
+            if (occ.isEmpty() && dayEvents.isEmpty()) return@forEach
+            // سربرگ روز — «شنبه ۱۰ آبان»
+            Text(
+                text = PersianText.weekDays.getOrElse(PersianText.weekdayIndexSat0(g)) { "" } + " " +
+                        (if (persianDigits) PersianText.toPersianDigits(j.day.toString())
+                         else j.day.toString()) + " " +
+                        PersianText.jalaliMonths.getOrElse(j.month - 1) { "" },
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+            )
+            occ.forEach { o ->
+                Text(
+                    text = if (o.isHoliday) "${o.title} (تعطیل)" else o.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (o.isHoliday) holidayColor()
+                    else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            dayEvents.forEach { e ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "${PersianText.weekDays[i]} ${if (persianDigits) PersianText.toPersianDigits(j.day.toString()) else j.day.toString()}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.width(84.dp)
+                    Box(
+                        modifier = Modifier
+                            .width(6.dp)
+                            .height(30.dp)
+                            .background(
+                                EventDotColors[e.colorIndex % EventDotColors.size],
+                                RoundedCornerShape(3.dp)
+                            )
                     )
-                    Column {
-                        occasions.forEach {
-                            Text(
-                                text = it.title,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (it.isHoliday) holidayColor() else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        dayEvents.forEach {
-                            Text(
-                                text = "• ${it.title}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(e.title, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = if (e.hour >= 0)
+                                PersianText.timeHM(e.hour, e.minute, persianDigits)
+                            else stringResource(R.string.day_sheet_all_day),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(onClick = { onEditEvent(e) }) {
+                        Text(stringResource(R.string.day_sheet_edit))
                     }
                 }
             }

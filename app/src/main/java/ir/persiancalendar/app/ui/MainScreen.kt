@@ -506,9 +506,20 @@ fun MainScreen(
                         settings = settings,
                         persianDigits = settings.persianDigits,
                         showHijri = settings.showHijri,
-                        onOpenDay = { dayDetail = it },
                         onOpenPrayer = { selectedTab = 1 },
                         adsRefresh = adsVersion,
+                        // نسخهٔ ۱.۱۱.۴۰ (کار ۳): ضربه روی روز → پنل جزئیات (خود تقویم)؛
+                        // نگه‌داشتن روز یا «افزودن رویداد»/«ویرایش» پنل → ویرایشگر رویداد
+                        onAddEvent = { d ->
+                            editorDate = d
+                            editorExisting = null
+                            editorVisible = true
+                        },
+                        onEditEvent = { e ->
+                            editorDate = null
+                            editorExisting = e
+                            editorVisible = true
+                        },
                         // نسخهٔ ۱.۱۱.۳۵: مقصد داخلی آیتم‌های تبلیغ — فقط کلیدهای
                         // لیست‌سفید AdsFeedPolicy؛ هر کلید به مقصد شناخته‌شدهٔ خود اپ می‌رود
                         onOpenInternal = { key ->

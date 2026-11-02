@@ -66,4 +66,38 @@
     <string name="month_cell_show_hijri_desc">عدد کوچک قمری زیر عدد شمسی هر روز در نمای ماهانه</string>
     <string name="month_cell_show_week_number_title">نمایش شماره هفته سال</string>
     <string name="month_cell_show_week_number_desc">ستون باریک شمارهٔ هفتهٔ سال کنار جدول ماهانه</string>
+    <!-- نسخهٔ ۱.۱۱.۴۰ — کار ۳: پنل جزئیات روز -->
+    <string name="day_sheet_dates_title">تبدیل تاریخ</string>
+    <string name="day_sheet_cal_jalali">شمسی</string>
+    <string name="day_sheet_cal_gregorian">میلادی</string>
+    <string name="day_sheet_cal_hijri">قمری</string>
+    <string name="day_sheet_occasions_title">مناسبت‌ها</string>
+    <string name="day_sheet_no_occasion">مناسبتی برای این روز ثبت نشده است</string>
+    <string name="day_sheet_events_title">رویدادهای من</string>
+    <string name="day_sheet_no_event">برای این روز رویدادی ندارید</string>
+    <string name="day_sheet_add_event">افزودن رویداد</string>
+    <string name="day_sheet_add_event_cd">افزودن رویداد جدید برای این روز</string>
+    <string name="day_sheet_edit">ویرایش</string>
+    <string name="day_sheet_all_day">تمام‌روز</string>
+    <string name="day_sheet_holiday_badge">تعطیل رسمی</string>
+    <string name="day_sheet_workday_badge">روز کاری</string>
+    <string name="day_sheet_times_title">اوقات شرعی — %1$s</string>
+    <string name="day_sheet_fajr">اذان صبح</string>
+    <string name="day_sheet_sunrise">طلوع آفتاب</string>
+    <string name="day_sheet_dhuhr">اذان ظهر</string>
+    <string name="day_sheet_asr">اذان عصر</string>
+    <string name="day_sheet_sunset">غروب آفتاب</string>
+    <string name="day_sheet_maghrib">اذان مغرب</string>
+    <string name="day_sheet_isha">اذان عشاء</string>
+    <!-- نسخهٔ ۱.۱۱.۴۰ — کار ۴: نمای هفتگی -->
+    <string name="week_agenda_scope_day">رویدادهای روز</string>
+    <string name="week_agenda_scope_week">رویدادهای کل هفته</string>
+    <string name="week_agenda_empty_day">برای این روز رویدادی ثبت نشده است</string>
+    <string name="week_agenda_empty_week">در این هفته رویدادی ثبت نشده است</string>
+    <!-- نسخهٔ ۱.۱۱.۴۰ — کار ۵ و ۶: تراکم + شروع هفته -->
+    <string name="month_density_title">حالت تراکم رویدادها</string>
+    <string name="month_density_desc">رنگ پس‌زمینهٔ هر روز بر اساس تعداد رویدادها، از کم‌رنگ تا پررنگ</string>
+    <string name="week_start_title">شروع هفته</string>
+    <string name="week_start_saturday">شنبه</string>
+    <string name="week_start_sunday">یکشنبه</string>
 </resources>
