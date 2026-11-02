@@ -196,8 +196,8 @@ def main():
     ai, acert = report(ADMIN, "ADMIN (artifact)")
     print()
     print("گواهی یکسان در هر دو؟", "بله ✓" if pcert == acert else "✗ خیر!")
-    print("versionCode = ۵۲؟", "بله ✓" if pi["versionCode"] == 51 and ai["versionCode"] == 51 else "✗")
-    print("versionName = 1.11.40؟", "بله ✓" if pi["versionName"] == "1.11.39" else "✗")
+    print("versionCode = ۵۲؟", "بله ✓" if pi["versionCode"] == 52 and ai["versionCode"] == 52 else "✗")
+    print("versionName = 1.11.40؟", "بله ✓" if pi["versionName"] == "1.11.40" else "✗")
 
     ps = apk_strings_blob(PUBLIC)
     asx = apk_strings_blob(ADMIN)
