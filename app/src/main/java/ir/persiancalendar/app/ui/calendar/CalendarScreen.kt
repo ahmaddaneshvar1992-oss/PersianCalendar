@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -73,6 +74,7 @@ import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.ui.components.AdsFeedSection
 import ir.persiancalendar.app.ui.components.BirthdayCard
 import ir.persiancalendar.app.ui.prayer.PrayerTimesCard
+import ir.persiancalendar.app.ui.theme.EventDotColors
 import ir.persiancalendar.app.ui.theme.eventDotColor
 import ir.persiancalendar.app.ui.theme.holidayColor
 import kotlinx.coroutines.launch
