@@ -96,7 +96,10 @@ data class AppSettings(
     /** شروع هفته در نمای هفتگی — شنبه (پیش‌فرض) یا یکشنبه */
     val weekStartSaturday: Boolean = true,
     /** حالت تراکم: رنگ پس‌زمینهٔ روزها بر اساس تعداد رویدادها (۴ سطح) */
-    val densityMode: Boolean = false
+    val densityMode: Boolean = false,
+    // ---------- نسخهٔ ۱.۱۱.۴۱: ذکر روزهای هفته ----------
+    /** کارت «ذکر امروز» در صفحه اصلی + بخش «ذکر روز» در پنل جزئیات (پیش‌فرض: روشن) */
+    val showWeekdayAzkar: Boolean = true
     // نسخهٔ ۱.۱۱.۳۰ (بازرسی امنیتی): adminPin و githubToken به AdminSecrets
     // (فلاور «admin») منتقل شدند — در APK عمومی نه فیلدی هست، نه کلید DataStore،
     // نه کد انتشار؛ پنل مدیریت اصلاً در نسخهٔ عمومی کامپایل نمی‌شود.
@@ -131,6 +134,8 @@ class SettingsRepository(private val context: Context) {
         // ---------- نسخهٔ ۱.۱۱.۴۰: شروع هفته + حالت تراکم ----------
         val WEEK_START_SATURDAY = booleanPreferencesKey("week_start_saturday")
         val DENSITY_MODE = booleanPreferencesKey("cell_density_mode")
+        // ---------- نسخهٔ ۱.۱۱.۴۱: ذکر روزهای هفته ----------
+        val SHOW_WEEKDAY_AZKAR = booleanPreferencesKey("show_weekday_azkar")
         // ---------- نسخه ۱.۳ ----------
         val ONGOING_DATE = booleanPreferencesKey("ongoing_date_notif")
         // ---------- نسخه ۱.۱۱.۴: ویزارد راه‌اندازی اولیه ----------
@@ -166,7 +171,8 @@ class SettingsRepository(private val context: Context) {
             showHijriInCells = p[Keys.SHOW_HIJRI_IN_CELLS] ?: false,
             showWeekNumber = p[Keys.SHOW_WEEK_NUMBER] ?: false,
             weekStartSaturday = p[Keys.WEEK_START_SATURDAY] ?: true,
-            densityMode = p[Keys.DENSITY_MODE] ?: false
+            densityMode = p[Keys.DENSITY_MODE] ?: false,
+            showWeekdayAzkar = p[Keys.SHOW_WEEKDAY_AZKAR] ?: true
         )
     }
 
@@ -251,6 +257,10 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.WEEK_START_SATURDAY] = b }
     suspend fun setDensityMode(b: Boolean) =
         context.dataStore.edit { it[Keys.DENSITY_MODE] = b }
+
+    // ---------- نسخهٔ ۱.۱۱.۴۱: ذکر روزهای هفته — اعمال فوری و ماندگار ----------
+    suspend fun setShowWeekdayAzkar(b: Boolean) =
+        context.dataStore.edit { it[Keys.SHOW_WEEKDAY_AZKAR] = b }
 
 
     companion object {

@@ -100,4 +100,19 @@
     <string name="week_start_title">شروع هفته</string>
     <string name="week_start_saturday">شنبه</string>
     <string name="week_start_sunday">یکشنبه</string>
+    <!-- ذکر روزهای هفته — نسخهٔ ۱.۱۱.۴۱ (درخواست کاربر) -->
+    <!-- متن‌های ذکر عمداً همین‌جاست تا بازبینی متن فقط با ویرایش این فایل انجام شود -->
+    <string name="azkar_saturday">یا رب العالمین</string>
+    <string name="azkar_sunday">یا ذالجلال والاکرام</string>
+    <string name="azkar_monday">یا قاضی الحاجات</string>
+    <string name="azkar_tuesday">یا ارحم الراحمین</string>
+    <string name="azkar_wednesday">یا حی یا قیوم</string>
+    <string name="azkar_thursday">لا اله الا الله الملک الحق المبین</string>
+    <string name="azkar_friday">اللهم صل علی محمد و آل محمد</string>
+    <string name="azkar_today_title">ذکر امروز</string>
+    <string name="azkar_today_cd">ذکر امروز — %1$s</string>
+    <string name="azkar_day_title">ذکر روز</string>
+    <string name="azkar_notif_prefix">ذکر امروز: %1$s</string>
+    <string name="azkar_weekly_title">ذکر روزهای هفته</string>
+    <string name="azkar_weekly_desc">کارت ذکر امروز در صفحه اصلی و ذکر روز در جزئیات هر روز</string>
 </resources>

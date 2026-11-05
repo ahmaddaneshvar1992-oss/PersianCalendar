@@ -163,6 +163,16 @@ object OngoingDateNotifier {
         big.append("\n")
         big.append("بادخزان — ساعت ${PersianText.toPersianDigits(timeText)} · همیشه در دسترس")
 
+        // نسخهٔ ۱.۱۱.۴۱ (درخواست کاربر): خط «ذکر امروز: …» در متن بازشدهٔ اعلان؛
+        // داخل runCatching — هیچ خطایی نباید اعلان همیشگی را مختل کند
+        runCatching {
+            val zekr = context.getString(
+                ir.persiancalendar.app.core.azkar.WeekdayAzkar.resOfDay(LocalDate.now())
+            )
+            big.append("\n")
+            big.append(context.getString(ir.persiancalendar.app.R.string.azkar_notif_prefix, zekr))
+        }
+
         return NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ONGOING)
             // نسخهٔ ۱.۱۱.۳۵: آیکون دایرهٔ سفید درشت با عدد cutout (کار ۲) — فالبک vector
             .setSmallIcon(dayIcon(context))

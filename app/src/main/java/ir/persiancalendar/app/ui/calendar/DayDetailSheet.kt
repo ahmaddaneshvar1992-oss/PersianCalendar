@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ir.persiancalendar.app.R
+import ir.persiancalendar.app.core.azkar.WeekdayAzkar
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
@@ -54,6 +55,7 @@ import ir.persiancalendar.app.ui.theme.holidayColor
  *  - رویدادها و یادآورهای همان روز (هر ردیف با دکمهٔ ویرایش)
  *  - دکمهٔ «افزودن رویداد» با همان تاریخ پیش‌فرض
  *  - اوقات شرعی همان روز
+ *  - ذکر روز (نسخهٔ ۱.۱۱.۴۱) — انتهای پنل، وقتی تنظیم روشن باشد
  *
  * کشیدن به بالا پنل را تمام‌صفحه می‌کند و کشیدن به پایین (یا دکمهٔ
  * برگشت گوشی) آن را می‌بندد — رفتار بومی ModalBottomSheet با
@@ -69,6 +71,7 @@ fun DayDetailSheet(
     holidayRepo: HolidayRepository,
     persianDigits: Boolean,
     showHijri: Boolean,
+    showAzkar: Boolean = true,
     cityIndex: Int,
     prayerMethod: PrayerMethod,
     onDismiss: () -> Unit,
@@ -279,6 +282,23 @@ fun DayDetailSheet(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+            }
+
+            // ---------- ذکر روز — نسخهٔ ۱.۱۱.۴۱ (درخواست کاربر) ----------
+            // ذکر همان روزِ لمس‌شده (نه لزوماً امروز)؛ انتهای پنل؛
+            // وقتی تنظیم «ذکر روزهای هفته» خاموش باشد دیده نمی‌شود.
+            if (showAzkar) {
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    stringResource(R.string.azkar_day_title),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(WeekdayAzkar.resOfDay(gDate)),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

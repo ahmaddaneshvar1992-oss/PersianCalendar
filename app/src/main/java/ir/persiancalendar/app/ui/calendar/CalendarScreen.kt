@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.persiancalendar.app.R
+import ir.persiancalendar.app.core.azkar.WeekdayAzkar
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
@@ -223,6 +224,13 @@ fun CalendarScreen(
                     )
                 }
             }
+        }
+
+        // ---------- کارت «ذکر امروز» — نسخهٔ ۱.۱۱.۴۱ (درخواست کاربر) ----------
+        // ذکر ثابت هر روز هفته، زیر کارت تاریخ سربرگ؛ قابل خاموش‌کردن از بخش نمایش
+        if (settings.showWeekdayAzkar) {
+            Spacer(Modifier.height(8.dp))
+            TodayAzkarCard(todayG = todayG)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -435,6 +443,7 @@ fun CalendarScreen(
             holidayRepo = holidayRepo,
             persianDigits = persianDigits,
             showHijri = settings.showHijri,
+            showAzkar = settings.showWeekdayAzkar,
             cityIndex = settings.cityIndex,
             prayerMethod = settings.prayerMethod,
             onDismiss = { daySheetFor = null },
@@ -447,6 +456,48 @@ fun CalendarScreen(
                 onEditEvent(e)
             }
         )
+    }
+}
+
+/**
+ * کارت کوچک «ذکر امروز» — نسخهٔ ۱.۱۱.۴۱ (درخواست کاربر)
+ *
+ * زیر کارت تاریخ سربرگ تقویم: عنوان کوچک + متن ذکر همان روز هفته.
+ * زمینهٔ surfaceVariant با متن onSurface (خوانا در تم روشن و تاریک)؛
+ * چینش راست‌به‌چپ خودِ زبان فارسی است و فونت برنامه (وزیرمتن)
+ * هر دو متن عربی/فارسی را خوانا رندر می‌کند.
+ * TalkBack: «ذکر امروز — <متن ذکر>».
+ */
+@Composable
+private fun TodayAzkarCard(todayG: LocalDate) {
+    val azkarText = stringResource(WeekdayAzkar.resOfDay(todayG))
+    val azkarCd = stringResource(R.string.azkar_today_cd, azkarText)
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = azkarCd }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.azkar_today_title),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = azkarText,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 
