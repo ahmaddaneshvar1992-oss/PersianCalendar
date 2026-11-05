@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
@@ -82,42 +83,50 @@ fun JalaliDatePickerDialog(
         },
         title = { Text(title) },
         text = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SimpleDropdown(
-                    modifier = Modifier.weight(1.2f),
-                    label = "سال",
-                    items = years.map { PersianText.toPersianDigits(it.toString()) },
-                    selectedIndex = years.indexOf(year).coerceAtLeast(0),
-                    onSelected = { idx ->
-                        val y = years.toList()[idx]
-                        year = y
-                        day = day.coerceAtMost(CalendarConverter.jalaliMonthLength(y, month))
-                    }
-                )
-                SimpleDropdown(
-                    modifier = Modifier.weight(1.5f).padding(start = 6.dp),
-                    label = "ماه",
-                    items = PersianText.jalaliMonths.toList(),
-                    selectedIndex = month - 1,
-                    onSelected = { idx ->
-                        month = idx + 1
-                        day = day.coerceAtMost(CalendarConverter.jalaliMonthLength(year, month))
-                    }
-                )
-                SimpleDropdown(
-                    modifier = Modifier.weight(1f).padding(start = 6.dp),
-                    label = "روز",
-                    items = (1..daysCount).map { PersianText.toPersianDigits(it.toString()) },
-                    selectedIndex = (day - 1).coerceIn(0, daysCount - 1),
-                    onSelected = { idx -> day = idx + 1 }
-                )
-            }
-            if (extraContent != null) {
-                Spacer(Modifier.height(8.dp))
-                extraContent()
+            // نسخهٔ ۱.۱۱.۴۲ (رفع باگ کاربر «عدد و حرف‌ها از کادر بیرون می‌آیند»):
+            // اسلات text در AlertDialog متریال ۳ داخل یک Box می‌نشیند؛ emission دو
+            // ریشهٔ مستقل (ردیف کادرها + چک‌باکس «بدون سال» کارت تولد) باعث می‌شد
+            // چک‌باکس و نوشته‌اش روی کادرهای سال/ماه/روز کشیده شود و متن‌ها از
+            // کادرها بیرون بزنند. همهٔ محتوا حالا در یک Column واحد است؛ کادر
+            // «روز» هم کوچک‌تر شد (درخواست کاربر) و فضای بیشتر به «سال» (۴ رقم) رسید.
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SimpleDropdown(
+                        modifier = Modifier.weight(1.4f),
+                        label = "سال",
+                        items = years.map { PersianText.toPersianDigits(it.toString()) },
+                        selectedIndex = years.indexOf(year).coerceAtLeast(0),
+                        onSelected = { idx ->
+                            val y = years.toList()[idx]
+                            year = y
+                            day = day.coerceAtMost(CalendarConverter.jalaliMonthLength(y, month))
+                        }
+                    )
+                    SimpleDropdown(
+                        modifier = Modifier.weight(1.5f).padding(start = 6.dp),
+                        label = "ماه",
+                        items = PersianText.jalaliMonths.toList(),
+                        selectedIndex = month - 1,
+                        onSelected = { idx ->
+                            month = idx + 1
+                            day = day.coerceAtMost(CalendarConverter.jalaliMonthLength(year, month))
+                        }
+                    )
+                    SimpleDropdown(
+                        modifier = Modifier.weight(0.8f).padding(start = 6.dp),
+                        label = "روز",
+                        items = (1..daysCount).map { PersianText.toPersianDigits(it.toString()) },
+                        selectedIndex = (day - 1).coerceIn(0, daysCount - 1),
+                        onSelected = { idx -> day = idx + 1 }
+                    )
+                }
+                if (extraContent != null) {
+                    Spacer(Modifier.height(8.dp))
+                    extraContent()
+                }
             }
         }
     )
@@ -144,7 +153,9 @@ fun SimpleDropdown(
             text = if (items.isNotEmpty() && selectedIndex in items.indices)
                 items[selectedIndex] else label,
             style = MaterialTheme.typography.labelLarge,
-            maxLines = 1
+            maxLines = 1,
+            // ۱.۱۱.۴۲: هیچ متنی هرگز از کادر بیرون نزند — بریدن با سه‌نقطه
+            overflow = TextOverflow.Ellipsis
         )
     }
 
