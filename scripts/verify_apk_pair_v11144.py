@@ -231,10 +231,11 @@ def main():
         "از ۱.۱۱.۴۳", "رفع دو ایراد اذان",
         "android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT",
         "setVolumeControlStream", "adjustStreamVolume", "onKeyDown",
-        # — جدید ۱.۱۱.۴۴: متن «درباره» + مارکرهای نگاشت شبکهٔ ماه —
+        # — جدید ۱.۱۱.۴۴: متن «درباره» (توجه: با R8/minify روشن، نام توابع محض
+        #   مثل dayOffsetForCellIndex در dex باقی نمی‌ماند؛ اثبات کد = tag=commit
+        #   + versionCode ۵۶ + تست‌های JVM سبز در CI + همین literalهای درباره) —
         "نسخه ۱.۱۱.۴۴", "رفع چینش ماهانهٔ تقویم",
         "امروز ۱۵ جمعه است اما در تقویم روی شنبه قرار دارد",
-        "dayOffsetForCellIndex",
     ]
     must_not_public = ["admin_pin", "github_token", "FeedPublisher", "publishAdsFeed",
                        "AdminScreen", "DevGate",
