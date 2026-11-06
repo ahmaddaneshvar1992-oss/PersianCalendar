@@ -31,3 +31,7 @@ tools/*.b64
 tools/keys/
 *feed-ed25519*.b64
 ads-feed-key*.b64
+
+# پایتون — چک‌اسکریپت‌های محلی
+__pycache__/
+*.pyc

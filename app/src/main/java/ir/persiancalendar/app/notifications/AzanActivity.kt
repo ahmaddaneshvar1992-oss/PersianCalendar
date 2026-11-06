@@ -1,8 +1,11 @@
 package ir.persiancalendar.app.notifications
 
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -127,6 +130,13 @@ class AzanActivity : ComponentActivity() {
         // تا وقتی صفحهٔ اذان جلوی چشم است، نمایشگر خاموش نشود (مثل ساعت‌های زنگ‌دار)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        // نسخهٔ ۱.۱۱.۴۳ (گزارش کاربر: «موقع پخش اذان صدای اذان با کم کردن ولوم
+        // گوشی کم نمیشه») — صدای اذان روی استریم «هشدار» (USAGE_ALARM) پخش
+        // می‌شود؛ تا وقتی صفحهٔ اذان جلوی چشم است، دکمه‌های ولوم گوشی همان
+        // استریم را کم/زیاد کنند (override صریح onKeyDown هم زیرش هست تا روی
+        // ROMهایی که volumeControlStream را نادیده می‌گیرند هم کار کند)
+        volumeControlStream = AudioManager.STREAM_ALARM
+
         // extraها فقط از enum اعتبارسنجی می‌شوند (الزام امنیتی)
         val slot = PrayerSlot.fromIndex(intent?.getIntExtra(EXTRA_PRAYER_INDEX, -1) ?: -1)
         val fromAlarm = intent?.getBooleanExtra(EXTRA_FROM_ALARM, false) == true
@@ -145,6 +155,36 @@ class AzanActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * نسخهٔ ۱.۱۱.۴۳ — دکمه‌های ولوم هنگام باز بودن صفحهٔ اذان، مستقیم ولوم
+     * استریم «هشدار» (STREAM_ALARM) را کم/زیاد می‌کنند؛ FLAG_SHOW_UI اسلایدر
+     * ولوم سیستم را هم روی همان استریم نشان می‌دهد. (volumeControlStream در
+     * onCreate هم ست شده — این override صریح تضمین رفتار یکسان روی همهٔ
+     * گوشی‌هاست.)
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> {
+                adjustAzanVolume(raise = true)
+                return true
+            }
+            KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                adjustAzanVolume(raise = false)
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun adjustAzanVolume(raise: Boolean) = runCatching {
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        am.adjustStreamVolume(
+            AudioManager.STREAM_ALARM,
+            if (raise) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER,
+            AudioManager.FLAG_SHOW_UI
+        )
+    }.getOrDefault(Unit)
 
     /** توقف کامل (دکمهٔ «توقف اذان» / دکمهٔ سبز) — صدا + اعلان + صفحه */
     fun stopAzan() {

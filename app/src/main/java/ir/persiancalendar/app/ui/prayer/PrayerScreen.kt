@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -457,9 +458,33 @@ fun PrayerScreen(
                     scope.launch { AppContainer.settingsRepo(context).setAzanStopOnExit(on) }
                     onSettingsChange()
                 }
-                // راهنمای دسترسی Full-Screen Intent — اندروید ۱۴ به بعد کاربر/گوگل‌پلی
-                // می‌تواند این دسترسی را بگیرد؛ راهنما + دکمهٔ رفتن به تنظیمات
-                if (!NotificationHelper.canUseFullScreenIntent(context)) {
+                // نسخهٔ ۱.۱۱.۴۳ — راهنمای ولوم اذان: صدای اذان روی استریم «هشدار»
+                // پخش می‌شود؛ هنگام باز بودن صفحهٔ اذان، دکمه‌های ولوم گوشی همان
+                // استریم را کم/زیاد می‌کنند (پیاده‌سازی در AzanActivity)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.azan_volume_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                // راهنمای دسترسی Full-Screen Intent — نسخهٔ ۱.۱۱.۴۳: در اندروید ۱۴+
+                // دسترسی «نمایش در حالت تمام‌صفحه» برای اپ‌های نصب‌شدهٔ خارج از
+                // استور پیش‌فرض خاموش است؛ دکمه مستقیم صفحهٔ اختصاصی همان دسترسی
+                // را باز می‌کند (قبلاً به تنظیمات اعلان می‌رفت که آن کلید را
+                // ندارد) و وضعیت با برگشتن از تنظیمات بلافاصله تازه می‌شود.
+                var fsiDenied by remember {
+                    mutableStateOf(!NotificationHelper.canUseFullScreenIntent(context))
+                }
+                DisposableEffect(context) {
+                    val act = context as? androidx.activity.ComponentActivity
+                    val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME)
+                            fsiDenied = !NotificationHelper.canUseFullScreenIntent(context)
+                    }
+                    act?.lifecycle?.addObserver(obs)
+                    onDispose { act?.lifecycle?.removeObserver(obs) }
+                }
+                if (fsiDenied) {
                     Spacer(Modifier.height(8.dp))
                     Text(
                         stringResource(R.string.azan_screen_fsi_denied),
@@ -467,14 +492,21 @@ fun PrayerScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                     androidx.compose.material3.TextButton(onClick = {
+                        // صفحهٔ اختصاصی «نمایش در حالت تمام‌صفحه» (اندروید ۱۴+)؛
+                        // اگر ROM آن را نداشت، فالبک به تنظیمات اعلان برنامه
                         runCatching {
+                            context.startActivity(
+                                android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            )
+                        }.recoverCatching {
                             context.startActivity(
                                 android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                                     .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
                             )
                         }
                     }) {
-                        Text(stringResource(R.string.azan_screen_open_notif_settings))
+                        Text(stringResource(R.string.azan_screen_open_fsi_settings))
                     }
                 }
             }

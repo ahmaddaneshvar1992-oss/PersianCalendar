@@ -66,7 +66,20 @@ object AdhanSounds {
         val resId = resIdFor(key) ?: return false
         return runCatching {
             release()
-            val p = MediaPlayer.create(context, resId) ?: return false
+            // نسخهٔ ۱.۱۱.۴۳: همان استریم «هشدار» (USAGE_ALARM) که سرویس پخش اذان
+            // استفاده می‌کند — تا ولوم و رفتار پیش‌نمایش با پخش واقعی یکسان باشد.
+            // MediaPlayer.create اجازهٔ ست‌کردن AudioAttributes نمی‌دهد (بعد از
+            // prepare ممنوع است)؛ پس پلیر دستی ساخته می‌شود (الگوی سرویس).
+            val attrs = android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+            val p = MediaPlayer()
+            p.setAudioAttributes(attrs)
+            val afd = context.resources.openRawResourceFd(resId)
+            p.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+            afd.close()
+            p.prepare()
             player = p
             p.setOnCompletionListener {
                 it.release()
