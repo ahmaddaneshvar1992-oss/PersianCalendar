@@ -254,6 +254,64 @@ class MonthGridLogicTest {
         )
     }
 
+    // ---------- جای‌گذاری خانه‌ها — رگرسیون ۱.۱۱.۴۴ (باگ «۱۵ آبان روی شنبه») ----------
+
+    @Test
+    fun `aban 1405 grid places day 1 on friday column`() {
+        // آبان ۱۴۰۵: روز ۱ = جمعه (اندیس ۶)، ۳۰ روز — گزارش کاربر ۱۴۰۵/۰۸/۱۵
+        val len = CalendarConverter.jalaliMonthLength(1405, 8)
+        assertEquals(30, len)
+        // خانه‌های ۰ تا ۵ (شنبه تا پنجشنبهٔ ردیف ۱) خالی‌اند
+        for (idx in 0..5) {
+            assertNull("خانهٔ $idx باید خالی باشد", MonthGridLogic.dayOffsetForCellIndex(idx, 6, len))
+        }
+        // روز ۱ دقیقاً زیر ستون جمعه (اندیس ۶)
+        assertEquals(0, MonthGridLogic.dayOffsetForCellIndex(6, 6, len))
+        // ۱۵ آبان زیر ستون جمعهٔ ردیف ۳ (خانهٔ ۲۰)
+        assertEquals(14, MonthGridLogic.dayOffsetForCellIndex(20, 6, len))
+        // ۳۰ آبان در ردیف ۵ ستون شنبه (خانهٔ ۳۵)
+        assertEquals(29, MonthGridLogic.dayOffsetForCellIndex(35, 6, len))
+        // خانهٔ ۳۶ (دومین ستون ردیف ۶) و بعدش خالی
+        assertNull(MonthGridLogic.dayOffsetForCellIndex(36, 6, len))
+        assertNull(MonthGridLogic.dayOffsetForCellIndex(41, 6, len))
+    }
+
+    @Test
+    fun `cell column always matches weekday for every month 1400 to 1410`() {
+        // رگرسیون باگ «۱۵ آبان روی شنبه»: برای همهٔ ماه‌های ۱۴۰۰..۱۴۱۰،
+        // ستون هر خانهٔ پر باید با روز هفتهٔ واقعی همان روز برابر باشد.
+        // با نگاشت قدیمی (idx بدون offset) این تست برای هر ماه غیر شنبه‌شروع می‌شکست.
+        for (jy in 1400..1410) {
+            for (jm in 1..12) {
+                val len = CalendarConverter.jalaliMonthLength(jy, jm)
+                val firstG = CalendarConverter.jalaliToGregorian(jy, jm, 1)
+                val firstDate = LocalDate.of(firstG.year, firstG.month, firstG.day)
+                val firstIndex = PersianText.weekdayIndexSat0(firstDate)
+                for (idx in 0 until 42) {
+                    val offset = MonthGridLogic.dayOffsetForCellIndex(idx, firstIndex, len) ?: continue
+                    val g = firstDate.plusDays(offset.toLong())
+                    assertEquals(
+                        "$jy/$jm خانهٔ $idx باید در ستون روز هفتهٔ خودش باشد",
+                        idx % 7,
+                        PersianText.weekdayIndexSat0(g)
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `day offset rejects invalid inputs without crash`() {
+        assertNull(MonthGridLogic.dayOffsetForCellIndex(0, 6, 0))
+        assertNull(MonthGridLogic.dayOffsetForCellIndex(0, 6, -3))
+        // آخرین خانهٔ پر آبان ۳۰روزه/جمعه‌شروع = ۳۵؛ خانهٔ ۴۰ و بعدش خالی
+        assertNull(MonthGridLogic.dayOffsetForCellIndex(40, 6, 30))
+        // اندیس روز هفتهٔ خارج بازهٔ ۰..۶ هم بی‌خطر مهار می‌شود (۹→۶)
+        assertNull(MonthGridLogic.dayOffsetForCellIndex(5, 9, 30))
+        assertEquals(0, MonthGridLogic.dayOffsetForCellIndex(6, 9, 30))
+        assertEquals(1, MonthGridLogic.dayOffsetForCellIndex(7, 7, 30))
+    }
+
     // ---------- ابزار کمکی مقایسهٔ میلادی ----------
 
     private fun toTriple(g: ir.persiancalendar.app.core.calendar.GregorianDate) =

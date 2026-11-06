@@ -719,7 +719,10 @@ private fun MonthPage(
                     repeat(7) { col ->
                         val idx = row * 7 + col
                         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            val cell = cells.getOrNull(idx)
+                            // ۱.۱۱.۴۴ — اعمال offset روز هفتهٔ روز ۱ ماه؛ رفع رگرسیون
+                            // ۱.۱۱.۳۹ که روز ۱ همیشه زیر ستون شنبه می‌افتاد
+                            val offset = MonthGridLogic.dayOffsetForCellIndex(idx, firstIndex, monthLen)
+                            val cell = offset?.let { cells.getOrNull(it) }
                             if (cell != null) {
                                 DayCell(
                                     data = cell,

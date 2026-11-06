@@ -63,6 +63,24 @@ object MonthGridLogic {
         else -> EventDotPlan(MAX_EVENT_DOTS, lastDotDimmed = true, showPlus = true)
     }
 
+    // ---------- جای‌گذاری خانه‌ها در شبکه — نسخهٔ ۱.۱۱.۴۴ ----------
+
+    /**
+     * نگاشت اندیس خانهٔ شبکهٔ ثابت ۶×۷ (row*7+col؛ ستون شنبه=۰ تا جمعه=۶)
+     * به اندیس روز ماه (۰ = روز اول ماه). خانه‌های پیش از روز ۱ ماه (به تعداد
+     * اندیس روز هفتهٔ روز ۱) و خانه‌های پس از آخرین روز ماه خالی‌اند → null.
+     *
+     * نسخهٔ ۱.۱۱.۴۴ — رفع رگرسیون ۱.۱۱.۳۹: در بازنویسی نمای ماهانه این offset
+     * از جای‌گذاری حذف شده بود و روز ۱ هر ماه همیشه زیر ستون شنبه می‌افتاد
+     * (گزارش کاربر: «امروز ۱۵ جمعه است اما در تقویم روی شنبه قرار دارد»)
+     * در حالی که رنگ قرمز جمعه‌ها و متن‌های تاریخ درست بودند.
+     */
+    fun dayOffsetForCellIndex(cellIndex: Int, firstWeekdayIndexSat0: Int, monthLength: Int): Int? {
+        if (monthLength <= 0) return null
+        val offset = cellIndex - firstWeekdayIndexSat0.coerceIn(0, 6)
+        return if (offset in 0 until monthLength) offset else null
+    }
+
     /**
      * چند ردیف واقعاً برای این ماه لازم است؟ (ماه‌های ۵ یا ۶ ردیفی)
      * نمای ماهانه همیشه FIXED_ROW_COUNT ردیف می‌کشد؛ این تابع فقط برای
