@@ -39,11 +39,11 @@ import java.io.File
  */
 object AnnouncementFeed {
 
-    /** خوراک اطلاعیه — فایل JSON روی شاخهٔ main همان مخزن برنامه */
+    /** خوراک اطلاعیه — فایل JSON روی شاخهٔ main مخزن اختصاصی خوراک (۱.۱۱.۴۶) */
     const val FEED_URL =
-        "https://raw.githubusercontent.com/ahmaddaneshvar1992-oss/PersianCalendar/main/feed/announcements.json"
+        "https://raw.githubusercontent.com/ahmaddaneshvar1992-oss/PersianCalendar-feed/main/feed/announcements.json"
 
-    private const val API_REPO = "ahmaddaneshvar1992-oss/PersianCalendar"
+    private const val API_REPO = "ahmaddaneshvar1992-oss/PersianCalendar-feed"
     private const val API_PATH = "feed/announcements.json"
     private const val STATE_FILE = "announcement_feed_state.txt"
     private const val CACHE_FILE = "announcements_cache.json"

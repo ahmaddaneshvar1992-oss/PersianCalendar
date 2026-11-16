@@ -881,7 +881,7 @@ fun AdminScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "راهنما: در گیت‌هاب ← Settings ← Developer settings ← Personal access tokens ← " +
-                            "Fine-grained token با دسترسی Contents: Read and write و Actions: Read and write فقط برای مخزن PersianCalendar بسازید (Actions برای ساخته‌شدن خودکار امضای خوراک لازم است). " +
+                            "Fine-grained token با دسترسی فقط به مخزن خوراک PersianCalendar-feed بسازید (نه مخزن اصلی برنامه!) با Contents: Read and write و Actions: Read and write — از ۱.۱۱.۴۶ انتشار خوراک و امضای آن فقط به مخزن خوراک دسترسی می‌خواهد و توکن با دامنهٔ کوچک‌تر حتی اگر لو برود کاری در مخزن اصلی برنامه نمی‌تواند بکند. " +
                             "نسخهٔ ۱.۱۱.۴۵: توکن پیش از ذخیره با AES-256-GCM و کلیدِ غیرقابل export خودِ گوشی رمز می‌شود و متن خام هرگز روی دیسک نمی‌نشیند؛ " +
                             "اگر گوشی گم شد یا مشکوک به لو رفتن هستید، اول توکن را در گیت‌هاب Revoke کنید و بعد «پاک کردن توکن» را بزنید.",
                         style = MaterialTheme.typography.bodySmall,

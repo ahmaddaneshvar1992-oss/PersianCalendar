@@ -34,11 +34,11 @@ import java.io.File
  */
 object MainAdFeed {
 
-    /** خوراک بنرها — فایل JSON روی شاخهٔ main همان مخزن برنامه */
+    /** خوراک بنرها — فایل JSON روی شاخهٔ main مخزن اختصاصی خوراک (۱.۱۱.۴۶) */
     const val FEED_URL =
-        "https://raw.githubusercontent.com/ahmaddaneshvar1992-oss/PersianCalendar/main/feed/main_ads.json"
+        "https://raw.githubusercontent.com/ahmaddaneshvar1992-oss/PersianCalendar-feed/main/feed/main_ads.json"
 
-    private const val API_REPO = "ahmaddaneshvar1992-oss/PersianCalendar"
+    private const val API_REPO = "ahmaddaneshvar1992-oss/PersianCalendar-feed"
     private const val API_PATH = "feed/main_ads.json"
     private const val REMOTE_IDS_FILE = "main_ads_feed_ids.txt"
     private const val CACHE_FILE = "main_ads_cache.json"

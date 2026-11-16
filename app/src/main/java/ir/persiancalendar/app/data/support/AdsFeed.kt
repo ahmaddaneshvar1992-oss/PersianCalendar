@@ -39,7 +39,12 @@ import java.io.File
  */
 object AdsFeed {
 
-    private const val REPO = "ahmaddaneshvar1992-oss/PersianCalendar"
+    // نسخهٔ ۱.۱۱.۴۶ — خوراک‌ها به مخزن اختصاصی منتقل شدند:
+    // «PersianCalendar-feed» فقط feed/ و وورکفلوی امضا را دارد؛ اسکریپت امضا
+    // از مخزن اصلی با commit SHA ثابت گرفته می‌شود، پس توکنی که فقط به همین
+    // مخزن دسترسی دارد هرگز نمی‌تواند کد امضا را عوض کند. مخزن اصلی دیگر
+    // feed ندارد (فایل‌های قدیمی‌اش به‌عنوان نسخهٔ پایانی منجمد ماندند).
+    private const val REPO = "ahmaddaneshvar1992-oss/PersianCalendar-feed"
     private const val PATH = "feed/main_ads.json"
     private const val CACHE_FILE = "ads_feed_cache.json"
     private const val STATE_FILE = "ads_feed_state.json"

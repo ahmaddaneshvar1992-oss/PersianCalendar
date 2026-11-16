@@ -25,7 +25,13 @@ import java.net.URL
  */
 object FeedPublisher {
 
-    private const val REPO = "ahmaddaneshvar1992-oss/PersianCalendar"
+    // نسخهٔ ۱.۱۱.۴۶ — انتشار به مخزن اختصاصی خوراک «PersianCalendar-feed»:
+    // توکن پنل از این نسخه فقط باید به همین مخزن دسترسی داشته باشد
+    // (Contents: Read and write + Actions: Read and write)؛ PUT خوراک،
+    // خواندن sequence، purge جی‌اس‌دلیور و راه‌اندازی وورکفلوی امضای «همین»
+    // مخزن از همین ثابت ساخته می‌شوند. اسکریپت امضا در مخزن اصلی است و
+    // وورکفلو با SHA ثابت می‌گیردش — توکنِ مختصِ خوراک نمی‌تواند امضا را عوض کند.
+    private const val REPO = "ahmaddaneshvar1992-oss/PersianCalendar-feed"
 
     // ---------- انتشار اطلاعیه‌ها (از AnnouncementFeed.publish — ۱.۱۱.۳۰ منتقل شد) ----------
 
