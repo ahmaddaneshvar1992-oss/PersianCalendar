@@ -42,6 +42,35 @@
         android:theme="@style/Theme.PersianCalendar"
         tools:targetApi="34">
 
+        <!-- ============================================================
+             بازرسی امنیتی ۱.۱۱.۴۵ — کار ۶: بازبینی همهٔ کامپوننت‌های exported
+
+             تنها کامپوننت exported=true اپ همین MainActivity است و «باید» هم
+             باشد: intent-filter اصلی LAUNCHER دارد و باید از لانچر قابل اجرا
+             باشد (الگوی استاندارد؛ روی اندروید ۱۲+ برای کامپوننت با intent-filter
+             اعلان exported اجباری است).
+
+             همهٔ گیرنده‌ها/سرویس‌های دیگر exported=false هستند و با همین مقدار
+             درست کار می‌کنند، چون:
+              ۱) همهٔ PendingIntentهای اذان/یادآور/تیک روزانه از «خود اپ» ساخته
+                 می‌شوند (AlarmScheduler) — تحویل درون‌برنامه‌ای به exported=false
+                 آزاد است؛
+              ۲) APPWIDGET_UPDATE/BOOT_COMPLETED/TIME_SET/TIMEZONE_CHANGED همگی
+                 «broadcast محافظت‌شدهٔ سیستم»اند (فقط سیستم می‌فرستد) و سیستم به
+                 گیرندهٔ غیرexported هم تحویل می‌دهد؛ هیچ اپ دیگری نمی‌تواند به
+                 آنها مستقیم Intent بزند؛ ویجت‌ها هم از طریق RemoteViews/PendingIntent
+                 هدف‌گیری می‌شوند نه مستقیم گیرنده؛
+              ۳) ReminderActionReceiver («انجام شد»/«بعداً یادآوری کن») هم از
+                 اکشن‌های اعلانِ خودِ اپ با PendingIntent صریح می‌آید؛
+              ۴) در این اپ هیچ ContentProvider/FileProvider وجود ندارد (هر دو
+                 manifest فلاور بررسی شد) — هیچ authority برای تداخل
+                 applicationId در کار نیست؛ هر پروایدری که بعداً اضافه شود باید
+                 authority=${applicationId} و grantUriPermissions محدود داشته باشد؛
+              ۵) چون هیچ گیرنده‌ای از بیرون قابل دسترس نیست، permission امضایی
+                 (protectionLevel=signature) هم لازم نشد — اگر روزی گیرنده‌ای با
+                 intent-filter عمومی اضافه شود، باید exported=false بماند یا با
+                 چنین permissionی گارد شود و ورودی Intent داخل آن اعتبارسنجی شود.
+             ============================================================ -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
