@@ -39,10 +39,10 @@ jobs:
 
       # نسخهٔ ۱.۱۱.۳۱ — پایهٔ اعتماد: تست‌های خودکار تبدیل تاریخ پیش از هر ساخت.
       # با شکست هر تست، APK ساخته و منتشر نمی‌شود.
-      - name: Run unit tests (تبدیل تاریخ — پایهٔ اعتماد)
+      - name: Run unit tests (تبدیل تاریخ + رمز پنل ادمین — پایهٔ اعتماد)
         run: |
           chmod +x gradlew
-          ./gradlew :app:testPublicReleaseUnitTest --stacktrace
+          ./gradlew :app:testPublicReleaseUnitTest :app:testAdminReleaseUnitTest --stacktrace
 
       - name: Upload test report (فقط هنگام شکست)
         if: failure()

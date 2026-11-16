@@ -3,6 +3,7 @@ package ir.persiancalendar.app.ui.settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -71,7 +73,10 @@ fun AdminScreen(onBack: () -> Unit) {
     // نسخهٔ ۱.۱۱.۳۰: رمز پنل و توکن از AdminSecrets فلاور admin می‌آیند
     // (در نسخهٔ عمومی اصلاً این صفحه وجود ندارد)
     val secrets = remember { AdminSecrets(context) }
-    val savedPin by secrets.adminPin.collectAsState(initial = "")
+    // نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۲): وضعیت رمز برای چرخهٔ مهاجرت legacy→هش
+    val pinState by secrets.pinState.collectAsState(
+        initial = AdminSecrets.PinUiState(needsSetup = false, isHashed = false, legacyExists = false)
+    )
     // نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۱): UI فقط ماسک توکن را می‌بیند («••••x7qf»)
     // و دیگر هیچ مسیری کل توکن را به کامپوزیشن نمی‌دهد
     val savedTokenMasked by secrets.githubTokenMasked.collectAsState(initial = "")
@@ -133,6 +138,37 @@ fun AdminScreen(onBack: () -> Unit) {
         }
     }
 
+    // ---------- نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۲): قفل موقت و نشست ----------
+    // بازشماری شمارش‌معکوس قفل روی صفحهٔ ورود (هر ثانیه)
+    LaunchedEffect(authed, pinCheckBusy) {
+        while (!authed) {
+            lockMsLeft = runCatching { secrets.remainingLockMs() }.getOrDefault(0L)
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    // نشست باز: هر ۱۵ ثانیه بررسی بی‌تعاملی — بعد از ۵ دقیقه قفل دوباره
+    LaunchedEffect(authed) {
+        while (authed) {
+            kotlinx.coroutines.delay(15_000)
+            if (System.currentTimeMillis() - lastActivityMs > AdminSecrets.SESSION_IDLE_MS) {
+                authed = false
+                pin = ""
+            }
+        }
+    }
+    // رفتن اپ به پس‌زمینه = قفل فوری پنل (بازرسی امنیتی — کار ۲)
+    val hostActivity = context as? androidx.activity.ComponentActivity
+    androidx.compose.runtime.DisposableEffect(hostActivity) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && authed) {
+                authed = false
+                pin = ""
+            }
+        }
+        hostActivity?.lifecycle?.addObserver(obs)
+        onDispose { hostActivity?.lifecycle?.removeObserver(obs) }
+    }
+
     // انتخاب تصویر بنر از گالری — کپی به filesDir/ads (نسخه ۱.۱۱.۶)
     val adImagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -177,6 +213,12 @@ fun AdminScreen(onBack: () -> Unit) {
             .verticalScroll(rememberScrollState())
             .statusBarsPadding() // نسخه ۱.۱۱.۲: سرصفحه زیر نوار وضعیت سیستم نمی‌رود
             .padding(12.dp)
+            // نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۲): هر لمس، نشست ۵ دقیقه‌ای را تازه می‌کند
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    lastActivityMs = System.currentTimeMillis()
+                }
+            }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("‹ بازگشت") }
@@ -221,9 +263,11 @@ fun AdminScreen(onBack: () -> Unit) {
                                         context, "رمز باید هم حرف و هم عدد داشته باشد", Toast.LENGTH_SHORT
                                     ).show()
                                     else -> scope.launch {
+                                        // نسخهٔ ۱.۱۱.۴۵: ذخیرهٔ هش PBKDF2 (متن خام هرگز ذخیره نمی‌شود)
                                         secrets.setAdminPin(newPin)
                                         newPin = ""
                                         authed = true
+                                        lastActivityMs = System.currentTimeMillis()
                                         Toast.makeText(context, "رمز تنظیم شد — وارد پنل شدید", Toast.LENGTH_SHORT).show()
                                     }
                                 }
@@ -233,13 +277,26 @@ fun AdminScreen(onBack: () -> Unit) {
                     }
                 }
             } else {
-                // ---------- ورود با رمز ----------
+                // ---------- ورود با رمز — نسخهٔ ۱.۱۱.۴۵: PBKDF2 + قفل موقت ----------
+                if (pinState.legacyExists) {
+                    // مهاجرت رمز متنی قدیمی: همین ورود موفق هش PBKDF2 را ذخیره می‌کند
+                    SectionCard {
+                        Text(
+                            "مهاجرت امنیتی: رمز شما هنوز به روش قدیمی ذخیره شده است. با همین ورود موفق، هش PBKDF2 (۱۵۰٬۰۰۰ دور + salt تصادفی) جایگزین می‌شود و متن خام حذف خواهد شد. رمز فعلی‌تان تغییری نمی‌کند؛ برای امنیت بیشتر بعداً از کارت «امنیت» رمز تازه بگذارید.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
                 SectionCard {
                     Column(Modifier.padding(14.dp)) {
                         Text("ورود توسعه‌دهنده", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "این پنل برای مدیریت بنرهای تبلیغ صفحه اصلی، اطلاعیه‌ها و انتشار برای کاربران است. رمزی که در اولین ورود تنظیم کرده‌اید را وارد کنید.",
+                            "این پنل برای مدیریت بنرهای تبلیغ صفحه اصلی، اطلاعیه‌ها و انتشار برای کاربران است. رمزی که در اولین ورود تنظیم کرده‌اید را وارد کنید. " +
+                                    "پس از ۵ تلاش نادرست، ورود موقتاً قفل می‌شود (۳۰ ثانیه، ۲ دقیقه، ۱۰ دقیقه و…) و نشست باز بعد از ۵ دقیقه بی‌تعاملی یا پس‌زمینه‌رفتن اپ دوباره رمز می‌خواهد.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -253,17 +310,57 @@ fun AdminScreen(onBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(8.dp))
+                        if (lockMsLeft > 0L) {
+                            Text(
+                                "به‌خاطر تلاش‌های نادرست، ورود موقتاً قفل است — " +
+                                        "مانده: " + (lockMsLeft / 60000).toString() + ":" + ((lockMsLeft % 60000) / 1000).toString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(Modifier.height(6.dp))
+                        }
                         Button(
                             onClick = {
-                                if (pin == savedPin) {
-                                    authed = true
-                                    pin = ""
-                                } else {
-                                    Toast.makeText(context, "رمز اشتباه است", Toast.LENGTH_SHORT).show()
+                                if (pinCheckBusy) return@Button
+                                if (lockMsLeft > 0L) {
+                                    Toast.makeText(context, "پنل موقتاً قفل است — چند لحظه دیگر تلاش کنید", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                pinCheckBusy = true
+                                scope.launch(Dispatchers.IO) {
+                                    // نسخهٔ ۱.۱۱.۴۵: مقایسهٔ زمان‌ثابت روی هش PBKDF2 (نخ پس‌زمینه؛ ~۱۵۰٬۰۰۰ دور)
+                                    val ok = runCatching { secrets.verifyAdminPin(pin) }.getOrDefault(false)
+                                    if (ok) {
+                                        runCatching { secrets.resetAttempts() }
+                                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                            pinCheckBusy = false
+                                            authed = true
+                                            lastActivityMs = System.currentTimeMillis()
+                                            pin = ""
+                                        }
+                                    } else {
+                                        val lock = runCatching { secrets.registerFailedAttempt() }.getOrDefault(0L)
+                                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                            pinCheckBusy = false
+                                            pin = ""
+                                            if (lock > 0L) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "تلاش‌های نادرست بیش از حد — ورود قفل شد؛ پس از " + (lock / 60000).toString() + " دقیقه و " + ((lock % 60000) / 1000).toString() + " ثانیه دوباره تلاش کنید",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            } else {
+                                                Toast.makeText(context, "رمز اشتباه است", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
                                 }
                             },
+                            enabled = !pinCheckBusy && lockMsLeft <= 0L,
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("ورود به پنل") }
+                        ) {
+                            Text(if (pinCheckBusy) "در حال بررسی…" else "ورود به پنل")
+                        }
                     }
                 }
             }
