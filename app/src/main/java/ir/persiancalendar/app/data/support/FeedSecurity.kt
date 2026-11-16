@@ -1,6 +1,5 @@
 package ir.persiancalendar.app.data.support
 
-import android.util.Base64
 import com.google.crypto.tink.subtle.Ed25519Verify
 
 /**
@@ -19,6 +18,14 @@ import com.google.crypto.tink.subtle.Ed25519Verify
  *
  * نتیجه: حتی اگر مخزن یا توکن نوشتن لو برود، مهاجم بدون کلید خصوصی نمی‌تواند
  * اطلاعیه/بنر/تنظیمات جعلی به کاربران برساند.
+ *
+ * نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۴، fail-closed):
+ *  - رمزگشایی Base64 به java.util.Base64 منتقل شد (desugar داریم؛ هم روی
+ *    اندروید و هم روی JVM تست واحد کار می‌کند) با گارد صریح «طول امضا = ۶۴
+ *    بایت» — امضای کوتاه‌تر/بلندتر هرگز به تأییدکننده نمی‌رسد؛
+ *  - verifyWith: نسخهٔ تزریق‌پذیر کلیدها برای تست واحد (تولید کلید تازه در
+ *    تست و امضا با کلید اشتباه) — مسیر اجرای واقعی دقیقاً همان است که تست می‌شود؛
+ *  - هیچ مسیری «امضا نیست پس می‌پذیرم» ندارد؛ خروجی پیش‌فرض همهٔ مسیرها false است.
  */
 object FeedSecurity {
 
@@ -36,6 +43,9 @@ object FeedSecurity {
      */
     const val PUBLIC_KEY_B64_ROTATED = "Z5mIWsYEhgULQ6B3tGimJkkQCUNPN0ipslFBY8uArPw="
 
+    /** امضای Ed25519 دقیقاً ۶۴ بایت است — هر چیز دیگری زودتر از تأیید رد می‌شود */
+    const val SIGNATURE_BYTES = 64
+
     @Volatile private var verifiers: List<Ed25519Verify>? = null
 
     private fun getVerifiers(): List<Ed25519Verify> {
@@ -43,8 +53,8 @@ object FeedSecurity {
         synchronized(this) {
             verifiers?.let { return it }
             val v = listOf(
-                Ed25519Verify(Base64.decode(PUBLIC_KEY_B64, Base64.DEFAULT)),
-                Ed25519Verify(Base64.decode(PUBLIC_KEY_B64_ROTATED, Base64.DEFAULT))
+                Ed25519Verify(java.util.Base64.getMimeDecoder().decode(PUBLIC_KEY_B64)),
+                Ed25519Verify(java.util.Base64.getMimeDecoder().decode(PUBLIC_KEY_B64_ROTATED))
             )
             verifiers = v
             return v
@@ -58,8 +68,27 @@ object FeedSecurity {
      * (Ed25519Verify.verify فقط در خطا استثنا پرتاب می‌کند و Unit برمی‌گرداند —
      * پس معیار پذیرش، «نبودن استثنا» است.)
      */
-    fun verify(content: ByteArray, signatureB64: String): Boolean = runCatching {
-        val sig = Base64.decode(signatureB64.trim(), Base64.DEFAULT)
-        getVerifiers().any { v -> runCatching { v.verify(sig, content) }.isSuccess }
-    }.getOrDefault(false)
+    fun verify(content: ByteArray, signatureB64: String): Boolean =
+        verifyWith(content, signatureB64, listOf(PUBLIC_KEY_B64, PUBLIC_KEY_B64_ROTATED))
+
+    /**
+     * تأیید با کلیدهای داده‌شده — همان مسیر کدِ verify برای تست واحد.
+     * fail-closed: ورودی خالی، Base64 خراب، طول ≠ ۶۴ بایت، کلید خراب یا
+     * تأییدکنندهٔ استثناگر — همه فقط false می‌دهند.
+     */
+    fun verifyWith(content: ByteArray, signatureB64: String, publicKeysB64: List<String>): Boolean {
+        if (content.isEmpty()) return false
+        val sig = runCatching {
+            java.util.Base64.getMimeDecoder().decode(signatureB64.trim())
+        }.getOrDefault(ByteArray(0))
+        // امضای Ed25519 دقیقاً ۶۴ بایت است — کوتاه‌تر/بلندتر = رد زودهنگام
+        if (sig.size != SIGNATURE_BYTES) return false
+        return publicKeysB64.any { keyB64 ->
+            runCatching {
+                val v = Ed25519Verify(java.util.Base64.getMimeDecoder().decode(keyB64.trim()))
+                v.verify(sig, content)
+                true
+            }.getOrDefault(false)
+        }
+    }
 }
