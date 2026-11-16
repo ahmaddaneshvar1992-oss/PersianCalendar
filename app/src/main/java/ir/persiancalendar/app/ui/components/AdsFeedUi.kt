@@ -146,7 +146,7 @@ private sealed interface AdImageState {
 
 /**
  * بارگذاری محدود تصویر https با ImageLoader موجود — خطا = Failed و فراخوان
- * آیتم را کامل پنهان می‌کند (جای خالی نمی‌ماند). سقف: آیکون ۱MB، بنر ۴MB.
+ * آیتم را کامل پنهان می‌کند (جای خالی نمی‌ماند). سقف هر دو از ۱.۱۱.۴۵: ۵۰۰ کیلوبایت (AdsFeedPolicy.MAX_IMAGE_BYTES).
  */
 @Composable
 private fun rememberAdImage(url: String, maxBytes: Int): AdImageState {
@@ -174,7 +174,7 @@ private fun AdTileItem(
 
     // پنهانی محلی فقط برای خطای تصویر (جای خالی نمی‌ماند) — کاربر پنهان نمی‌کند
     var imageFailed by remember(item.id) { mutableStateOf(false) }
-    val imageState = rememberAdImage(item.iconUrl, maxBytes = 1024 * 1024)
+    val imageState = rememberAdImage(item.iconUrl, maxBytes = AdsFeedPolicy.MAX_IMAGE_BYTES)
     LaunchedEffect(imageState) {
         if (imageState is AdImageState.Failed) imageFailed = true
     }
@@ -301,7 +301,7 @@ private fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
     val openCd = adOpenText(item)
 
     var imageFailed by remember(item.id) { mutableStateOf(false) }
-    val imageState = rememberAdImage(item.imageUrl, maxBytes = 4 * 1024 * 1024)
+    val imageState = rememberAdImage(item.imageUrl, maxBytes = AdsFeedPolicy.MAX_IMAGE_BYTES)
     LaunchedEffect(imageState) {
         if (imageState is AdImageState.Failed) imageFailed = true
     }

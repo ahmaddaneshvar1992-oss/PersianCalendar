@@ -41,6 +41,42 @@ object AdsFeedPolicy {
     const val MAX_DESC = 80
     const val MAX_URL = 2048
 
+    /**
+     * سقف بایتی تصویر تبلیغ (بازرسی ۱.۱۱.۴۵ — کار ۵): ۵۰۰ کیلوبایت.
+     * ImageLoader.fetchBounded هم Content-Length را می‌سنجد و هم جریان را
+     * بایت‌به‌بایت می‌بندد؛ data URI درون‌خطی هم با همین بودجه سنجیده می‌شود
+     * (سقف کاراکتر ۴۰۰ هزار ≈ ۳۰۰ کیلوبایت دودویی — سخت‌گیرانه‌تر از همین سقف).
+     */
+    const val MAX_IMAGE_BYTES = 500_000
+
+    /**
+     * خطای قابل‌قبول ساعت دستگاه (بازرسی ۱.۱۱.۴۵ — کار ۵): ±۵ دقیقه.
+     * پنجرهٔ نمایش با همین رواداری سنجیده می‌شود تا ساعت ناصحیحِ خفیف دستگاه
+     * بنر درست را از دست ندهد؛ تاریخ‌های آشفته خودشان در saneAdWindow رد می‌شوند.
+     */
+    const val SKEW_MS = 5L * 60L * 1000L
+
+    /** کهن‌ترین تاریخ مجاز فیلد زمانی — پیش از آن آشفته است (۲۰۲۰-۰۱-۰۱ UTC) */
+    const val MIN_VALID_TS = 1_577_836_800_000L
+
+    /** بیشینهٔ طول پنجرهٔ نمایش یک آیتم — ۳۶۶ روز */
+    const val MAX_WINDOW_MS = 366L * 24L * 60L * 60L * 1000L
+
+    /**
+     * سلامت پنجرهٔ زمانی آیتم (بازرسی ۱.۱۱.۴۵ — کار ۵): startAt/endAt اگر
+     * موجود باشند باید در بازهٔ منطقی باشند و پنجرهٔ درست‌ویژه داشته باشند؛
+     * پنجرهٔ آشفته = کل آیتم رد می‌شود (نه پنهان موقت).
+     */
+    fun saneAdWindow(startAt: Long, endAt: Long): Boolean {
+        if (startAt > 0 && startAt < MIN_VALID_TS) return false
+        if (endAt > 0 && endAt < MIN_VALID_TS) return false
+        if (startAt > 0 && endAt > 0) {
+            if (endAt <= startAt) return false
+            if (endAt - startAt > MAX_WINDOW_MS) return false
+        }
+        return true
+    }
+
     /** عمر پیش‌فرض کش وقتی فید maxCacheDays نداده باشد */
     const val DEFAULT_MAX_CACHE_DAYS = 7
 
@@ -170,10 +206,15 @@ object AdsFeedPolicy {
         return (nowMs - fetchedAtMs) <= days * 24L * 60L * 60L * 1000L
     }
 
-    /** بازهٔ زمانی مجاز نمایش (بازهٔ نامعتبر = پنهان) — همان قاعدهٔ AdPolicy */
-    fun inTimeWindow(startAt: Long, endAt: Long, nowMs: Long): Boolean {
-        if (startAt > 0 && nowMs < startAt) return false
-        if (endAt > 0 && nowMs >= endAt) return false
+    /**
+     * بازهٔ زمانی مجاز نمایش (بازهٔ نامعتبر = پنهان) — همان قاعدهٔ AdPolicy.
+     * نسخهٔ ۱.۱۱.۴۵: رواداری ساعت دستگاه (skew) — بنر تا SKEW_MS زودتر «به‌صفا»
+     * می‌آید و تا SKEW_MS پس از پایان هنوز دیده می‌شود؛ برای بنرهای بدون تاریخ
+     * بی‌اثر است.
+     */
+    fun inTimeWindow(startAt: Long, endAt: Long, nowMs: Long, skewMs: Long = 0L): Boolean {
+        if (startAt > 0 && nowMs < startAt - skewMs) return false
+        if (endAt > 0 && nowMs >= endAt + skewMs) return false
         if (startAt > 0 && endAt > 0 && endAt <= startAt) return false
         return true
     }
@@ -199,7 +240,7 @@ object AdsFeedPolicy {
         if (!feedAdsEnabled) return false
         if (!item.enabled) return false
         if (item.minVersionCode > versionCode) return false
-        return inTimeWindow(item.startAt, item.endAt, nowMs)
+        return inTimeWindow(item.startAt, item.endAt, nowMs, SKEW_MS)
     }
 
     /**

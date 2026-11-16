@@ -144,6 +144,12 @@ object AdsFeed {
             } else "" to ""
         }
 
+        // بازرسی ۱.۱۱.۴۵ — کار ۵: پنجرهٔ زمانی آشفته (قبل از ۲۰۲۰، پایان پیش از
+        // آغاز یا پنجرهٔ بلندتر از یک سال) = کل آیتم رد می‌شود، نه پنهان موقت
+        val startAt = MainAdFeed.parseWhen(o.opt("startAt"))
+        val endAt = MainAdFeed.parseWhen(o.opt("endAt"))
+        if (!AdsFeedPolicy.saneAdWindow(startAt, endAt)) return null
+
         return FeedItem(
             id = id,
             type = type,
@@ -155,8 +161,8 @@ object AdsFeed {
             targetType = targetType,
             target = target,
             order = o.optInt("order", 0),
-            startAt = MainAdFeed.parseWhen(o.opt("startAt")),
-            endAt = MainAdFeed.parseWhen(o.opt("endAt")),
+            startAt = startAt,
+            endAt = endAt,
             minVersionCode = o.optInt("minVersionCode", 0).coerceAtLeast(0),
             description = AdsFeedPolicy.clamp(o.optString("description"), AdsFeedPolicy.MAX_DESC)
         )
