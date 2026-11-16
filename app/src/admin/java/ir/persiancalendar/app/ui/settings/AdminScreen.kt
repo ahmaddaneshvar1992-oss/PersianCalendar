@@ -72,7 +72,9 @@ fun AdminScreen(onBack: () -> Unit) {
     // (در نسخهٔ عمومی اصلاً این صفحه وجود ندارد)
     val secrets = remember { AdminSecrets(context) }
     val savedPin by secrets.adminPin.collectAsState(initial = "")
-    val savedToken by secrets.githubToken.collectAsState(initial = "")
+    // نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۱): UI فقط ماسک توکن را می‌بیند («••••x7qf»)
+    // و دیگر هیچ مسیری کل توکن را به کامپوزیشن نمی‌دهد
+    val savedTokenMasked by secrets.githubTokenMasked.collectAsState(initial = "")
 
     var authed by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
@@ -90,14 +92,14 @@ fun AdminScreen(onBack: () -> Unit) {
     var annPickedImage by remember { mutableStateOf("") }
     var annImageUrl by remember { mutableStateOf("") }
     // انتشار همگانی اطلاعیه برای کاربران — نسخه ۱.۱۱.۱۶ (درخواست کاربر)
+    // نسخهٔ ۱.۱۱.۴۵: این فیلد فقط برای «ورود توکن تازه» است و هرگز از بلاب
+    // رمزشده پر نمی‌شود — متن خام توکن هرگز از DataStore به UI برنمی‌گردد
     var ghToken by remember { mutableStateOf("") }
-    // نسخهٔ ۱.۱۱.۲۳ (گزارش کاربر: «توکن ذخیره می‌کنم ولی بعد از برگشت دوباره باید بگذارم»):
-    // collectAsState با مقدار اولیهٔ خالی شروع می‌شود و فیلد در فریم اول خالی قفل
-    // می‌شد؛ حالا وقتی تنظیمات واقعی از DataStore رسید، توکن ذخیره‌شده در فیلد
-    // می‌نشیند — بدون بازنویسی چیزی که کاربر در حال تایپ آن است.
-    LaunchedEffect(savedToken) {
-        if (savedToken.isNotBlank() && ghToken.isBlank()) {
-            ghToken = savedToken
+    // نسخهٔ ۱.۱۱.۴۵ — مهاجرت فعال توکن متنی قدیمی (کلید legacy) به بلاب رمز
+    // کی‌استور در نخستین ورود به پنل، تا متن خام هرگز روی دیسک باقی نماند
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            runCatching { secrets.migrateLegacyToken() }
         }
     }
     var pubStatus by remember { mutableStateOf("") }
@@ -760,11 +762,21 @@ fun AdminScreen(onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
+                    // نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۱): وضعیت توکن فقط ماسک‌شده
+                    // («••••x7qf») — کل توکن هرگز به UI برنمی‌گردد
+                    Text(
+                        if (savedTokenMasked.isNotBlank())
+                            "توکن ذخیره‌شده روی دستگاه: ${savedTokenMasked} (رمزنگاری AES-256-GCM کلیدِ غیرقابل export کی‌استور)"
+                        else "توکنی روی دستگاه ذخیره نشده است",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
                         value = ghToken,
                         onValueChange = { ghToken = it.take(120) },
                         singleLine = true,
-                        label = { Text("توکن گیت‌هاب (فقط روی این دستگاه ذخیره می‌شود)") },
+                        label = { Text("توکن تازه (برای جایگزینی — خالی بگذارید اگر نمی‌خواهید تغییر کند)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
@@ -773,7 +785,7 @@ fun AdminScreen(onBack: () -> Unit) {
                     Text(
                         "راهنما: در گیت‌هاب ← Settings ← Developer settings ← Personal access tokens ← " +
                             "Fine-grained token با دسترسی Contents: Read and write و Actions: Read and write فقط برای مخزن PersianCalendar بسازید (Actions برای ساخته‌شدن خودکار امضای خوراک لازم است). " +
-                            "توکن فقط روی همین دستگاه می‌ماند و هرگز جایی ارسال نمی‌شود؛ برای امنیت بیشتر تاریخ انقضای کوتاه بگذارید و " +
+                            "نسخهٔ ۱.۱۱.۴۵: توکن پیش از ذخیره با AES-256-GCM و کلیدِ غیرقابل export خودِ گوشی رمز می‌شود و متن خام هرگز روی دیسک نمی‌نشیند؛ " +
                             "اگر گوشی گم شد یا مشکوک به لو رفتن هستید، اول توکن را در گیت‌هاب Revoke کنید و بعد «پاک کردن توکن» را بزنید.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -783,16 +795,24 @@ fun AdminScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
-                                    // نسخهٔ ۱.۱۱.۲۳: نتیجهٔ واقعی ذخیره گزارش می‌شود، نه پیام همیشگی
-                                    runCatching { secrets.setGithubToken(ghToken) }
+                                    if (ghToken.isBlank()) {
+                                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "فیلد توکن تازه خالی است", Toast.LENGTH_SHORT).show()
+                                        }
+                                        return@launch
+                                    }
+                                    // نسخهٔ ۱.۱۱.۴۵: نتیجهٔ واقعی ذخیره گزارش می‌شود؛ ذخیره فوراً رمز می‌شود
+                                    runCatching { secrets.saveGithubToken(ghToken) }
                                         .onSuccess {
                                             kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "توکن ذخیره شد — بعد از خروج هم می‌ماند", Toast.LENGTH_SHORT).show()
+                                                ghToken = "" // متن خام فیلد هم بلافاصله پاک می‌شود
+                                                Toast.makeText(context, "توکن رمزنگاری‌شده ذخیره شد — بعد از خروج هم می‌ماند", Toast.LENGTH_SHORT).show()
                                             }
                                         }
-                                        .onFailure { e ->
+                                        .onFailure {
+                                            // عمداً بدون جزئیات استثنا — هیچ متنی از محتوای توکن در پیام نمی‌آید
                                             kotlinx.coroutines.withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "خطا در ذخیرهٔ توکن: ${e.message}", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, "خطا در ذخیرهٔ توکن", Toast.LENGTH_LONG).show()
                                             }
                                         }
                                 }
@@ -804,7 +824,8 @@ fun AdminScreen(onBack: () -> Unit) {
                         OutlinedButton(
                             onClick = {
                                 scope.launch(Dispatchers.IO) {
-                                    runCatching { secrets.setGithubToken("") }
+                                    // نسخهٔ ۱.۱۱.۴۵: بلاب رمز و نسخهٔ متنی قدیمی هر دو پاک می‌شوند
+                                    runCatching { secrets.wipeGithubToken() }
                                     kotlinx.coroutines.withContext(Dispatchers.Main) {
                                         ghToken = ""
                                         Toast.makeText(context, "توکن از این دستگاه پاک شد", Toast.LENGTH_SHORT).show()
@@ -843,11 +864,17 @@ fun AdminScreen(onBack: () -> Unit) {
                         onClick = {
                             pubBusy = true
                             scope.launch(Dispatchers.IO) {
-                                secrets.setGithubToken(ghToken)
+                                // نسخهٔ ۱.۱۱.۴۵: توکن از بلاب رمزشدهٔ کی‌استور خوانده می‌شود
+                                // (نه از فیلد UI) — متن خام فقط در همین حافظهٔ کوتاه‌مدت می‌ماند
+                                val token = secrets.githubTokenBlocking()
                                 val list = AnnouncementBox.active(context)
-                                val msg = ir.persiancalendar.app.data.support.FeedPublisher.publishAnnouncements(
-                                    context, ghToken, list
-                                )
+                                val msg = if (token.isBlank()) {
+                                    "اول توکن گیت‌هاب را در فیلد بالا وارد و «ذخیره توکن» را بزنید"
+                                } else {
+                                    ir.persiancalendar.app.data.support.FeedPublisher.publishAnnouncements(
+                                        context, token, list
+                                    )
+                                }
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                                     pubBusy = false
                                     pubStatus = msg
@@ -926,10 +953,15 @@ fun AdminScreen(onBack: () -> Unit) {
                         onClick = {
                             adPubBusy = true
                             scope.launch(Dispatchers.IO) {
-                                secrets.setGithubToken(ghToken)
-                                val msg = ir.persiancalendar.app.data.support.FeedPublisher.publishAdsFeed(
-                                    context, ghToken, MainAdBox.active(context)
-                                )
+                                // نسخهٔ ۱.۱۱.۴۵: توکن از بلاب رمزشدهٔ کی‌استور خوانده می‌شود
+                                val token = secrets.githubTokenBlocking()
+                                val msg = if (token.isBlank()) {
+                                    "اول توکن گیت‌هاب را در فیلد بالا وارد و «ذخیره توکن» را بزنید"
+                                } else {
+                                    ir.persiancalendar.app.data.support.FeedPublisher.publishAdsFeed(
+                                        context, token, MainAdBox.active(context)
+                                    )
+                                }
                                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                                     adPubBusy = false
                                     adPubStatus = msg
@@ -1003,6 +1035,28 @@ fun AdminScreen(onBack: () -> Unit) {
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("خروج از پنل") }
+                    Spacer(Modifier.height(8.dp))
+                    // نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۱): خروج + پاک‌کردن کامل توکن
+                    // — برای «گوشی را تحویل می‌دهم / توکن چرخش می‌کنم»؛ بعد از آن باید
+                    // توکن تازه ذخیره شود تا انتشار دوباره کار کند
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                runCatching { secrets.wipeGithubToken() }
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    ghToken = ""
+                                    authed = false
+                                    Toast.makeText(
+                                        context,
+                                        "توکن از دستگاه حذف شد — از پنل خارج شدید",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    onBack()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("خروج و حذف توکن") }
                 }
             }
 
