@@ -13,8 +13,8 @@ android {
         applicationId = "ir.persiancalendar.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 58
-        versionName = "1.11.46"
+        versionCode = 61
+        versionName = "1.11.49"
 
         vectorDrawables {
             useSupportLibrary = true

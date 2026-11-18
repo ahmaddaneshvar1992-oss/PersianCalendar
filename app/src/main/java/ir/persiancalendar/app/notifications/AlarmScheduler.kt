@@ -274,6 +274,15 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                         !soundAllowed -> append(" (حالت بی‌صدا — بدون پخش صدا)")
                         else -> append(" (با صدای اذان دلخواه شما)")
                     }
+                    // نسخهٔ ۱.۱۱.۴۸: اگر کاربر باز شدن خودکار را خواسته ولی
+                    // دسترسی تمام‌صفحه را ندارد، اعلان خودش راهنما می‌شود
+                    if (AzanPolicy.shouldShowFullScreenHint(
+                            wanted = s.azanAutoOpenScreen,
+                            fsiAllowed = NotificationHelper.canUseFullScreenIntent(appContext)
+                        )
+                    ) {
+                        append(" — ${appContext.getString(ir.persiancalendar.app.R.string.azan_fsi_hint)}")
+                    }
                 }
                 NotificationHelper.notifyPrayer(
                     appContext, slot.label, subtitle,

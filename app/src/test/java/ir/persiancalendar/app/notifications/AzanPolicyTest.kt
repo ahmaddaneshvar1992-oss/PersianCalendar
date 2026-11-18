@@ -146,4 +146,17 @@ class AzanPolicyTest {
             )
         )
     }
+
+    // ---------- راهنمای درون‌اعلان دسترسی تمام‌صفحه — نسخهٔ ۱.۱۱.۴۸ ----------
+
+    @Test
+    fun `fsi hint shows only when user wants auto-open but permission missing`() {
+        // خواسته ولی اجازه ندارد → راهنما نشان داده شود
+        assertTrue(AzanPolicy.shouldShowFullScreenHint(wanted = true, fsiAllowed = false))
+        // اجازه دارد → راهنما لازم نیست
+        assertFalse(AzanPolicy.shouldShowFullScreenHint(wanted = true, fsiAllowed = true))
+        // اصلاً خواسته نیست → هیچ راهنمایی
+        assertFalse(AzanPolicy.shouldShowFullScreenHint(wanted = false, fsiAllowed = false))
+        assertFalse(AzanPolicy.shouldShowFullScreenHint(wanted = false, fsiAllowed = true))
+    }
 }

@@ -51,6 +51,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
 import ir.persiancalendar.app.R
 import ir.persiancalendar.app.core.birthday.BirthdayCalculator
+import ir.persiancalendar.app.core.birthday.BirthdayProfile
 import ir.persiancalendar.app.core.calendar.CalendarConverter
 import ir.persiancalendar.app.core.calendar.JalaliDate
 import ir.persiancalendar.app.core.calendar.PersianText
@@ -278,17 +279,14 @@ fun BirthdayCard(
 /** سه‌تایی سال/ماه/روز تولد — سال ۰ یعنی «بدون سال» */
 private typealias BirthTriple = Triple<Int, Int, Int>
 
-/** پارس "jy/jm/jd" — ورودی خراب = null (بدون کرش) */
-private fun parseBirth(raw: String): BirthTriple? {
-    val parts = raw.trim().split("/")
-    if (parts.size != 3) return null
-    val y = parts[0].toIntOrNull() ?: return null
-    val m = parts[1].toIntOrNull() ?: return null
-    val d = parts[2].toIntOrNull() ?: return null
-    if (m !in 1..12 || d !in 1..31) return null
-    if (y != 0 && y !in 1300..1500) return null
-    return BirthTriple(y, m, d)
-}
+/**
+ * پارس "jy/jm/jd" — از ۱.۱۱.۴۸ در BirthdayProfile (کلاس خالص تست‌پذیر)؛
+ * ریشهٔ «سرریز ادیتور تولد»: پارس قدیمی سالِ قبل از ۱۳۰۰ را رد می‌کرد در
+ * حالی که ادیتور تا ۱۱۰ سال قبل (۱۲۹۵) می‌دهد — تولدِ ذخیره‌شده در بازِ بعدی
+ * بی‌سروصدا از دست می‌رفت. حالا هر دو در یک بازهٔ مشترک‌اند.
+ */
+private fun parseBirth(raw: String): BirthTriple? =
+    BirthdayProfile.parse(raw)?.let { BirthTriple(it.year, it.month, it.day) }
 
 /**
  * ثبت/ویرایش تاریخ تولد — همان پیکر شمسی اپ (JalaliDatePickerDialog) با

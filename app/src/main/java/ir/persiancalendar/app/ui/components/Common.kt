@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
@@ -89,7 +93,16 @@ fun JalaliDatePickerDialog(
             // چک‌باکس و نوشته‌اش روی کادرهای سال/ماه/روز کشیده شود و متن‌ها از
             // کادرها بیرون بزنند. همهٔ محتوا حالا در یک Column واحد است؛ کادر
             // «روز» هم کوچک‌تر شد (درخواست کاربر) و فضای بیشتر به «سال» (۴ رقم) رسید.
-            Column(modifier = Modifier.fillMaxWidth()) {
+            // نسخهٔ ۱.۱۱.۴۸ (رفع «سرریز ادیتور تولد»): محتوای اسلات text در
+            // AlertDialog متریال ۳ خودش محدودِ ارتفاع است ولی اسکرول ندارد — با
+            // فونت درشت یا صفحهٔ کوتاه، چک‌باکس «بدون سال» و ردیف کادرها بریده
+            // می‌شد. حالا ستون داخلی محدودِ ارتفاع + اسکرول‌پذیر است.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -163,14 +176,41 @@ fun SimpleDropdown(
         expanded = expanded,
         onDismissRequest = { expanded = false }
     ) {
-        items.forEachIndexed { idx, item ->
-            androidx.compose.material3.DropdownMenuItem(
-                text = { Text(item, style = MaterialTheme.typography.bodyMedium) },
-                onClick = {
-                    expanded = false
-                    onSelected(idx)
-                }
+        // نسخهٔ ۱.۱۱.۴۸ (رفع «سرریز ادیتور تولد»): منوی سالِ تولد ۱۱۱ آیتمی است
+        // (۱۲۹۵ تا ۱۴۰۵) — منوی بلند از صفحه بیرون می‌زد و روی نسخه‌های قدیمی
+        // متریال ۳ اصلاً اسکرول نداشت. فهرست‌های بلند حالا در ستونی با سقفِ
+        // ارتفاع و اسکرول قطعی می‌نشینند و جای شروعِ اسکرول نزدیکِ آیتمِ انتخابی
+        // است تا رسیدن به سالِ دلخواه عملاً شدنی باشد (ارتفاع آیتم ۴۸dp است).
+        if (items.size <= 10) {
+            items.forEachIndexed { idx, item ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(item, style = MaterialTheme.typography.bodyMedium) },
+                    onClick = {
+                        expanded = false
+                        onSelected(idx)
+                    }
+                )
+            }
+        } else {
+            val itemPx = with(LocalDensity.current) { 48.dp.toPx() }
+            val scroll = rememberScrollState(
+                initial = (selectedIndex * itemPx).toInt().coerceAtLeast(0)
             )
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(scroll)
+            ) {
+                items.forEachIndexed { idx, item ->
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(item, style = MaterialTheme.typography.bodyMedium) },
+                        onClick = {
+                            expanded = false
+                            onSelected(idx)
+                        }
+                    )
+                }
+            }
         }
     }
 }

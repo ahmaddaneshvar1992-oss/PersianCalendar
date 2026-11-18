@@ -3,8 +3,10 @@ package ir.persiancalendar.app.notifications
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioManager
@@ -13,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import ir.persiancalendar.app.R
 
 /**
@@ -55,6 +58,13 @@ import ir.persiancalendar.app.R
  *     (ForegroundServiceStartNotAllowedException روی بعضی لایه‌های اندروید)،
  *     خطا بی‌صدا قورت داده می‌شد و هیچ صدایی پخش نمی‌شد — حالا در این حالت
  *     پخش فالبکی داخل خود گیرنده آغاز می‌شود تا حداقل شروع اذان شنیده شود.
+ *
+ * نسخهٔ ۱.۱۱.۴۷ (گزارش کاربر: «وقتی اذان میگه من ولوم صداشو کم میکنم صدای
+ * اذان کم نمیشه») — آینهٔ ولوم: در حین پخش اذان، گیرندهٔ تغییر ولوم ثبت
+ * می‌شود؛ تغییر ولوم استریم‌های رسانه/زنگ/اعلان به‌صورت متناسب روی استریم
+ * «هشدار» اعمال می‌شود (AzanVolumePolicy) — پس دکمه‌های ولوم در هر صفحه‌ای
+ * مستقیماً صدای اذان را کم و زیاد می‌کنند. با پایان پخش، گیرنده برداشته
+ * می‌شود و رفتار ولوم گوشی عادی برمی‌گردد.
  */
 class AzanPlaybackService : Service() {
 
@@ -65,6 +75,47 @@ class AzanPlaybackService : Service() {
     // AudioFocusRequest از API ۲۶؛ فیلد به‌صورت Any? نگه داشته می‌شود تا
     // لود شدن کلاس روی اندروید ۷ (API ۲۴/۲۵) به مشکل نخورد
     private var focusRequest26: Any? = null
+
+    // ---------- آینهٔ ولوم — نسخهٔ ۱.۱۱.۴۷ ----------
+    private var volumeReceiverRegistered = false
+    private val volumeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (!isPlaying) return
+            val stream = intent?.getIntExtra(EXTRA_VOLUME_STREAM_TYPE, -1) ?: return
+            if (!AzanVolumePolicy.shouldMirror(stream)) return
+            val value = intent.getIntExtra(EXTRA_VOLUME_STREAM_VALUE, -1)
+            if (value < 0) return
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val srcMax = runCatching { am.getStreamMaxVolume(stream) }.getOrDefault(0)
+            val alarmMax = runCatching { am.getStreamMaxVolume(AudioManager.STREAM_ALARM) }
+                .getOrDefault(0)
+            val current = runCatching { am.getStreamVolume(AudioManager.STREAM_ALARM) }
+                .getOrDefault(-1)
+            val target = AzanVolumePolicy.mirroredAlarmVolume(value, srcMax, alarmMax)
+            // فقط اگر واقعاً تغییر کند اعمال شود (جلوگیری از حلقهٔ رویداد)
+            if (AzanVolumePolicy.needsApply(target, current))
+                runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, target, 0) }
+        }
+    }
+
+    /** ثبت گیرندهٔ تغییر ولوم — فقط تا پایان پخش (پرچم برای جلوگیری از ثبت دوباره) */
+    private fun registerVolumeMirror() {
+        if (volumeReceiverRegistered) return
+        runCatching {
+            ContextCompat.registerReceiver(
+                this, volumeReceiver,
+                IntentFilter(VOLUME_CHANGED_ACTION),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            volumeReceiverRegistered = true
+        }
+    }
+
+    private fun unregisterVolumeMirror() {
+        if (!volumeReceiverRegistered) return
+        runCatching { unregisterReceiver(volumeReceiver) }
+        volumeReceiverRegistered = false
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -119,6 +170,9 @@ class AzanPlaybackService : Service() {
 
         isPlaying = player != null && runCatching { player?.isPlaying == true }.getOrDefault(false)
 
+        // نسخهٔ ۱.۱۱.۴۷: تا پایان پخش، ولومِ کاربر روی اذان آینه می‌شود
+        if (isPlaying) registerVolumeMirror()
+
         if (player == null) stopPlayback()
         return START_NOT_STICKY
     }
@@ -151,6 +205,7 @@ class AzanPlaybackService : Service() {
         runCatching { player?.release() }
         player = null
         AdhanSounds.release()
+        unregisterVolumeMirror()
         super.onDestroy()
     }
 
@@ -161,6 +216,7 @@ class AzanPlaybackService : Service() {
         player = null
         AdhanSounds.release()
         abandonAudioFocus()
+        unregisterVolumeMirror()
         // نسخهٔ ۱.۱۱.۳۳ (الزام کاربر): وقتی «توقف» زده شود یا اذان تمام شود،
         // نوتیفیکیشن اوقات شرعی هم حذف شود — نه فقط اعلان سرویس
         NotificationHelper.cancelPrayer(this)
@@ -237,6 +293,12 @@ class AzanPlaybackService : Service() {
 
     companion object {
         const val EXTRA_SOUND_KEY = "sound_key"
+
+        // نسخهٔ ۱.۱۱.۴۷: پخش سیستمِ تغییر ولوم (ثابت آن مخفی است) — رشتهٔ صریح
+        // برای سازگاری کامل روی همهٔ لایه‌ها
+        const val VOLUME_CHANGED_ACTION = "android.media.VOLUME_CHANGED_ACTION"
+        const val EXTRA_VOLUME_STREAM_TYPE = "android.media.EXTRA_VOLUME_STREAM_TYPE"
+        const val EXTRA_VOLUME_STREAM_VALUE = "android.media.EXTRA_VOLUME_STREAM_VALUE"
 
         /** اندیس وعدهٔ در حال اذان (۰ تا ۷) — برای صفحهٔ اذان و اعلان — نسخهٔ ۱.۱۱.۳۳ */
         const val EXTRA_PRAYER_INDEX = "azan_prayer_index"

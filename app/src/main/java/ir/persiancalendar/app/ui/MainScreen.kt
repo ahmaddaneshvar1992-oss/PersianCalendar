@@ -45,6 +45,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -122,6 +124,11 @@ private val FabGreen = Color(0xFF1EA84D)
  *  - زنگ اطلاعیه کنار منوی سه‌نقطه (نسخه ۱.۶): خبر و تبلیغ از پنل مدیریت با نقطه قرمز.
  *  - دکمه سبز «+»: در تقویم/رویدادها ثبت سریع رویداد، در یادآورها ساخت یادآور جدید
  *  - باز شدن مستقیم روی تب از اعلان همیشگی (openTabRequest)
+ *  - نسخهٔ ۱.۱۱.۴۹: نوار ناوبری پایین با چهار بخش مطابق طرح کاربر (تقویم /
+ *    اوقات و قبله / یادآور و رویداد / تنظیمات) — گروه‌های دوتایی با ضربهٔ
+ *    دوباره بین صفحه‌ها می‌چرخند؛ منوی سه‌نقطه و میان‌برهای نوار بالا سرِ
+ *    جای خود هستند و همهٔ شماره‌های تب (اعلان‌ها، مقصدهای داخلی تبلیغ)
+ *    بدون تغییر کار می‌کنند.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -433,6 +440,56 @@ fun MainScreen(
                 }
             }
         },
+        // ---------- نوار ناوبری پایین صفحه — نسخهٔ ۱.۱۱.۴۹ (مطابق طرح کاربر) ----------
+        // چهار بخش مثل عکس: تقویم / اوقات و قبله / یادآور و رویداد / تنظیمات.
+        // در چیدمان راست‌به‌چپ، نخستین آیتم سمت راست می‌نشیند (تقویم = راست،
+        // تنظیمات = چپ). دو گروهِ دوصفحه‌ای با ضربهٔ دوباره بین صفحه‌هایشان
+        // می‌چرخند و هر دو زیرِ همان آیتم هایلایت می‌شوند. صفحه‌های تمام‌صفحه
+        // (حساب، پنل مدیریت، پشتیبانی، نمای روز) نوار را نمی‌گیرند — همان شرط topBar.
+        bottomBar = {
+            if (!accountVisible && !devPanelVisible && !supportVisible && dayDetail == null) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = selectedTab == 0,
+                        onClick = {
+                            selectedTab = 0
+                            dayDetail = null
+                        },
+                        icon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                        label = { Text("تقویم") }
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 1 || selectedTab == 2,
+                        onClick = {
+                            dayDetail = null
+                            // اگر همین بخش فعال است، ضربهٔ بعدی بین اوقات و قبله می‌چرخد
+                            selectedTab = if (selectedTab == 1) 2 else 1
+                        },
+                        icon = { Icon(Icons.Filled.Explore, contentDescription = null) },
+                        label = { Text("اوقات و قبله") }
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 3 || selectedTab == 4,
+                        onClick = {
+                            dayDetail = null
+                            // اگر همین بخش فعال است، ضربهٔ بعدی بین یادآورها و رویدادها می‌چرخد
+                            selectedTab = if (selectedTab == 4) 3 else 4
+                        },
+                        icon = { Icon(Icons.Filled.Alarm, contentDescription = null) },
+                        label = { Text("یادآور و رویداد") }
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 5,
+                        onClick = {
+                            selectedTab = 5
+                            dayDetail = null
+                        },
+                        icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                        label = { Text("تنظیمات") }
+                    )
+                }
+            }
+        },
         // ---------- نسخه ۱.۱۱.۵: نوار پایین تبلیغات حذف شد — پایین صفحه محتواست ----------
         // ---------- دکمه سبز «+» — رویداد جدید در تقویم/رویدادها، یادآور جدید در یادآورها ----------
         floatingActionButton = {
@@ -541,15 +598,16 @@ fun MainScreen(
                         }
                     )
 
-                    1 -> PrayerScreen(
+                    // نسخهٔ ۱.۱۱.۴۹: گروه «اوقات و قبله» — هر دو صفحه زیرِ همان
+                    // آیتمِ نوار پایین هایلایت می‌شوند و ضربهٔ دوباره می‌چرخاند
+                    1, 2 -> if (selectedTab == 1) PrayerScreen(
                         settings = settings,
                         persianDigits = settings.persianDigits,
                         onSettingsChange = { /* تنظیمات از طریق DataStore جریان می‌یابد */ }
-                    )
+                    ) else QiblaScreen(settings = settings)
 
-                    2 -> QiblaScreen(settings = settings)
-
-                    3 -> EventsScreen(
+                    // نسخهٔ ۱.۱۱.۴۹: گروه «یادآور و رویداد» — مانند اوقات و قبله
+                    3, 4 -> if (selectedTab == 3) EventsScreen(
                         events = events,
                         persianDigits = settings.persianDigits,
                         onEdit = { e ->
@@ -569,9 +627,7 @@ fun MainScreen(
                                     .cancelEventReminder(context, e.id)
                             }
                         }
-                    )
-
-                    4 -> RemindersScreen(persianDigits = settings.persianDigits)
+                    ) else RemindersScreen(persianDigits = settings.persianDigits)
 
                     5 -> SettingsScreen(
                         settings = settings,

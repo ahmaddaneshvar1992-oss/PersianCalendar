@@ -66,7 +66,9 @@ object TokenCrypto {
     fun mask(token: String): String {
         val t = token.trim()
         if (t.isEmpty()) return ""
-        val tail = if (t.length >= 4) t.takeLast(4) else t
+        // توکنِ کوتاه هرگز هیچ بخشی‌اش نشان داده نمی‌شود — توکنِ ۴ کاراکتری با
+        // takeLast(4) یعنی لو رفتنِ کامل؛ زیرِ ۸ کاراکتر همهٔ آن ماسک است
+        val tail = if (t.length >= 8) t.takeLast(4) else ""
         return "••••$tail"
     }
 

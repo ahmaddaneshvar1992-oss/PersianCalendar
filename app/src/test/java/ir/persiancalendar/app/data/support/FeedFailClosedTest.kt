@@ -1,5 +1,6 @@
 package ir.persiancalendar.app.data.support
 
+import ir.persiancalendar.app.core.ads.AdsFeedPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -45,6 +46,15 @@ class FeedFailClosedTest {
         return Base64.getEncoder().encodeToString(s.sign())
     }
 
+    /**
+     * کلید عمومی به فرمتِ خامِ ۳۲ بایتی (فرمت FeedSecurity) — خروجی JDK
+     * SPKI چهل‌وچهار بایتی است؛ کلیدِ خام همان ۳۲ بایتِ آخر است.
+     */
+    private fun rawPubB64(keyPair: java.security.KeyPair): String {
+        val enc = keyPair.public.encoded
+        return Base64.getEncoder().encodeToString(enc.copyOfRange(enc.size - 32, enc.size))
+    }
+
     // ---------- کلید واقعی اپ — مرجع پذیرش ----------
 
     private val appKeys = listOf(FeedSecurity.PUBLIC_KEY_B64, FeedSecurity.PUBLIC_KEY_B64_ROTATED)
@@ -61,7 +71,7 @@ class FeedFailClosedTest {
     @Test
     fun `signature valid only for exact bytes - tampered content rejected`() {
         val kp = newKeyPair()
-        val pub = Base64.getEncoder().encodeToString(kp.public.encoded)
+        val pub = rawPubB64(kp)
         val sig = sign(kp, content)
         assertTrue(FeedSecurity.verifyWith(content, sig, listOf(pub)))
         // یک بایت از محتوا تغییر کند — همان امضا دیگر معتبر نیست
@@ -73,22 +83,24 @@ class FeedFailClosedTest {
     @Test
     fun `signature with wrong key is rejected`() {
         val attacker = newKeyPair()
-        val attackerPub = Base64.getEncoder().encodeToString(attacker.public.encoded)
+        val attackerPub = rawPubB64(attacker)
         val sig = sign(attacker, content)
         // امضای مهاجم با هیچ‌کدام از کلیدهای اپ تأیید نمی‌شود
         assertFalse(FeedSecurity.verify(content, sig))
         assertFalse(FeedSecurity.verifyWith(content, sig, appKeys))
-        assertFalse(FeedSecurity.verifyWith(content, sig, listOf(attackerPub)))
+        // امضا با کلیدِ خودِ مهاجم البته تأیید می‌شود — مرزِ اعتماد «پین‌شدن
+        // کلیدها» است نه رمزنگاری؛ ردِ واقعی مهاجم در دو assertFalse بالایی است
+        assertTrue(FeedSecurity.verifyWith(content, sig, listOf(attackerPub)))
         // و امضای صحیح با کلید درست پذیرفته می‌شود — هر دو کلید پین‌شده پذیرفته‌اند
         val good = newKeyPair()
-        val goodPub = Base64.getEncoder().encodeToString(good.public.encoded)
+        val goodPub = rawPubB64(good)
         assertTrue(FeedSecurity.verifyWith(content, sign(good, content), listOf(goodPub)))
     }
 
     @Test
     fun `signature shorter or longer than 64 bytes is rejected early`() {
         val kp = newKeyPair()
-        val pub = Base64.getEncoder().encodeToString(kp.public.encoded)
+        val pub = rawPubB64(kp)
         val sig = Base64.getDecoder().decode(sign(kp, content))
         val short = Base64.getEncoder().encodeToString(sig.copyOf(63))
         val long = Base64.getEncoder().encodeToString(sig + ByteArray(1))

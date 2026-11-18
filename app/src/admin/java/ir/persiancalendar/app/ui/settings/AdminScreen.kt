@@ -138,6 +138,9 @@ fun AdminScreen(onBack: () -> Unit) {
         }
     }
 
+    var pinCheckBusy by remember { mutableStateOf(false) }
+    var lockMsLeft by remember { mutableStateOf(0L) }
+    var lastActivityMs by remember { mutableStateOf(0L) }
     // ---------- نسخهٔ ۱.۱۱.۴۵ (بازرسی امنیتی — کار ۲): قفل موقت و نشست ----------
     // بازشماری شمارش‌معکوس قفل روی صفحهٔ ورود (هر ثانیه)
     LaunchedEffect(authed, pinCheckBusy) {
@@ -228,7 +231,9 @@ fun AdminScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(6.dp))
 
         if (!authed) {
-            if (savedPin.isBlank()) {
+            // نسخهٔ ۱.۱۱.۴۵: تشخیص «اولین ورود» از PinUiState (نه رمز قدیمی نه هش)
+            // — مرجعِ قدیمیِ متنیِ savedPin با مهاجرت PBKDF2 حذف شد
+            if (pinState.needsSetup) {
                 // ---------- نسخهٔ ۱.۱۱.۲۹ (بازرسی امنیتی): پیش‌فرض «۱۲۳۴» حذف شد —
                 // اولین ورود اجبار به تنظیم رمز (حداقل ۶ کاراکتر، حرف + عدد) دارد
                 SectionCard {

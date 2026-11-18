@@ -69,7 +69,9 @@ class AdminPinCryptoTest {
     @Test
     fun `mask helper never leaks more than four tail chars`() {
         assertEquals("••••x7qf", TokenCrypto.mask("github_pat_ABCx7qf"))
-        assertEquals("••••ab", TokenCrypto.mask("abcd"))
+        // توکنِ کوتاه (زیر ۸ کاراکتر) هیچ بخشی از خودش را نشان نمی‌دهد
+        assertEquals("••••", TokenCrypto.mask("abcd"))
+        assertEquals("••••", TokenCrypto.mask("1234567"))
         assertEquals("", TokenCrypto.mask("  "))
     }
 

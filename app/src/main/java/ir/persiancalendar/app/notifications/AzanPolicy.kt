@@ -80,4 +80,15 @@ object AzanPolicy {
     ): Boolean =
         autoOpen && fsiAllowed &&
             (alwaysFullScreen || !screenOn || deviceLocked || ourAppForeground)
+
+    /**
+     * آیا اعلان اذان باید راهنمای «دسترسی تمام‌صفحه» را هم نشان بدهد؟ —
+     * نسخهٔ ۱.۱۱.۴۸: کاربر باز شدن خودکار صفحهٔ اذان را خواسته (پیش‌فرضِ تازه =
+     * روشن) ولی روی اندروید ۱۴+ دسترسی Full-Screen Intent داده نشده؛ در این
+     * حالت فقط اعلان heads-up می‌آید و صفحهٔ تمام‌صفحه هرگز بالا نمی‌آید و
+     * کاربر نمی‌داند چرا — پس اعلان خودش راهنما می‌شود تا کاربر از ردیفِ
+     * تنظیمات اذان، دسترسی را روشن کند.
+     */
+    fun shouldShowFullScreenHint(wanted: Boolean, fsiAllowed: Boolean): Boolean =
+        wanted && !fsiAllowed
 }
