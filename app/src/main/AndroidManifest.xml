@@ -16,6 +16,12 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- صفحهٔ تمام‌صفحهٔ اذان (مثل ساعت‌های زنگ‌دار) — نسخه ۱.۱۱.۱۵ -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- نسخهٔ ۱.۱۱.۵۰ (درخواست کاربر: «میخوام بالای همه برنامه‌ها اجرا بشه») —
+         fullScreenIntent فقط روی قفل صفحه/صفحهٔ خاموش بالا می‌آید؛ روی صفحهٔ
+         روشن و اپ دیگر، اندروید ۱۰+ شروع اکتیویتی از پس‌زمینه را مگر با همین
+         دسترسی (نمایش روی برنامه‌های دیگر) بسته می‌کند. با آن، صفحهٔ اذان
+         مستقیم و بالای همهٔ برنامه‌ها باز می‌شود. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- سرویس پخش اذان در پس‌زمینه — نسخه ۱.۱۱.۷ -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />

@@ -256,16 +256,18 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 val soundAllowed = AdhanSounds.resIdFor(s.adhanSound) != null &&
                     AzanPolicy.shouldPlaySound(ringerKind(appContext), dndFilter(appContext))
 
+                val screenOn = runCatching {
+                    (appContext.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
+                }.getOrDefault(true)
+                val deviceLocked = runCatching {
+                    (appContext.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked
+                }.getOrDefault(false)
                 val fullscreen = soundAllowed && AzanPolicy.shouldUseFullScreen(
                     autoOpen = s.azanAutoOpenScreen,
                     alwaysFullScreen = s.azanAlwaysFullScreen,
                     fsiAllowed = NotificationHelper.canUseFullScreenIntent(appContext),
-                    screenOn = runCatching {
-                        (appContext.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
-                    }.getOrDefault(true),
-                    deviceLocked = runCatching {
-                        (appContext.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked
-                    }.getOrDefault(false),
+                    screenOn = screenOn,
+                    deviceLocked = deviceLocked,
                     ourAppForeground = ir.persiancalendar.app.PersianCalendarApp.isForeground
                 )
                 val subtitle = buildString {
@@ -293,6 +295,38 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 if (soundAllowed) {
                     // پخش صدای اذان انتخابی کاربر با سرویس Foreground (نسخه ۱.۱۱.۷)
                     AzanPlaybackService.start(appContext, s.adhanSound, slot.ordinal)
+                }
+
+                // ---------- نسخهٔ ۱.۱۱.۵۰ (درخواست کاربر: «میخوام بالای همه
+                // برنامه‌ها اجرا بشه») — پرتاب مستقیم صفحهٔ اذان روی صفحهٔ روشن:
+                // fullScreenIntent فقط روی قفل/صفحهٔ خاموش اکتیویتی را بالا
+                // می‌آورد؛ روی صفحهٔ روشن و اپ دیگر، با دسترسی «نمایش روی همهٔ
+                // برنامه‌ها» (SYSTEM_ALERT_WINDOW) شروع اکتیویتی از پس‌زمینه
+                // مجاز است و صفحهٔ اذان مستقیم و بالای همهٔ برنامه‌ها باز
+                // می‌شود. بدون آن دسترسی، رفتار قبلی می‌ماند (اعلان heads-up
+                // با دکمهٔ «باز کردن») و هیچ کرشی رخ نمی‌دهد.
+                if (soundAllowed && AzanPolicy.shouldLaunchDirectly(
+                        wanted = s.azanAutoOpenScreen || s.azanAlwaysFullScreen,
+                        screenOn = screenOn,
+                        deviceLocked = deviceLocked,
+                        ourAppForeground = ir.persiancalendar.app.PersianCalendarApp.isForeground,
+                        overlayAllowed = runCatching {
+                            android.provider.Settings.canDrawOverlays(appContext)
+                        }.getOrDefault(false)
+                    )
+                ) {
+                    runCatching {
+                        appContext.startActivity(
+                            android.content.Intent(appContext, AzanActivity::class.java).apply {
+                                putExtra(AzanActivity.EXTRA_PRAYER_INDEX, slot.ordinal)
+                                putExtra(AzanActivity.EXTRA_FROM_ALARM, true)
+                                addFlags(
+                                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                )
+                            }
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 // پخش صدا هرگز نباید اپ را منفجر کند

@@ -95,14 +95,6 @@ import ir.persiancalendar.app.ui.support.SupportScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-/** آیتم منوی سه‌نقطه — نسخه ۱.۱۱.۵: هر آیتم tab یا action مشخص دارد */
-private data class MenuItem(
-    val title: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val tab: Int = -1,
-    val action: String? = null
-)
-
 /** سبز دکمه «+» — مطابق طراحی خواسته‌شده کاربر (نسخه ۱.۳) */
 private val FabGreen = Color(0xFF1EA84D)
 
@@ -111,11 +103,13 @@ private val FabGreen = Color(0xFF1EA84D)
  *  - اطلاعیه‌ها عکس دارند: مدیر از پنل مدیریت عکس (گالری یا URL) ضمیمه می‌کند و
  *    شیت اطلاعیه‌ها همان عکس را نشان می‌دهد (درخواست کاربر).
  *  - دکمه‌های میان‌بر «قبله‌نما» و «یادآورها» کنار زنگ اطلاعیه در نوار بالا (درخواست کاربر).
- *  - پنل منوی سه‌نقطه دقیقاً کنار خود دکمه ⋮ (سمت چپ گوشی) باز می‌شود —
- *    جای‌گذاری قطعی با PopupPositionProvider اختصاصی، مستقل از جهت چیدمان (گزارش کاربر).
- *  - منوی سه‌نقطه (⋮) به سبک «پنل زیبا» باز می‌شود: کارت گوشه‌گرد با آیکن دایره‌ای،
- *    بخش‌بندی (حساب/اشتراک‌گذاری، صفحه‌ها، ابزارها) و هایلایت تب فعلی — مطابق نمونه کاربر.
- *  - آیتم‌های منو: «حساب کاربری» و «اشتراک‌گذاری برنامه».
+ *  - نسخهٔ ۱.۱۱.۵۰ (درخواست کاربر): منوی سه‌نقطه از نوار بالا حذف شد («منو
+ *    تنظیمات پایین دارم») — «اشتراک‌گذاری برنامه» و «پشتیبانی» به تنظیمات
+ *    منتقل شدند (حساب از قبل آن‌جا بود)؛ آیتم «اوقات و قبله» نوار پایین به
+ *    «قبله نما» تغییر کرد و اوقات شرعی از کارت اوقات صفحهٔ تقویم، صفحهٔ اذان
+ *    و مقصدهای داخلی در دسترس می‌ماند.
+ *  - نسخهٔ ۱.۱۱.۵۰: صفحهٔ اذان روی صفحهٔ روشن مستقیم و بالای همهٔ برنامه‌ها
+ *    باز می‌شود (دسترسی «نمایش روی همهٔ برنامه‌ها» — SYSTEM_ALERT_WINDOW).
  *  - نسخه ۱.۱۱.۵: تبلیغات بنری AdMob و اینترستیشال حذف شدند؛ از نسخه ۱.۱۱.۶ بنرهای
  *    اختصاصی مدیر (پنل مدیریت ← تبلیغات صفحه اصلی) در صفحه اصلی تقویم نمایش داده می‌شوند.
  *  - صفحه «یادآورها» (نسخه ۱.۱۱): موتور یادآور عمومی آب/دارو/ورزش/شخصی با Room،
@@ -167,18 +161,6 @@ fun MainScreen(
     var remEditorVisible by remember { mutableStateOf(false) }
     var remEditing by remember { mutableStateOf<ir.persiancalendar.app.data.db.ReminderEntity?>(null) }
 
-    // آیتم‌های منوی سه‌نقطه — نسخه ۱.۱۱.۵: حساب کاربری و اشتراک‌گذاری در بخش اول
-    val menuItems = listOf(
-        MenuItem("حساب کاربری", Icons.Filled.Person, action = "account"),
-        MenuItem("اشتراک‌گذاری برنامه", Icons.Filled.Share, action = "share"),
-        MenuItem("تقویم", Icons.Filled.CalendarMonth, tab = 0),
-        MenuItem("اوقات شرعی", Icons.Filled.AccessTime, tab = 1),
-        MenuItem("قبله‌نما", Icons.Filled.Explore, tab = 2),
-        MenuItem("رویدادها", Icons.Filled.EventNote, tab = 3),
-        MenuItem("یادآورها", Icons.Filled.Alarm, tab = 4),
-        MenuItem("تنظیمات", Icons.Filled.Settings, tab = 5),
-        MenuItem("پشتیبانی", Icons.AutoMirrored.Filled.Help, action = "support")
-    )
     // نسخهٔ ۱.۱۱.۲۵ (درخواست کاربر: «میخوام پنل مدیریت رو کسی جز من نبینه»):
     // آیتم «پنل مدیریت» از منو حذف شد؛ ورود فقط از راه مخفی در تنظیمات است
     // (۵ لمس پشت‌سرهم روی عنوان «درباره بادخزان») + همان رمز پنل.
@@ -317,7 +299,6 @@ fun MainScreen(
         // ---------- نوار بالا با منوی سه‌نقطه سمت چپ (نسخه ۱.۵) ----------
         topBar = {
             if (!accountVisible && !devPanelVisible && !supportVisible && dayDetail == null) {
-                var menuOpen by remember { mutableStateOf(false) }
                 Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
                     // نسخه ۱.۱۱.۲: statusBarsPadding — دکمه سه‌نقطه و زنگ اطلاعیه و عنوان
                     // دیگر زیر نوار وضعیت سیستم (ساعت/باتری) نمی‌روند (گزارش کاربر)
@@ -368,83 +349,20 @@ fun MainScreen(
                                 )
                             }
                         }
-                        // سه‌نقطه در سمت چپ (در RTL پایان سطر = چپ)
-                        // نسخه ۱.۱۱.۶: پنل منو داخل Box همین دکمه با Popup اختصاصی باز می‌شود
-                        // تا دقیقاً زیر خود دکمه ⋮ (سمت چپ گوشی) و کنارش قرار بگیرد
-                        Box {
-                            androidx.compose.material3.IconButton(onClick = { menuOpen = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = "منوی برنامه")
-                            }
-                            if (menuOpen) {
-                                val density = LocalDensity.current
-                                val marginPx = with(density) { 10.dp.roundToPx() }
-                                val gapPx = with(density) { 4.dp.roundToPx() }
-                                Popup(
-                                    popupPositionProvider = remember(marginPx, gapPx) {
-                                        LeftAnchoredMenuProvider(marginPx, gapPx)
-                                    },
-                                    onDismissRequest = { menuOpen = false },
-                                    properties = PopupProperties(focusable = true)
-                                ) {
-                                    // پنل زیبا — کارت گوشه‌گرد با آیکن دایره‌ای و بخش‌بندی
-                                    Surface(
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = MaterialTheme.colorScheme.surface,
-                                        shadowElevation = 8.dp,
-                                        border = BorderStroke(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant
-                                        ),
-                                        modifier = Modifier.widthIn(min = 232.dp, max = 312.dp)
-                                    ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .heightIn(max = 460.dp)
-                                                .verticalScroll(rememberScrollState())
-                                        ) {
-                                            menuItems.forEachIndexed { index, item ->
-                                                // جداکننده بخش‌ها: پیش از «تقویم» و پیش از «تنظیمات»
-                                                if (index == 2 || index == 7) {
-                                                    HorizontalDivider(
-                                                        modifier = Modifier.padding(
-                                                            horizontal = 10.dp,
-                                                            vertical = 4.dp
-                                                        ),
-                                                        color = MaterialTheme.colorScheme
-                                                            .outlineVariant.copy(alpha = 0.5f)
-                                                    )
-                                                }
-                                                MenuRow(
-                                                    title = item.title,
-                                                    icon = item.icon,
-                                                    active = item.tab >= 0 && item.tab == selectedTab,
-                                                    primary = MaterialTheme.colorScheme.primary
-                                                ) {
-                                                    menuOpen = false
-                                                    when (item.action) {
-                                                        "account" -> accountVisible = true
-                                                        "share" -> shareApp(context)
-                                                        "support" -> supportVisible = true
-                                                        // نسخهٔ ۱.۱۱.۳۰: فقط در فلاور admin — نسخهٔ عمومی پنل ندارد
-                                                        "admin" -> if (DevGate.enabled) devPanelVisible = true
-                                                        else -> if (item.tab >= 0) selectedTab = item.tab
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // ---------- نسخهٔ ۱.۱۱.۵۰: منوی سه‌نقطه حذف شد ----------
+                        // (درخواست کاربر: «اون سه نقطه بالا که منو تنظیمات هست پاک
+                        // بشه چون منو تنظیمات پایین دارم») — حساب کاربری در
+                        // تنظیمات بود؛ اشتراک‌گذاری برنامه و پشتیبانی هم به
+                        // تنظیمات منتقل شدند تا از دست نروند.
                     }
                 }
             }
         },
-        // ---------- نوار ناوبری پایین صفحه — نسخهٔ ۱.۱۱.۴۹ (مطابق طرح کاربر) ----------
-        // چهار بخش مثل عکس: تقویم / اوقات و قبله / یادآور و رویداد / تنظیمات.
-        // در چیدمان راست‌به‌چپ، نخستین آیتم سمت راست می‌نشیند (تقویم = راست،
-        // تنظیمات = چپ). دو گروهِ دوصفحه‌ای با ضربهٔ دوباره بین صفحه‌هایشان
-        // می‌چرخند و هر دو زیرِ همان آیتم هایلایت می‌شوند. صفحه‌های تمام‌صفحه
+        // ---------- نوار ناوبری پایین صفحه — نسخهٔ ۱.۱۱.۵۰ (درخواست کاربر) ----------
+        // چهار بخش: تقویم / قبله نما / یادآور و رویداد / تنظیمات — آیتم «اوقات و
+        // قبله» به «قبله نما» تغییر کرد. در چیدمان راست‌به‌چپ، نخستین آیتم سمت
+        // راست می‌نشیند. گروه «یادآور و رویداد» با ضربهٔ دوباره بین صفحه‌هایش
+        // می‌چرخد و هر دو زیرِ همان آیتم هایلایت می‌شوند. صفحه‌های تمام‌صفحه
         // (حساب، پنل مدیریت، پشتیبانی، نمای روز) نوار را نمی‌گیرند — همان شرط topBar.
         bottomBar = {
             if (!accountVisible && !devPanelVisible && !supportVisible && dayDetail == null) {
@@ -458,15 +376,17 @@ fun MainScreen(
                         icon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
                         label = { Text("تقویم") }
                     )
+                    // نسخهٔ ۱.۱۱.۵۰ (درخواست کاربر): به‌جای «اوقات و قبله» فقط
+                    // «قبله نما» — اوقات شرعی از کارت اوقات پایین صفحهٔ تقویم،
+                    // صفحهٔ اذان و مقصدهای داخلی در دسترس می‌ماند
                     NavigationBarItem(
-                        selected = selectedTab == 1 || selectedTab == 2,
+                        selected = selectedTab == 2,
                         onClick = {
                             dayDetail = null
-                            // اگر همین بخش فعال است، ضربهٔ بعدی بین اوقات و قبله می‌چرخد
-                            selectedTab = if (selectedTab == 1) 2 else 1
+                            selectedTab = 2
                         },
                         icon = { Icon(Icons.Filled.Explore, contentDescription = null) },
-                        label = { Text("اوقات و قبله") }
+                        label = { Text("قبله نما") }
                     )
                     NavigationBarItem(
                         selected = selectedTab == 3 || selectedTab == 4,
@@ -632,7 +552,9 @@ fun MainScreen(
                     5 -> SettingsScreen(
                         settings = settings,
                         onOpenAccount = { accountVisible = true },
-                        onDevPanel = { devPanelVisible = true }
+                        onDevPanel = { devPanelVisible = true },
+                        // نسخهٔ ۱.۱۱.۵۰: «پشتیبانی» پس از حذف منوی سه‌نقطه از تنظیمات
+                        onOpenSupport = { supportVisible = true }
                     )
                 }
             }
@@ -747,80 +669,8 @@ fun MainScreen(
         )
     }
 }
-
-/**
- * جای‌گذار پنل منو — نسخه ۱.۱۱.۶ (گزارش کاربر)
- *
- * پنل همیشه دقیقاً زیر دکمه سه‌نقطه و هم‌تراز لبه دکمه (سمت چپ گوشی) باز می‌شود؛
- * برخلاف DropdownMenu پیش‌فرض، جهت چیدمان (RTL) در محل باز شدن اثر ندارد و
- * اگر پنل از عرض صفحه بزرگ‌تر باشد به داخل صفحه محدود می‌شود.
- */
-private class LeftAnchoredMenuProvider(
-    private val marginPx: Int,
-    private val gapPx: Int
-) : PopupPositionProvider {
-    override fun calculatePosition(
-        anchorBounds: IntRect,
-        windowSize: IntSize,
-        layoutDirection: LayoutDirection,
-        popupContentSize: IntSize
-    ): IntOffset {
-        // لبه شروع پنل = لبه دکمه سه‌نقطه؛ خروج از صفحه با حاشیه امن محدود می‌شود
-        val maxX = (windowSize.width - popupContentSize.width - marginPx).coerceAtLeast(marginPx)
-        val x = anchorBounds.left.coerceIn(marginPx, maxX)
-        val maxY = (windowSize.height - popupContentSize.height - marginPx).coerceAtLeast(0)
-        val y = (anchorBounds.bottom + gapPx).coerceIn(0, maxY)
-        return IntOffset(x, y)
-    }
-}
-
-/**
- * ردیف منوی سه‌نقطه — سبک پنل نمونه کاربر: آیکن در دایره ملایم + عنوان؛
- * تب فعلی با رنگ اصلی هایلایت می‌شود (نسخه ۱.۱۱.۵)
- */
-@Composable
-private fun MenuRow(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    active: Boolean,
-    primary: Color,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(
-                    if (active) primary.copy(alpha = 0.16f) else primary.copy(alpha = 0.09f),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = primary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        Spacer(Modifier.size(12.dp))
-        Text(
-            title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (active) primary else MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
 /** اشتراک‌گذاری برنامه از منوی سه‌نقطه — با لانچر امن (نسخه ۱.۱۱.۵) */
-private fun shareApp(context: android.content.Context) {
+fun shareApp(context: android.content.Context) {
     val ok = runCatching {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"

@@ -91,4 +91,23 @@ object AzanPolicy {
      */
     fun shouldShowFullScreenHint(wanted: Boolean, fsiAllowed: Boolean): Boolean =
         wanted && !fsiAllowed
+
+    /**
+     * آیا باید صفحهٔ اذان مستقیم (بدون واسط اعلان) بالای همهٔ برنامه‌ها باز شود؟
+     * — نسخهٔ ۱.۱۱.۵۰ (درخواست کاربر: «میخوام بالای همه برنامه‌ها اجرا بشه»)
+     *
+     * fullScreenIntent فقط روی قفل صفحه/صفحهٔ خاموش اکتیویتی را بالا می‌آورد؛
+     * روی صفحهٔ روشن و اپ دیگر، اندروید ۱۰+ شروع اکتیویتی از پس‌زمینه را
+     * می‌بندد مگر اپ دسترسی SYSTEM_ALERT_WINDOW (نمایش روی برنامه‌های دیگر)
+     * داشته باشد. پس پرتاب مستقیم فقط برای همان حالتِ خالی است: صفحهٔ روشن،
+     * قفل بسته نیست، خود اپ جلوی صفحه نیست، دسترسی داده شده و کاربر باز شدن
+     * خودکار را خواسته (خودکار یا «همیشه تمام‌صفحه»).
+     */
+    fun shouldLaunchDirectly(
+        wanted: Boolean,
+        screenOn: Boolean,
+        deviceLocked: Boolean,
+        ourAppForeground: Boolean,
+        overlayAllowed: Boolean
+    ): Boolean = wanted && overlayAllowed && screenOn && !deviceLocked && !ourAppForeground
 }

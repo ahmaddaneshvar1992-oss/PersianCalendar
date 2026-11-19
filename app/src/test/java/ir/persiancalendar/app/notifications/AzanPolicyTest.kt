@@ -159,4 +159,51 @@ class AzanPolicyTest {
         assertFalse(AzanPolicy.shouldShowFullScreenHint(wanted = false, fsiAllowed = false))
         assertFalse(AzanPolicy.shouldShowFullScreenHint(wanted = false, fsiAllowed = true))
     }
+
+    // ---------- پرتاب مستقیم صفحهٔ اذان بالای همهٔ برنامه‌ها — نسخهٔ ۱.۱۱.۵۰ ----------
+
+    @Test
+    fun `direct launch only for screen-on unlocked other-app foreground with overlay`() {
+        // حالت هدف: صفحهٔ روشن، قفل بسته نیست، اپ دیگری جلو، دسترسی overlay هست
+        assertTrue(
+            AzanPolicy.shouldLaunchDirectly(
+                wanted = true, screenOn = true, deviceLocked = false,
+                ourAppForeground = false, overlayAllowed = true
+            )
+        )
+        // بدون دسترسی overlay → پرتاب مستقیم ندارد (اعلان heads-up می‌ماند)
+        assertFalse(
+            AzanPolicy.shouldLaunchDirectly(
+                wanted = true, screenOn = true, deviceLocked = false,
+                ourAppForeground = false, overlayAllowed = false
+            )
+        )
+        // قفل بسته یا صفحهٔ خاموش → مسیر FSI است نه پرتاب مستقیم
+        assertFalse(
+            AzanPolicy.shouldLaunchDirectly(
+                wanted = true, screenOn = false, deviceLocked = false,
+                ourAppForeground = false, overlayAllowed = true
+            )
+        )
+        assertFalse(
+            AzanPolicy.shouldLaunchDirectly(
+                wanted = true, screenOn = true, deviceLocked = true,
+                ourAppForeground = false, overlayAllowed = true
+            )
+        )
+        // خود اپ جلوی صفحه → نیازی به پرتاب نیست
+        assertFalse(
+            AzanPolicy.shouldLaunchDirectly(
+                wanted = true, screenOn = true, deviceLocked = false,
+                ourAppForeground = true, overlayAllowed = true
+            )
+        )
+        // کاربر باز شدن خودکار را نخواسته → هیچ
+        assertFalse(
+            AzanPolicy.shouldLaunchDirectly(
+                wanted = false, screenOn = true, deviceLocked = false,
+                ourAppForeground = false, overlayAllowed = true
+            )
+        )
+    }
 }

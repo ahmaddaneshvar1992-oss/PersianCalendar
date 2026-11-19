@@ -509,6 +509,50 @@ fun PrayerScreen(
                         Text(stringResource(R.string.azan_screen_open_fsi_settings))
                     }
                 }
+
+                // ---------- دسترسی «نمایش روی همهٔ برنامه‌ها» — نسخهٔ ۱.۱۱.۵۰ ----------
+                // (درخواست کاربر: «میخوام بالای همه برنامه‌ها اجرا بشه») —
+                // fullScreenIntent فقط روی قفل صفحه بالا می‌آید؛ روی صفحهٔ روشن
+                // و اپ دیگر، اندروید ۱۰+ شروع اکتیویتی از پس‌زمینه را می‌بندد
+                // مگر اپ دسترسی SYSTEM_ALERT_WINDOW داشته باشد.
+                var overlayAllowed by remember {
+                    mutableStateOf(android.provider.Settings.canDrawOverlays(context))
+                }
+                DisposableEffect(context) {
+                    val act = context as? androidx.activity.ComponentActivity
+                    val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME)
+                            overlayAllowed = android.provider.Settings.canDrawOverlays(context)
+                    }
+                    act?.lifecycle?.addObserver(obs)
+                    onDispose { act?.lifecycle?.removeObserver(obs) }
+                }
+                Spacer(Modifier.height(8.dp))
+                if (overlayAllowed) {
+                    Text(
+                        stringResource(R.string.azan_overlay_granted),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.azan_overlay_denied),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    androidx.compose.material3.TextButton(onClick = {
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    android.net.Uri.parse("package:${context.packageName}")
+                                )
+                            )
+                        }
+                    }) {
+                        Text(stringResource(R.string.azan_overlay_open_settings))
+                    }
+                }
             }
         }
 
