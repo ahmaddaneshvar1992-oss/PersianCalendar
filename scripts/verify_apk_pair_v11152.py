@@ -215,7 +215,6 @@ def main():
         "Z5mIWsYEhgULQ6B3tGimJkkQCUNPN0ipslFBY8uArPw=",
         "sequence", "issuedAt", "maxCacheDays", "adsEnabled",
         "ads_feed_cache.json", "ads_feed_state.json",
-        "status_bar_icon_style", "feed/main_ads.json",
         "data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,",
         # — ۱.۱۱.۳۹ (رگرسیون) —
         "cell_show_gregorian", "cell_show_hijri", "cell_show_week_number",

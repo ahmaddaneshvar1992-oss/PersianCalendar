@@ -21,6 +21,20 @@ NAMES = {
 }
 
 
+class NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+    """گیت‌هاب: zip آرتیفکت به URL امضاشدهٔ blob ریدایرکت می‌شود؛ اگر هدر
+    Authorization دوباره فرستاده شود، Azure با 401 رد می‌کند — نسخهٔ ۱.۱۱.۵۲
+    (خطای واقعی ترن انتشار: HTTP 401 Server failed to authenticate)"""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None:
+            new.headers.pop("Authorization", None)
+        return new
+
+
+_OPENER = urllib.request.build_opener(NoAuthRedirect)
+
+
 def api(url: str):
     tok = os.environ.get("GH_TOKEN", "")
     req = urllib.request.Request(url, headers={
@@ -28,7 +42,7 @@ def api(url: str):
         "Accept": "application/vnd.github+json",
         "User-Agent": "release-helper",
     })
-    return urllib.request.urlopen(req, timeout=60)
+    return _OPENER.open(req, timeout=60)
 
 
 def main() -> int:
