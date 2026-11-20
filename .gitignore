@@ -35,3 +35,10 @@ ads-feed-key*.b64
 # پایتون — چک‌اسکریپت‌های محلی
 __pycache__/
 *.pyc
+
+# مستعارهای sandbox — نباید در مخزن برنامه باشند
+PersianCalendar/
+PersianCalendar-feed/
+upload/
+download/
+worklog.md

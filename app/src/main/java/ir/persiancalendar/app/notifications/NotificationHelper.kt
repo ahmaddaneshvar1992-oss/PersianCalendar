@@ -252,13 +252,35 @@ object NotificationHelper {
      * صدا اذان قطع بشه»): deleteIntent — کشیدن اعلان به کنار یا «پاک کردن
      * همه» هم صدای اذان را قطع می‌کند.
      */
+    /** PendingIntent صفحهٔ اختصاصی «نمایش در حالت تمام‌صفحه» — نسخهٔ ۱.۱۱.۵۲ */
+    fun fsiSettingsIntent(context: Context): PendingIntent = PendingIntent.getActivity(
+        context, 9200,
+        Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    /** PendingIntent صفحهٔ «نمایش روی برنامه‌های دیگر» همان برنامه — نسخهٔ ۱.۱۱.۵۲ */
+    fun overlaySettingsIntent(context: Context): PendingIntent = PendingIntent.getActivity(
+        context, 9201,
+        Intent(
+            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            android.net.Uri.parse("package:${context.packageName}")
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
     fun notifyPrayer(
         context: Context,
         label: String,
         timeText: String,
         fullScreen: Boolean = true,
         silent: Boolean = false,
-        prayerIndex: Int = -1
+        prayerIndex: Int = -1,
+        // نسخهٔ ۱.۱۱.۵۲: دکمهٔ مستقیم تنظیماتِ دسترسیِ ناقص — روی خود اعلان اذان
+        setupLabel: String? = null,
+        setupIntent: PendingIntent? = null
     ) {
         val builder = NotificationCompat.Builder(context, CHANNEL_PRAYERS)
             .setSmallIcon(R.drawable.ic_notification)
@@ -273,6 +295,13 @@ object NotificationHelper {
             // اکشن «باز کردن» — در حالت heads-up (گوشی روشن و باز) راه اصلی است
             .addAction(0, "باز کردن", azanScreenIntent(context, prayerIndex, fromAlarm = false))
             .addAction(0, "توقف صدا", azanStopIntent(context))
+            // نسخهٔ ۱.۱۱.۵۲: اگر دسترسیِ لازم برای باز شدن خودکار ناقص است،
+            // دکمهٔ مستقیم تنظیمات همان دسترسی روی خود اعلان است — کاربر دیگر
+            // سرگردان در تنظیمات نمی‌شود
+            .apply {
+                if (setupLabel != null && setupIntent != null)
+                    addAction(0, setupLabel, setupIntent)
+            }
             // نسخهٔ ۱.۱۱.۱۹: رد کردن/پاک کردن اعلان = توقف صدای اذان
             .setDeleteIntent(azanStopIntent(context))
         if (!silent) {

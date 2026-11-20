@@ -93,6 +93,38 @@ object AzanPolicy {
         wanted && !fsiAllowed
 
     /**
+     * کدام راهنما و دکمهٔ تنظیمات باید در اعلان اذان دیده شود؟ — نسخهٔ ۱.۱۱.۵۲
+     * (گزارش کاربر: «وقتی اذان میگه نوفیکیش که باید اجرا بشه میگه نمایش در
+     * حالت تمام صفحه به تو پیش فرض فعال باشه من وقتی فعالش هم میکنم بازم اون
+     * نوفیکیش اذان بالا نمیاد»)
+     *
+     * ریشهٔ گیج‌کنندگی: اندروید دو دسترسی متفاوت دارد —
+     *  ① دسترسی سیستمِ «نمایش در حالت تمام‌صفحه» (Full-Screen Intent) برای
+     *     باز شدن روی قفل/صفحهٔ خاموش؛ سوییچ درون‌برنامه‌ای «نمایش تمام‌صفحه
+     *     حتی در حین کار با گوشی» جایگزین آن نیست و روشن‌کردنش بدون ① اثری ندارد!
+     *  ② «نمایش روی برنامه‌های دیگر» (SYSTEM_ALERT_WINDOW) برای باز شدن روی
+     *     صفحهٔ روشن و اپ دیگر (۱.۱۱.۵۰).
+     * پس راهنما باید وضعیتِ دقیق را بگوید: FSI خاموش → اول همان؛ با FSI روشن
+     * ولی صفحهٔ روشن و باز و اپ دیگر جلوی صفحه و بدون overlay → راهنمای ②.
+     */
+    enum class FullScreenHintKind { NONE, FSI, OVERLAY }
+
+    fun fullScreenHintKind(
+        wanted: Boolean,
+        fsiAllowed: Boolean,
+        screenOn: Boolean,
+        deviceLocked: Boolean,
+        ourAppForeground: Boolean,
+        overlayAllowed: Boolean
+    ): FullScreenHintKind = when {
+        !wanted -> FullScreenHintKind.NONE
+        !fsiAllowed -> FullScreenHintKind.FSI
+        screenOn && !deviceLocked && !ourAppForeground && !overlayAllowed ->
+            FullScreenHintKind.OVERLAY
+        else -> FullScreenHintKind.NONE
+    }
+
+    /**
      * آیا باید صفحهٔ اذان مستقیم (بدون واسط اعلان) بالای همهٔ برنامه‌ها باز شود؟
      * — نسخهٔ ۱.۱۱.۵۰ (درخواست کاربر: «میخوام بالای همه برنامه‌ها اجرا بشه»)
      *

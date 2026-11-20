@@ -270,27 +270,52 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                     deviceLocked = deviceLocked,
                     ourAppForeground = ir.persiancalendar.app.PersianCalendarApp.isForeground
                 )
+                // نسخهٔ ۱.۱۱.۵۲ (گزارش کاربر: «وقتی فعالش هم می‌کنم بازم اون
+                // نوفیکیش اذان بالا نمیاد»): راهنما حالا هوشمند است — دسترسیِ
+                // ناقص را دقیق نام می‌برد و خود اعلان دکمهٔ مستقیم تنظیمات همان
+                // دسترسی را دارد (تفکیک FSI سیستم از سوییچ درون‌برنامه‌ای)
+                val overlayNow = runCatching {
+                    android.provider.Settings.canDrawOverlays(appContext)
+                }.getOrDefault(false)
+                val hintKind = AzanPolicy.fullScreenHintKind(
+                    wanted = s.azanAutoOpenScreen,
+                    fsiAllowed = NotificationHelper.canUseFullScreenIntent(appContext),
+                    screenOn = screenOn,
+                    deviceLocked = deviceLocked,
+                    ourAppForeground = ir.persiancalendar.app.PersianCalendarApp.isForeground,
+                    overlayAllowed = overlayNow
+                )
                 val subtitle = buildString {
                     append("اوقات شرعی امروز — ${slot.label}")
                     when {
                         !soundAllowed -> append(" (حالت بی‌صدا — بدون پخش صدا)")
                         else -> append(" (با صدای اذان دلخواه شما)")
                     }
-                    // نسخهٔ ۱.۱۱.۴۸: اگر کاربر باز شدن خودکار را خواسته ولی
-                    // دسترسی تمام‌صفحه را ندارد، اعلان خودش راهنما می‌شود
-                    if (AzanPolicy.shouldShowFullScreenHint(
-                            wanted = s.azanAutoOpenScreen,
-                            fsiAllowed = NotificationHelper.canUseFullScreenIntent(appContext)
-                        )
-                    ) {
-                        append(" — ${appContext.getString(ir.persiancalendar.app.R.string.azan_fsi_hint)}")
+                    when (hintKind) {
+                        AzanPolicy.FullScreenHintKind.FSI ->
+                            append(" — ${appContext.getString(ir.persiancalendar.app.R.string.azan_fsi_hint)}")
+                        AzanPolicy.FullScreenHintKind.OVERLAY ->
+                            append(" — ${appContext.getString(ir.persiancalendar.app.R.string.azan_overlay_hint)}")
+                        AzanPolicy.FullScreenHintKind.NONE -> {}
                     }
+                }
+                // دکمهٔ مستقیم تنظیماتِ همان دسترسیِ ناقص — روی خود اعلان
+                val setup = when (hintKind) {
+                    AzanPolicy.FullScreenHintKind.FSI ->
+                        NotificationHelper.fsiSettingsIntent(appContext) to
+                            appContext.getString(ir.persiancalendar.app.R.string.azan_notif_open_fsi)
+                    AzanPolicy.FullScreenHintKind.OVERLAY ->
+                        NotificationHelper.overlaySettingsIntent(appContext) to
+                            appContext.getString(ir.persiancalendar.app.R.string.azan_notif_open_overlay)
+                    AzanPolicy.FullScreenHintKind.NONE -> null to null
                 }
                 NotificationHelper.notifyPrayer(
                     appContext, slot.label, subtitle,
                     fullScreen = fullscreen,
                     silent = !soundAllowed,
-                    prayerIndex = slot.ordinal
+                    prayerIndex = slot.ordinal,
+                    setupLabel = setup.second,
+                    setupIntent = setup.first
                 )
                 if (soundAllowed) {
                     // پخش صدای اذان انتخابی کاربر با سرویس Foreground (نسخه ۱.۱۱.۷)

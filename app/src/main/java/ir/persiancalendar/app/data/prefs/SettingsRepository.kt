@@ -68,7 +68,7 @@ data class AppSettings(
      *  راهنمای روشن‌کردن دسترسی را نشان می‌دهد (shouldShowFullScreenHint). */
     val azanAutoOpenScreen: Boolean = true,
     /** نمایش تمام‌صفحه حتی وقتی گوشی روشن و باز است و اپ دیگری جلوی صفحه است */
-    val azanAlwaysFullScreen: Boolean = false,
+    val azanAlwaysFullScreen: Boolean = true,
     /** با خروج از صفحهٔ اذان، پخش هم متوقف شود؟ */
     val azanStopOnExit: Boolean = false,
     /** رمز پنل مدیریت — نسخهٔ ۱.۱۱.۳۰ به AdminSecrets (فلاور admin) منتقل شد */
@@ -86,8 +86,6 @@ data class AppSettings(
     val profileBirth: String = "",
     // ---------- نسخهٔ ۱.۱۱.۳۵: تبلیغات مدیریت‌شده (بدون کنترل کاربر) + کارت تولد ----------
     // (سوئیچ کاربر adsEnabled حذف شد — تبلیغات فقط با کلید adsEnabled فید امضاشده کنترل می‌شود)
-    /** سبک آیکون عدد روز در نوار وضعیت — ۰ = دایرهٔ درشت (پیش‌فرض)، ۱ = ساده */
-    val statusBarIconStyle: Int = StatusBarDayIcon.STYLE_CIRCLE,
     /** نمایش کارت «روز تولد شما» در صفحه اصلی */
     val birthdayCardVisible: Boolean = true,
     // ---------- نسخهٔ ۱.۱۱.۳۹: نمای ماهانهٔ بهبودیافته (همه پیش‌فرض خاموش) ----------
@@ -130,7 +128,6 @@ class SettingsRepository(private val context: Context) {
         val AZAN_STOP_ON_EXIT = booleanPreferencesKey("azan_stop_on_exit")
         // ---------- نسخهٔ ۱.۱۱.۳۵: سبک آیکون نوار وضعیت + کارت تولد ----------
         // (کلید قدیمی ads_enabled در DataStore بی‌اثر مانده — تبلیغات فقط با فید کنترل می‌شود)
-        val STATUS_BAR_ICON_STYLE = intPreferencesKey("status_bar_icon_style")
         val BIRTHDAY_VISIBLE = booleanPreferencesKey("birthday_card_visible")
         // ---------- نسخهٔ ۱.۱۱.۳۹: نمای ماهانهٔ بهبودیافته ----------
         val SHOW_GREGORIAN_IN_CELLS = booleanPreferencesKey("cell_show_gregorian")
@@ -163,14 +160,13 @@ class SettingsRepository(private val context: Context) {
             prayerNotifications = decodeMask(p[Keys.PRAYER_NOTIF] ?: (1 or 4 or 32)),
             useCurrentLocation = p[Keys.USE_LOCATION] ?: false,
             adhanSound = p[Keys.ADHAN_SOUND] ?: "moazenzadeh",
-            azanAutoOpenScreen = p[Keys.AZAN_AUTO_OPEN] ?: false,
-            azanAlwaysFullScreen = p[Keys.AZAN_ALWAYS_FULL] ?: false,
+            azanAutoOpenScreen = p[Keys.AZAN_AUTO_OPEN] ?: true,
+            azanAlwaysFullScreen = p[Keys.AZAN_ALWAYS_FULL] ?: true,
             azanStopOnExit = p[Keys.AZAN_STOP_ON_EXIT] ?: false,
             ongoingDateNotif = p[Keys.ONGOING_DATE] ?: true,
             onboardingDone = p[Keys.ONBOARDING_DONE] ?: false,
             profileGender = p[Keys.PROFILE_GENDER] ?: "",
             profileBirth = p[Keys.PROFILE_BIRTH] ?: "",
-            statusBarIconStyle = p[Keys.STATUS_BAR_ICON_STYLE] ?: StatusBarDayIcon.STYLE_CIRCLE,
             birthdayCardVisible = p[Keys.BIRTHDAY_VISIBLE] ?: true,
             showGregorianInCells = p[Keys.SHOW_GREGORIAN_IN_CELLS] ?: false,
             showHijriInCells = p[Keys.SHOW_HIJRI_IN_CELLS] ?: false,
@@ -244,8 +240,6 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.PROFILE_BIRTH] = "$jy/$jm/$jd" }
 
     // ---------- نسخهٔ ۱.۱۱.۳۵: سبک آیکون نوار وضعیت + کارت تولد ----------
-    suspend fun setStatusBarIconStyle(style: Int) =
-        context.dataStore.edit { it[Keys.STATUS_BAR_ICON_STYLE] = style }
     suspend fun setBirthdayCardVisible(b: Boolean) =
         context.dataStore.edit { it[Keys.BIRTHDAY_VISIBLE] = b }
 

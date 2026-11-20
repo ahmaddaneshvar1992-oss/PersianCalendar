@@ -104,10 +104,9 @@ object OngoingDateNotifier {
      * (StatusBarDayIcon). در هر خطا فالبک به آیکون vector برنامه — بدون کرش.
      */
     private fun dayIcon(context: Context): IconCompat {
-        val style = runCatching {
-            ir.persiancalendar.app.di.AppContainer.settingsRepo(context)
-                .settingsBlocking().statusBarIconStyle
-        }.getOrDefault(ir.persiancalendar.app.notifications.StatusBarDayIcon.STYLE_CIRCLE)
+        // نسخهٔ ۱.۱۱.۵۲ (درخواست کاربر: «سبک آیکون نوار وضعیت همیشه روی ساده باشه
+        // و گزینه‌ها رو پاک کن») — همیشه سبک «ساده» (فقط عدد)؛ بدون خواندن تنظیم
+        val style = ir.persiancalendar.app.notifications.StatusBarDayIcon.STYLE_SIMPLE
         val bmp = runCatching {
             ir.persiancalendar.app.notifications.StatusBarDayIcon.bitmapFor(context, style)
         }.getOrNull()

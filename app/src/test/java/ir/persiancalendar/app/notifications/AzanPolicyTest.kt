@@ -206,4 +206,49 @@ class AzanPolicyTest {
             )
         )
     }
+
+    /** نسخهٔ ۱.۱۱.۵۲: راهنمای هوشمند — تفکیک FSI سیستم از overlay و سوییچ درون‌برنامه‌ای */
+    @org.junit.Test
+    fun fullScreenHintKind_picks_the_exact_missing_permission() {
+        // کاربر باز شدن خودکار را نخواسته → هیچ راهنمایی
+        assertEquals(
+            AzanPolicy.FullScreenHintKind.NONE,
+            AzanPolicy.fullScreenHintKind(
+                wanted = false, fsiAllowed = false, screenOn = true,
+                deviceLocked = false, ourAppForeground = false, overlayAllowed = false
+            )
+        )
+        // FSI سیستم خاموش → راهنمای FSI (حتی اگر سوییچ درون‌برنامه‌ای روشن باشد — گزارش کاربر)
+        assertEquals(
+            AzanPolicy.FullScreenHintKind.FSI,
+            AzanPolicy.fullScreenHintKind(
+                wanted = true, fsiAllowed = false, screenOn = true,
+                deviceLocked = false, ourAppForeground = false, overlayAllowed = true
+            )
+        )
+        // FSI روشن، صفحهٔ روشن و باز و اپ دیگر جلوی صفحه و بدون overlay → راهنمای overlay
+        assertEquals(
+            AzanPolicy.FullScreenHintKind.OVERLAY,
+            AzanPolicy.fullScreenHintKind(
+                wanted = true, fsiAllowed = true, screenOn = true,
+                deviceLocked = false, ourAppForeground = false, overlayAllowed = false
+            )
+        )
+        // FSI روشن، قفل بسته → مسیر FSI فعال است → بدون راهنما
+        assertEquals(
+            AzanPolicy.FullScreenHintKind.NONE,
+            AzanPolicy.fullScreenHintKind(
+                wanted = true, fsiAllowed = true, screenOn = false,
+                deviceLocked = true, ourAppForeground = false, overlayAllowed = false
+            )
+        )
+        // FSI روشن، صفحهٔ روشن، خود اپ جلوی صفحه → بدون راهنما
+        assertEquals(
+            AzanPolicy.FullScreenHintKind.NONE,
+            AzanPolicy.fullScreenHintKind(
+                wanted = true, fsiAllowed = true, screenOn = true,
+                deviceLocked = false, ourAppForeground = true, overlayAllowed = false
+            )
+        )
+    }
 }
