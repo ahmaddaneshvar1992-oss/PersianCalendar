@@ -31,6 +31,7 @@ data class MainAd(
     val on: Boolean = true,
     val at: Long = System.currentTimeMillis(),
     // ---------- نسخهٔ ۱.۱۱.۳۴: فیلدهای جدید بنرهای تبلیغاتی (همه اختیاری) ----------
+    val badge: String = "",         // نسخهٔ ۱.۱۱.۵۱: برچسب کوتاه روی بنر («جدید»، «٪۲۰ تخفیف») — خالی = بدون بج
     val priority: Int = 0,          // اولویت نمایش — بزرگ‌تر اول (حداکثر ۲ بنر هم‌زمان)
     val startAt: Long = 0L,         // epoch ms — شروع بازهٔ نمایش؛ ۰ = از همین حالا
     val endAt: Long = 0L,           // epoch ms — پایان بازهٔ نمایش؛ ۰ = بدون پایان
@@ -63,6 +64,7 @@ object MainAdBox {
                     link = o.optString("link"),
                     image = o.optString("image"),
                     colorIndex = o.optInt("colorIndex", 0),
+                    badge = o.optString("badge"),
                     on = o.optBoolean("on", true),
                     at = o.optLong("at", System.currentTimeMillis()),
                     priority = o.optInt("priority", 0),
@@ -88,7 +90,13 @@ object MainAdBox {
         cta: String = "",
         link: String = "",
         image: String = "",
-        colorIndex: Int = 0
+        colorIndex: Int = 0,
+        // ---------- نسخهٔ ۱.۱۱.۵۱: پارامترهای پیشرفتهٔ فرم بنر ----------
+        badge: String = "",
+        priority: Int = 0,
+        startAt: Long = 0L,
+        endAt: Long = 0L,
+        minVersionCode: Int = 0
     ): Boolean {
         val ad = MainAd(
             id = System.currentTimeMillis(),
@@ -98,10 +106,55 @@ object MainAdBox {
             link = link.trim(),
             image = image.trim(),
             colorIndex = colorIndex.coerceIn(0, 7),
+            badge = badge.trim(),
+            priority = priority.coerceIn(0, 2),
+            startAt = startAt,
+            endAt = endAt,
+            minVersionCode = minVersionCode,
             at = System.currentTimeMillis()
         )
         val all = load(context).toMutableList()
         all.add(ad)
+        return save(context, all)
+    }
+
+    /**
+     * ویرایش بنر موجود — نسخهٔ ۱.۱۱.۵۱ (درخواست کاربر: پنل پیشرفته‌تر):
+     * جای بنر در فهرست و id حفظ می‌شود؛ فقط محتوا به‌روز می‌شود.
+     */
+    fun update(context: Context, item: MainAd): Boolean =
+        save(context, load(context).map { if (it.id == item.id) item else it })
+
+    /**
+     * تکثیر بنر — نسخهٔ ۱.۱۱.۵۱: کپیِ غیرفعال بلافاصله زیر بنر اصلی می‌نشیند
+     * تا خطای «انتشار دوباره» پیش نیاید؛ مدیر آن را ویرایش و روشن می‌کند.
+     */
+    fun duplicate(context: Context, id: Long): Boolean {
+        val all = load(context).toMutableList()
+        val idx = all.indexOfFirst { it.id == id }
+        if (idx < 0) return false
+        val src = all[idx]
+        // تصویر فایل داخلی: کپی فیزیکی تا حذف یکی دیگری را یتیم نکند
+        val img = runCatching {
+            if (src.image.isNotBlank() && !src.image.startsWith("http")) {
+                val f = File(src.image)
+                if (f.exists()) {
+                    val copy = File(adsDir(context), "ad-${System.currentTimeMillis()}.img")
+                    f.copyTo(copy, overwrite = true)
+                    copy.absolutePath
+                } else ""
+            } else src.image
+        }.getOrDefault("")
+        all.add(
+            idx + 1,
+            src.copy(
+                id = System.currentTimeMillis(),
+                title = src.title + " (کپی)",
+                on = false,
+                image = img,
+                at = System.currentTimeMillis()
+            )
+        )
         return save(context, all)
     }
 
@@ -154,6 +207,7 @@ object MainAdBox {
                     .put("link", a.link)
                     .put("image", a.image)
                     .put("colorIndex", a.colorIndex)
+                    .put("badge", a.badge)
                     .put("on", a.on)
                     .put("at", a.at)
                     // نسخهٔ ۱.۱۱.۳۴: فیلدهای جدید در انتشار پنل هم حفظ می‌شوند (round-trip)

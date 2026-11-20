@@ -156,6 +156,7 @@ object FeedPublisher {
                     .put("imageUrl", image)
                     .put("targetType", targetType)
                     .put("target", target)
+                    .put("badge", AdsFeedPolicy.clamp(a.badge, AdsFeedPolicy.MAX_BADGE))
                     .put("order", idx)
                     .put("startAt", a.startAt)
                     .put("endAt", a.endAt)

@@ -129,11 +129,16 @@ private fun adOpenText(item: FeedItem): String {
 /** باز کردن مقصد آیتم — خارجی فقط https با مرورگر؛ داخلی فقط لیست‌سفید */
 private fun openAdTarget(context: android.content.Context, item: FeedItem, onOpenInternal: (String) -> Unit) {
     when {
-        item.targetType == "external" && item.target.isNotBlank() ->
+        item.targetType == "external" && item.target.isNotBlank() -> {
+            // نسخهٔ ۱.۱۱.۵۱: شمارندهٔ لمس بنر — در پنل مدیریت نمایش داده می‌شود
+            ir.persiancalendar.app.data.support.AdClickStats.record(context, item.id)
             LinkOpener.openOrToast(context, item.target)
-        item.targetType == "internal" && item.target.isNotBlank() ->
+        }
+        item.targetType == "internal" && item.target.isNotBlank() -> {
+            ir.persiancalendar.app.data.support.AdClickStats.record(context, item.id)
             onOpenInternal(item.target)
-        // بدون مقصد معتبر = بدون عمل (کارت فقط نمایشی است)
+        }
+        // بدون مقصد معتبر = بدون عمل (کارت فقط نمایشی است) و در آمار هم نمی‌آید
     }
 }
 
@@ -295,7 +300,8 @@ private fun AdTileItem(
  *  - تا رسیدن تصویر → جای‌نگه‌دار ۳:۱ مثل قبل.
  */
 @Composable
-private fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
+/** نسخهٔ ۱.۱۱.۵۱: internal — پنل مدیریت از همین رندرکننده برای «پیش‌نمایش زنده» استفاده می‌کند */
+internal fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
     val context = LocalContext.current
     val adLabel = stringResource(R.string.ad_label)
     val openCd = adOpenText(item)
