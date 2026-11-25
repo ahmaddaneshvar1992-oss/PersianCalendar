@@ -36,7 +36,7 @@ import ir.persiancalendar.app.core.prayer.PrayerMethod
 import ir.persiancalendar.app.core.prayer.PrayerTimesCalculator
 import ir.persiancalendar.app.data.db.EventEntity
 import ir.persiancalendar.app.ui.components.SectionCard
-import ir.persiancalendar.app.ui.theme.EventDotColors
+import ir.persiancalendar.app.ui.theme.eventDotColor
 import ir.persiancalendar.app.ui.theme.holidayColor
 import java.time.LocalDate
 
@@ -182,7 +182,7 @@ fun DayDetailScreen(
                                     .width(6.dp)
                                     .height(36.dp)
                                     .background(
-                                        EventDotColors[e.colorIndex % EventDotColors.size],
+                                        eventDotColor(e.colorIndex),
                                         RoundedCornerShape(3.dp)
                                     )
                             )

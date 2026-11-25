@@ -12,8 +12,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import ir.persiancalendar.app.data.support.ImageLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,11 +53,18 @@ val AdColorNames: List<String> = listOf(
  * ورودی: مسیر فایل داخلی (تصویر گالری مدیر) یا URL اینترنتی یا data URI.
  * بارگذاری روی نخ پس‌زمینه انجام می‌شود و در صورت خطا فقط پس‌زمینه خالی می‌ماند.
  * نسخه ۱.۱۱.۳۴: فقط https/data/فایل محلی — سقف ۴ مگابایت دانلود (ImageLoader).
+ *
+ * نسخهٔ ۱.۱۱.۵۳ — رفع باگ بارگذاری تصویر با remember + LaunchedEffect:
+ * produceState قبلی هنگام تغییر source مقدار تصویر قبلی را نگه می‌داشت
+ * (تصویر بنر/اطلاعیهٔ پیشین تا رسیدن تصویر تازه — و در خطا برای همیشه — زیر
+ * آیتم جدید دیده می‌شد). حالا remember(source) هر تغییر را به null صفر
+ * برمی‌گرداند و LaunchedEffect(source) دوباره بارگذاری می‌کند.
  */
 @Composable
 fun AdImage(source: String, modifier: Modifier = Modifier) {
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, source) {
-        value = withContext(Dispatchers.IO) {
+    var bitmap by remember(source) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(source) {
+        bitmap = withContext(Dispatchers.IO) {
             runCatching {
                 val bytes = when {
                     // نسخهٔ ۱.۱۱.۲۱: عکس جاسازی‌شده در خوراک راه‌دور (بنر گالری مدیر)

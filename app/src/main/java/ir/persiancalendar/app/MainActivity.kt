@@ -103,7 +103,10 @@ class MainActivity : ComponentActivity() {
                             MainScreen(
                                 settings = settings,
                                 openTabRequest = openTabRequest.intValue,
-                                openAnnouncements = openAnnouncements.value
+                                openAnnouncements = openAnnouncements.value,
+                                // نسخهٔ ۱.۱۱.۵۳: پاک‌سازی وضعیت درخواست پس از مصرف
+                                onTabRequestConsumed = { openTabRequest.intValue = -1 },
+                                onAnnouncementsConsumed = { openAnnouncements.value = false }
                             )
                         } else {
                             // ---------- ویزارد راه‌اندازی اولیه (نسخه ۱.۱۱.۴) ----------

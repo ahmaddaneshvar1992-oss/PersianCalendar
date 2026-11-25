@@ -75,7 +75,7 @@ import ir.persiancalendar.app.data.prefs.AppSettings
 import ir.persiancalendar.app.ui.components.AdsFeedSection
 import ir.persiancalendar.app.ui.components.BirthdayCard
 import ir.persiancalendar.app.ui.prayer.PrayerTimesCard
-import ir.persiancalendar.app.ui.theme.EventDotColors
+import ir.persiancalendar.app.ui.theme.eventDotColor
 import ir.persiancalendar.app.ui.theme.eventDotColor
 import ir.persiancalendar.app.ui.theme.holidayColor
 import kotlinx.coroutines.launch
@@ -1171,7 +1171,7 @@ private fun WeekAgendaList(
                             .width(6.dp)
                             .height(30.dp)
                             .background(
-                                EventDotColors[e.colorIndex % EventDotColors.size],
+                                eventDotColor(e.colorIndex),
                                 RoundedCornerShape(3.dp)
                             )
                     )

@@ -26,11 +26,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+// نسخهٔ ۱.۱۱.۵۳: خواندن سازگار versionCode روی اندروید ۷/۸ (API ۲۴–۲۷)
+import androidx.core.content.pm.PackageInfoCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -82,8 +83,15 @@ fun AdsFeedSection(
 ) {
     val context = LocalContext.current
     val items = remember(refreshKey) {
+        // نسخهٔ ۱.۱۱.۵۳ — سازگاری اندروید ۷/۸ (API ۲۴–۲۷): فیلد longVersionCode
+        // فقط از API ۲۸ هست و خواندن مستقیمش روی نسخه‌های قدیمی NoSuchFieldError
+        // می‌دهد (runCatching آن را می‌بلعید و کد نسخه همیشه ۰ می‌شد، پس بنرهای
+        // با حداقل نسخه هرگز نمایش داده نمی‌شدند). PackageInfoCompat روی همهٔ
+        // سطوح API درست جواب می‌دهد.
         val versionCode = runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
+            PackageInfoCompat.getLongVersionCode(
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            ).toInt()
         }.getOrDefault(0)
         AdsFeed.loadDisplay(context, System.currentTimeMillis(), versionCode)
     }
@@ -104,6 +112,7 @@ fun AdsFeedSection(
                     AdTileItem(
                         item = item,
                         onOpenInternal = onOpenInternal,
+                        refreshKey = refreshKey,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -113,7 +122,7 @@ fun AdsFeedSection(
         }
         // ---------- بنرهای تمام‌عرض در پایین شبکه ----------
         banners.forEachIndexed { idx, item ->
-            AdBannerItem(item = item, onOpenInternal = onOpenInternal)
+            AdBannerItem(item = item, onOpenInternal = onOpenInternal, refreshKey = refreshKey)
             if (idx < banners.lastIndex) Spacer(Modifier.height(8.dp))
         }
     }
@@ -152,11 +161,19 @@ private sealed interface AdImageState {
 /**
  * بارگذاری محدود تصویر https با ImageLoader موجود — خطا = Failed و فراخوان
  * آیتم را کامل پنهان می‌کند (جای خالی نمی‌ماند). سقف هر دو از ۱.۱۱.۴۵: ۵۰۰ کیلوبایت (AdsFeedPolicy.MAX_IMAGE_BYTES).
+ *
+ * نسخهٔ ۱.۱۱.۵۳ — رفع باگ بارگذاری تصویر با remember + LaunchedEffect:
+ *  - قبلاً produceState(url) بود؛ با تغییر تصویر بنر (ویرایش در پنل مدیریت با
+ *    همان id) مقدار قبلی باقی می‌ماند و تصویر کهنهٔ بنر پیشین زیر بنر جدید
+ *    دیده می‌شد — حالا remember(url, refreshKey) هر تغییر را به Loading صفر برمی‌گرداند.
+ *  - refreshKey باعث تلاش دوباره پس از خطای موقت شبکه می‌شود (قبلاً بنر پس از
+ *    یک خطا تا ری‌استارت اپ برای همیشه پنهان بود).
  */
 @Composable
-private fun rememberAdImage(url: String, maxBytes: Int): AdImageState {
-    val state by produceState<AdImageState>(AdImageState.Loading, url) {
-        value = withContext(Dispatchers.IO) {
+private fun rememberAdImage(url: String, maxBytes: Int, refreshKey: Int = 0): AdImageState {
+    var state by remember(url, refreshKey) { mutableStateOf<AdImageState>(AdImageState.Loading) }
+    LaunchedEffect(url, refreshKey) {
+        state = withContext(Dispatchers.IO) {
             runCatching {
                 val bytes = ImageLoader.fetchBounded(url, maxBytes) ?: return@runCatching null
                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
@@ -171,6 +188,7 @@ private fun rememberAdImage(url: String, maxBytes: Int): AdImageState {
 private fun AdTileItem(
     item: FeedItem,
     onOpenInternal: (String) -> Unit,
+    refreshKey: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -178,8 +196,12 @@ private fun AdTileItem(
     val openCd = adOpenText(item)
 
     // پنهانی محلی فقط برای خطای تصویر (جای خالی نمی‌ماند) — کاربر پنهان نمی‌کند
-    var imageFailed by remember(item.id) { mutableStateOf(false) }
-    val imageState = rememberAdImage(item.iconUrl, maxBytes = AdsFeedPolicy.MAX_IMAGE_BYTES)
+    // نسخهٔ ۱.۱۱.۵۳: کلید شامل iconUrl و refreshKey — ویرایش تصویر بنر با همان id
+    // یا تلاش دوبارهٔ فید، وضعیت خطای کهنه را پاک می‌کند (قبلاً تا ری‌استارت اپ می‌ماند)
+    var imageFailed by remember(item.id, item.iconUrl, refreshKey) { mutableStateOf(false) }
+    val imageState = rememberAdImage(
+        item.iconUrl, maxBytes = AdsFeedPolicy.MAX_IMAGE_BYTES, refreshKey = refreshKey
+    )
     LaunchedEffect(imageState) {
         if (imageState is AdImageState.Failed) imageFailed = true
     }
@@ -301,13 +323,17 @@ private fun AdTileItem(
  */
 @Composable
 /** نسخهٔ ۱.۱۱.۵۱: internal — پنل مدیریت از همین رندرکننده برای «پیش‌نمایش زنده» استفاده می‌کند */
-internal fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit) {
+internal fun AdBannerItem(item: FeedItem, onOpenInternal: (String) -> Unit, refreshKey: Int = 0) {
     val context = LocalContext.current
     val adLabel = stringResource(R.string.ad_label)
     val openCd = adOpenText(item)
 
-    var imageFailed by remember(item.id) { mutableStateOf(false) }
-    val imageState = rememberAdImage(item.imageUrl, maxBytes = AdsFeedPolicy.MAX_IMAGE_BYTES)
+    // نسخهٔ ۱.۱۱.۵۳: کلید شامل imageUrl و refreshKey — پیش‌نمایش زندهٔ پنل مدیریت
+    // پس از انتخاب تصویر تازه (با همان id) دوباره نمایش داده می‌شود
+    var imageFailed by remember(item.id, item.imageUrl, refreshKey) { mutableStateOf(false) }
+    val imageState = rememberAdImage(
+        item.imageUrl, maxBytes = AdsFeedPolicy.MAX_IMAGE_BYTES, refreshKey = refreshKey
+    )
     LaunchedEffect(imageState) {
         if (imageState is AdImageState.Failed) imageFailed = true
     }

@@ -200,6 +200,9 @@ object OngoingDateNotifier {
 
     /** نمایش/به‌روزرسانی مستقیم اعلان (حلقهٔ دقیقه‌ای سرویس + جایگزین بدون سرویس) */
     fun postOngoing(context: Context) {
+        // نسخهٔ ۱.۱۱.۵۳: گارد مجوز اعلان (اندروید ۱۳+) — نبود POST_NOTIFICATIONS
+        // یعنی notify() بی‌فایده است؛ حلقهٔ سرویس به کار خودش ادامه می‌دهد
+        if (!NotificationHelper.canPostNotifications(context)) return
         runCatching {
             NotificationManagerCompat.from(context)
                 .notify(NOTIF_ID_ONGOING, buildOngoingNotification(context))

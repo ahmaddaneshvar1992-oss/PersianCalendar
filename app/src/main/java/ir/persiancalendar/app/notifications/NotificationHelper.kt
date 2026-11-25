@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import ir.persiancalendar.app.MainActivity
 import ir.persiancalendar.app.R
 import ir.persiancalendar.app.data.db.ReminderEntity
@@ -34,6 +35,22 @@ object NotificationHelper {
     // اکشن‌های اعلان یادآور — «انجام شد» و «بعداً یادآوری کن»
     const val ACTION_REMINDER_DONE = "ir.persiancalendar.app.action.REMINDER_DONE"
     const val ACTION_REMINDER_SNOOZE = "ir.persiancalendar.app.action.REMINDER_SNOOZE"
+
+    /**
+     * مجوز ارسال اعلان هست؟ — نسخهٔ ۱.۱۱.۵۳ (اندروید ۱۳+ / API ۳۳)
+     * پیش از هر notify() چک می‌شود تا در نبود مجوز POST_NOTIFICATIONS نه
+     * SecurityException رخ دهد و نه هشدار لنت NotificationPermission؛
+     * در اندروید‌های قدیمی‌تر (پیش از ۳۳) مجوز در مانیفست تعریف شده و همیشه هست.
+     * اعلان‌های خاموش‌شدهٔ کلی (کانال/برنامه) هم با areNotificationsEnabled رد می‌شوند.
+     */
+    fun canPostNotifications(context: Context): Boolean = runCatching {
+        android.os.Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }.getOrDefault(false) && runCatching {
+        NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }.getOrDefault(false)
 
     fun createChannels(context: Context) {
         // NotificationChannel از API ۲۶ به بعد موجود است؛ در اندروید ۷ اعلان بدون کانال کار می‌کند
@@ -163,6 +180,7 @@ object NotificationHelper {
     }
 
     fun notifyEvent(context: Context, notifId: Int, title: String, text: String) {
+        if (!canPostNotifications(context)) return // نسخهٔ ۱.۱۱.۵۳: گارد مجوز اعلان
         val notification = NotificationCompat.Builder(context, CHANNEL_EVENTS)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -207,6 +225,7 @@ object NotificationHelper {
      * دو اکشن: «انجام شد» (ثبت نوبت) و «بعداً یادآوری کن» (۱۰ دقیقه بعد)
      */
     fun notifyReminder(context: Context, reminder: ir.persiancalendar.app.data.db.ReminderEntity, slotMinute: Int) {
+        if (!canPostNotifications(context)) return // نسخهٔ ۱.۱۱.۵۳: گارد مجوز اعلان
         val typeLabel = ReminderEntity.typeLabels.getOrElse(reminder.type) { "یادآور" }
         val hour = (slotMinute / 60).coerceIn(0, 23)
         val minute = slotMinute % 60
@@ -282,6 +301,9 @@ object NotificationHelper {
         setupLabel: String? = null,
         setupIntent: PendingIntent? = null
     ) {
+        // نسخهٔ ۱.۱۱.۵۳: گارد مجوز اعلان — نبود مجوز یعنی اعلان (و فول‌اسکرین آن)
+        // نمایش داده نمی‌شود؛ صدای اذان مستقل از این اعلان پخش می‌شود
+        if (!canPostNotifications(context)) return
         val builder = NotificationCompat.Builder(context, CHANNEL_PRAYERS)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(label)
@@ -337,6 +359,7 @@ object NotificationHelper {
      * لمس اعلان، برنامه را روی پنل اطلاعیه‌ها باز می‌کند.
      */
     fun notifyAnnouncement(context: Context, title: String, body: String, link: String = "") {
+        if (!canPostNotifications(context)) return // نسخهٔ ۱.۱۱.۵۳: گارد مجوز اعلان
         val fullText = if (body.isNotBlank()) "$title\n$body" else title
         // نسخهٔ ۱.۱۱.۲۰: لمس اعلان اطلاعیهٔ لینک‌دار، مستقیم لینک را در مرورگر باز می‌کند
         val contentPi = if (link.isNotBlank()) {

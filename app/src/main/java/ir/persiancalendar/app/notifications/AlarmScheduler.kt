@@ -157,20 +157,32 @@ object AlarmScheduler {
 
         for (i in 0..7) {
             if (i !in notifPrayerIndexes) continue
-            val hours = values[i].toInt()
-            val minutes = Math.round((values[i] - hours) * 60).toInt().let { m ->
-                if (m >= 60) 59 else m
+            // نسخهٔ ۱.۱۱.۵۳ — نرمال‌سازی امن ۲۴ ساعتهٔ ساعت/دقیقه (نیمه‌شب):
+            // قبلاً values[i] مستقیم به LocalTime.of(hours, minutes) می‌رفت؛
+            // مقدار ۲۴+ (نیمه‌شب نزدیک فردا) یا گرد شدن دقیقه به ۶۰ باعث
+            // DateTimeException می‌شد و «کل» زمان‌بندی اذان قطع می‌شد.
+            // اکنون کل دقیقه‌ها نرمال می‌شود و مازادِ ۲۴ ساعت به روزِ تریگر
+            // منتقل می‌شود (۲۴٫۰ = فردا ۰۰:۰۰) و خطای هر یک وقت، بقیه را
+            // نمی‌شکند (runCatching هر پیمانه).
+            runCatching {
+                val totalMinutes = Math.round(values[i] * 60).toInt()
+                val dayOffset = Math.floorDiv(totalMinutes, 24 * 60)
+                val normMinutes = totalMinutes - dayOffset * 24 * 60 // همیشه 0..1439
+                val hour = normMinutes / 60 // 0..23
+                val minute = normMinutes % 60 // 0..59
+                val trigger = LocalDateTime.of(
+                    today.plusDays(dayOffset.toLong()),
+                    LocalTime.of(hour, minute)
+                ).atZone(zone).toInstant().toEpochMilli()
+                if (trigger <= now) return@runCatching
+                val pi = PendingIntent.getBroadcast(
+                    context,
+                    REQUEST_PRAYER_BASE + i,
+                    Intent(context, PrayerAlarmReceiver::class.java).putExtra(EXTRA_PRAYER_INDEX, i),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+                setExact(context, trigger, pi)
             }
-            val trigger = LocalDateTime.of(today, LocalTime.of(hours, minutes))
-                .atZone(zone).toInstant().toEpochMilli()
-            if (trigger <= now) continue
-            val pi = PendingIntent.getBroadcast(
-                context,
-                REQUEST_PRAYER_BASE + i,
-                Intent(context, PrayerAlarmReceiver::class.java).putExtra(EXTRA_PRAYER_INDEX, i),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
-            setExact(context, trigger, pi)
         }
     }
 

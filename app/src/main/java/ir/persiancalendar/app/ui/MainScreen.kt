@@ -129,7 +129,13 @@ private val FabGreen = Color(0xFF1EA84D)
 fun MainScreen(
     settings: AppSettings,
     openTabRequest: Int = -1,
-    openAnnouncements: Boolean = false
+    openAnnouncements: Boolean = false,
+    // نسخهٔ ۱.۱۱.۵۳ (رفع «باز نشدن دوبارهٔ اعلان‌های ناوبری»): پس از مصرف
+    // درخواست، فراخوان آن را پاک می‌کند تا لمس دوبارهٔ اعلان — حتی وقتی
+    // برنامه باز است و onNewIntent همان مقدار قبلی را می‌فرستد — دوباره
+    // ناوبری را اجرا کند و چرخش صفحه هم ناوبری تکراری نسازد.
+    onTabRequestConsumed: () -> Unit = {},
+    onAnnouncementsConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -178,6 +184,7 @@ fun MainScreen(
             devPanelVisible = false
             supportVisible = false
             selectedTab = openTabRequest
+            onTabRequestConsumed() // نسخهٔ ۱.۱۱.۵۳: درخواست مصرف شد — پاک می‌شود
         }
     }
 
@@ -187,6 +194,7 @@ fun MainScreen(
             annSheetVisible = true
             AnnouncementBox.markSeen(context)
             annUnseen = 0
+            onAnnouncementsConsumed() // نسخهٔ ۱.۱۱.۵۳: درخواست مصرف شد — پاک می‌شود
         }
     }
 
@@ -532,11 +540,6 @@ fun MainScreen(
                         persianDigits = settings.persianDigits,
                         onEdit = { e ->
                             editorExisting = e
-                            editorDate = null
-                            editorVisible = true
-                        },
-                        onAdd = {
-                            editorExisting = null
                             editorDate = null
                             editorVisible = true
                         },

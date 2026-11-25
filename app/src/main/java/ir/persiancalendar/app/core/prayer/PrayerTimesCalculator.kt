@@ -151,12 +151,16 @@ object PrayerTimesCalculator {
             imsak = local(imsak),
             fajr = fajrLocal,
             sunrise = local(sunrise),
-            dhuhr = local(dhuhr) + 1.0 / 60.0, // احتیاط یک دقیقه
+            // نسخهٔ ۱.۱۱.۵۳ — نرمال‌سازی امن ۲۴ ساعتهٔ ظهر و نیمه‌شب: «احتیاط
+            // یک دقیقه» می‌تواند ظهرِ نزدیک نیمه‌شب را به ۲۴٫۰+ ببرد؛ مقدارِ
+            // خارج از بازه به همان لحظهٔ روز (روز بعد، ۰۰:۰۰) نرمال می‌شود تا
+            // زمان‌بندی اذان (LocalTime.of) هرگز DateTimeException نگیرد.
+            dhuhr = fixhour(local(dhuhr) + 1.0 / 60.0), // احتیاط یک دقیقه
             asr = local(asr),
             sunset = local(sunset),
             maghrib = maghribLocal,
             isha = local(isha),
-            midnight = midnightLocal
+            midnight = fixhour(midnightLocal)
         )
     }
 
